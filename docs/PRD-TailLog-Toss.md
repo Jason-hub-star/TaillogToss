@@ -1,7 +1,7 @@
 # TailLog(DogCoach) → Toss In-App 마이그레이션 마스터 개발명세서
 
 - **프로젝트**: TailLog (DogCoach) → Toss In-App
-- **문서 버전**: 2.0.0
+- **문서 버전**: 2.1.0
 - **작성일**: 2026-02-25
 - **기준 템플릿**: `prdtamplate.md`
 - **참고 스킬**: `skills/toss_apps/SKILL.md` (Section 1-8)
@@ -18,6 +18,7 @@
 ### 0.2 변경 이력
 | 버전 | 날짜 | 내용 |
 |------|------|------|
+| v2.1.0 | 2026-02-25 | B2B 확장 개요 섹션 21 추가 (PRD-TailLog-B2B.md, SCHEMA-B2B.md 분리) |
 | v2.0.0 | 2026-02-25 | 플랜 승인 후 완전판 작성 (토큰 정책, 데이터 보존, IAP SDK 방어, Smart Message 빈도 제한, 딥엔트리 라우팅 포함) |
 | v1.0.1 | 2026-02-25 | 전체 문서 한글화 및 구조 재정리 |
 | v1.0.0 | 2026-02-25 | 초기 통합본 작성 |
@@ -138,9 +139,13 @@
 5. Edge Function: `tossUserKey + pepper` → PBKDF2 → Supabase Auth signIn/signUp
 6. 클라이언트: `supabase.auth.setSession({ access_token, refresh_token })` → 온보딩 진행
 
-**Edge Function 시크릿**:
+**클라이언트 환경변수** (SKILL.md Section 8 Client Baseline):
+- `EXPO_PUBLIC_SUPABASE_URL`, `EXPO_PUBLIC_SUPABASE_ANON_KEY`
+
+**Edge Function 시크릿** (SKILL.md Section 8 Edge Function Baseline):
+- `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`
 - `TOSS_CLIENT_CERT_BASE64`, `TOSS_CLIENT_KEY_BASE64`
-- `SUPER_SECRET_PEPPER`, `SUPABASE_SERVICE_ROLE_KEY`
+- `SUPER_SECRET_PEPPER`
 
 ### 4.3 백엔드 (대부분 유지)
 - FastAPI + SQLAlchemy async + Supabase PostgreSQL (유지)
@@ -192,6 +197,8 @@ CREATE POLICY "Allow individual update access" ON public.users FOR UPDATE USING 
 ```
 
 **절대 규칙**: integer `users.id`와 Supabase Auth UUID를 혼용하지 않음
+
+> **B2B 확장 시 role enum 변경**: B2B Phase 7에서 `role` CHECK를 `('user','trainer','admin','org_owner','org_staff')` 로 확장한다. 기존 B2C 값(`'user','trainer','admin'`)은 유지되며, 신규 값은 B2B 전용이다. 상세: [SCHEMA-B2B.md](SCHEMA-B2B.md) 섹션 2
 
 ### 6.2 마이그레이션 전략
 
@@ -354,7 +361,7 @@ supabase/
 - **관리자 `remove-by-user-key`**: UNLINK와 동일 정책 적용
 - **구현**: `referrer` 값에 따라 분기 → 삭제/익명화/유예 처리 + `noti_history`에 처리 로그 기록
 
-**`verify_jwt = false` 설정 필요** (로그인 전 호출이므로)
+**`verify_jwt = false` 고정** — `login-with-toss`는 로그인 전 호출이므로 JWT가 존재하지 않음. SKILL.md Section 8 config 예시는 `true`가 기본이지만, 이 함수만 반드시 `false`로 오버라이드한다 (섹션 13.6 참조)
 
 **login-with-toss 무인증 엔드포인트 방어 정책:**
 | 방어 수단 | 설정값 |
@@ -575,12 +582,15 @@ supabase/
 
 ### 13.6 verify_jwt 함수별 분리 (보안사고 방지)
 
-| 함수 | verify_jwt | 추가 검증 |
-|------|-----------|-----------|
-| `login-with-toss` | **false** (유일한 예외) | 9.1의 무인증 방어 정책 적용 |
-| `verify-iap-order` | true | Supabase JWT 유효성 |
-| `send-smart-message` | true | 관리자 Role 체크 |
-| `grant-toss-points` | true | 관리자 Role 체크 |
+> **고정 규칙**: `login-with-toss`만 `verify_jwt = false`. 나머지는 전부 `true`.
+> SKILL.md Section 8 config 예시의 `verify_jwt = true`가 기본값이며, `login-with-toss`만 `false`로 오버라이드한다.
+
+| 함수 | verify_jwt | 이유 | 추가 검증 |
+|------|-----------|------|-----------|
+| `login-with-toss` | **false** (유일한 예외) | 로그인 전 호출 — JWT 미존재 | 9.1의 무인증 방어 정책 적용 |
+| `verify-iap-order` | true | 인증 후 호출 | Supabase JWT 유효성 |
+| `send-smart-message` | true | 인증 후 호출 | 관리자 Role 체크 |
+| `grant-toss-points` | true | 인증 후 호출 | 관리자 Role 체크 |
 
 ### 13.7 기타
 - 데이터 프라이버시: nullable 프로필 처리 (사용자 동의 기반), GDPR/PIPA 준수
@@ -701,6 +711,40 @@ supabase/
 - [ ] Smart Message 템플릿 생성
 - [ ] Sandbox App 설치
 - [ ] 토스 포인트 테스트 1회 성공 확인
+
+---
+
+## 21. B2B 확장 (유치원·호텔·훈련사 관리 SaaS)
+
+> 기존 TailLog B2C 기능(행동기록/AI코칭/훈련)을 **최대한 유지**하면서, 반려견 유치원·호텔·개인 훈련사를 위한 관리 기능을 **확장 레이어**로 추가한다.
+
+### 21.1 포지셔닝
+
+- TailLog는 **강아지 상태 관리 + 보호자 커뮤니케이션 고도화** SaaS
+- **절대 안 다루는 것**: 매장 이용요금, 보호자 결제내역, 정산, 매출분석 (POS 아님)
+- 매장 이용요금 결제는 각 매장에서 별도로 처리
+
+### 21.2 3가지 사용자 모드
+
+| 모드 | 대상 | 핵심 |
+|------|------|------|
+| **일반 사용자** | B2C 보호자 | 기존 그대로 (대시보드, 행동기록, AI코칭, 훈련) |
+| **종사자 (센터)** | 유치원/호텔 직원 | Today Ops Queue, Bulk기록, 리포트 |
+| **종사자 (개인 훈련사)** | 프리랜서 훈련사 | 내 담당 큐, 리포트, 보호자 소통 |
+
+### 21.3 확정 사항
+
+- **결제**: 토스 IAP (디지털 서비스 구독). 센터 플랜 + 개인 훈련사 플랜 2레일
+- **대시보드**: 토스 미니앱 올인 (별도 웹앱 없음)
+- **스키마**: v1에 B2B 테이블 10개 빈 상태 포함 (B2C 무영향)
+- **dogs.user_id**: NOT NULL 유지 (B2B는 `org_dogs`로 관리, dogs 테이블 안 건드림)
+
+### 21.4 상세 문서
+
+| 문서 | 내용 | 독자 |
+|------|------|------|
+| [PRD-TailLog-B2B.md](PRD-TailLog-B2B.md) | 기획 스펙: UX(Ops Queue/Bulk/종사자모드), 보호자공유, 가격/과금, Phase, 비용, 네트워크효과 | PM/디자이너 |
+| [SCHEMA-B2B.md](SCHEMA-B2B.md) | 기술 스펙: DDL 10개, RLS 4-tier, Entitlement 상태머신, 리스크, 검증결과 15건 | 개발자 |
 
 ---
 

@@ -504,10 +504,12 @@ daily_reports 생성 시: subscription.status IN ('active','trial') 검증
 
 | # | 리스크 | 설명 | 완화 |
 |---|--------|------|------|
-| 5 | WebView 40마리 성능 | 카드+사진+뱃지 렌더링 | react-virtuoso + lazy load |
+| 5 | RN 40마리 성능 | 카드+사진+뱃지 렌더링 | FlatList 네이티브 가상화 + lazy load (WebView→RN 전환으로 리스크 대폭 완화) |
 | 6 | 비토스 보호자 | Smart Message 불가 | share_token + Kakao Alimtalk |
 | 7 | Entitlement 불일치 | 결제 성공인데 권한 미동기화 | 동기적 갱신 + 재시도 큐 + polling |
 | 8 | 개인 훈련사/센터 중복 | 훈련사가 센터 소속이면서 개인 플랜도 있는 경우 | 센터 플랜 우선. 개인 플랜 구매 차단 or 경고 |
+
+> **주의 (L-3 엣지케이스)**: `users.role`은 단일 값이므로, `org_staff`이면서 동시에 개인 `trainer`인 경우 role 충돌. 권장 대안: (1) role을 배열/비트마스크로 변경 또는 (2) `org_members`/`dog_assignments` 기반 동적 역할 결정으로 전환. B2B Phase 7 진입 시 재검토 필수.
 
 ---
 

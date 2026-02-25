@@ -1,7 +1,7 @@
 # TailLog(DogCoach) → Toss In-App 마이그레이션 마스터 개발명세서
 
 - **프로젝트**: TailLog (DogCoach) → Toss In-App
-- **문서 버전**: 2.1.0
+- **문서 버전**: 2.2.0
 - **작성일**: 2026-02-25
 - **기준 템플릿**: `prdtamplate.md`
 - **참고 스킬**: `skills/toss_apps/SKILL.md` (Section 1-8)
@@ -18,6 +18,7 @@
 ### 0.2 변경 이력
 | 버전 | 날짜 | 내용 |
 |------|------|------|
+| v2.2.0 | 2026-02-25 | WebView → React Native 전환. 추가 리스크 3건(pepper 회전, Edge Function cold start, FE 재작성 일정), 로직 이슈 2건(재연결 시나리오, pepper 회전 프로토콜) 반영. TDS RN 컴포넌트 매핑표 추가 |
 | v2.1.0 | 2026-02-25 | B2B 확장 개요 섹션 21 추가 (PRD-TailLog-B2B.md, SCHEMA-B2B.md 분리) |
 | v2.0.0 | 2026-02-25 | 플랜 승인 후 완전판 작성 (토큰 정책, 데이터 보존, IAP SDK 방어, Smart Message 빈도 제한, 딥엔트리 라우팅 포함) |
 | v1.0.1 | 2026-02-25 | 전체 문서 한글화 및 구조 재정리 |
@@ -90,11 +91,25 @@
 - Python 전용 로직: SQLAlchemy async, rule-based fallback 25개 템플릿, 비용 추적 upsert
 - 코드 재작성 비용 >> 유지 비용 (300줄+ AI 로직을 Deno로 옮기면 버그 위험만 증가)
 
-### 2.3 WebView 선택 근거 (React Native 불채택)
-- DogCoach는 폼 입력 + 리스트 + 차트 중심, 네이티브 API(카메라/GPS) 미사용
-- React Native 전환 시 132개 TSX 전면 재작성 필요 (8-10주, Recharts 16개+, Framer Motion 20개+ 재구현)
-- WebView는 기존 웹 기술 재활용 + TDS WebView 컴포넌트 교체만으로 충분
-- 토스 SKILL.md: "Mandatory TDS WebView for non-game apps"
+### 2.3 React Native 선택 근거 (WebView 불채택)
+
+> **결정 변경 (v2.2.0)**: 분석 결과 WebView도 TDS 전면 교체로 132개 TSX 전부 재작성 필요. 두 경로 모두 동일 규모의 UI 재작성이 불가피하므로, 네이티브 성능 이점이 있는 React Native을 채택한다.
+
+**React Native 채택 근거:**
+- WebView/RN 모두 132개 TSX 전면 재작성 필요 → UI 재작성 규모 동일, 기존 "WebView가 기존 코드 재활용" 전제 무효
+- SKILL.md "Mandatory TDS WebView for non-game apps"는 "WebView 선택 시 TDS 필수"라는 의미이며, RN은 별도 구현 옵션으로 명시됨
+- B2B 확장 시 40마리+ 카드 리스트: RN FlatList(네이티브 가상화) >> WebView react-virtuoso
+- 차트 16+개 동시 렌더링: react-native-svg 네이티브 렌더러 >> WebView SVG DOM
+- 앱 시작 속도: 네이티브 0.5-1초 vs WebView 2-3초
+- 향후 네이티브 기능 확장 가능 (카메라, GPS, 깊은 푸시 통합)
+
+**WebView 불채택 근거:**
+- WebView SVG/DOM 오버헤드로 60fps 달성 불확실 (특히 차트+리스트 동시 렌더링)
+- WebView Blob/File API 제한으로 PDF 다운로드/이미지 내보내기 호환성 불확실
+- B2B "Today Ops Queue" 40마리 카드 성능에서 WebView 한계 예상
+
+**비즈니스 로직 재사용 (RN에서도 ~70% 재사용):**
+- TanStack Query hooks (RN 호환), TypeScript 타입 정의 (100%), API 클라이언트, query-key 팩토리, 유틸리티 함수
 
 ### 2.4 인증 전략
 - Supabase Auth를 **유지**하되, Toss Login을 **Supabase Edge Function**으로 브릿지
@@ -107,15 +122,15 @@
 
 | 영역 | 기존 (DogCoach) | 목표 (Toss 인앱) |
 |------|-----------------|------------------|
-| FE 프레임워크 | Next.js 16 + React 19 | `@apps-in-toss/web-framework` (WebView) |
-| UI 시스템 | Tailwind CSS v4 + Radix UI + Framer Motion | **TDS (Toss Design System)** 전면 교체 |
+| FE 프레임워크 | Next.js 16 + React 19 | `@apps-in-toss/react-native-framework` (React Native) |
+| UI 시스템 | Tailwind CSS v4 + Radix UI + Framer Motion | **TDS React Native** 전면 교체 + Victory Native(차트) |
 | 인증 | Supabase Auth (Google/Kakao OAuth + 게스트) | **Toss Login → Supabase Edge Function → Supabase Auth** (브릿지 패턴) |
 | 인증 mTLS | 없음 | **Supabase Edge Function(Deno)**에서 mTLS 인증서 처리 |
 | 결제 | Stripe 플레이스홀더 | **Toss IAP** (소모품/비소모품) |
 | 알림 | 미구현 (Kakao Alimtalk 예정) | **Toss Smart Message** (Push + Inbox + SMS + Alimtalk) |
 | 프로모션 | 없음 | **토스 포인트** 연동 (3-step key 기반) |
 | BE 보안 | HTTPS + Supabase JWT | S2S API는 **Supabase Edge Function에서 mTLS** 처리 |
-| FE 배포 | Vercel | 토스 WebView 번들 배포 |
+| FE 배포 | Vercel | 토스 React Native 번들 배포 (프레임워크 관리) |
 | BE 배포 | Fly.io | Fly.io 유지 (**Supabase JWT 검증만, mTLS 불필요**) |
 | 랜딩 페이지 | 12개 섹션 (Framer Motion) | **제거** — 대시보드가 진입점 |
 | 게스트 모드 | anonymous_sid 쿠키 기반 | **제거** — 토스 유저는 항상 인증됨 |
@@ -124,12 +139,14 @@
 
 ## 4. 기술 스택 & 제약
 
-### 4.1 프론트엔드 (변경)
-- `@apps-in-toss/web-framework` + TypeScript 5.x (strict)
-- TDS 컴포넌트: Top, BottomCTA, ListRow, TextField, Checkbox, Switch, Skeleton, Badge, Asset 등
-- TDS Hooks: useDialog, useToast, useBottomSheet, useVisualViewport
-- 상태관리: TanStack Query v5 (서버상태) + Zustand (로컬상태)
-- 차트: 경량 클라이언트 차트 라이브러리 (Recharts CSR 모드)
+### 4.1 프론트엔드 (변경 — React Native)
+- `@apps-in-toss/react-native-framework` + TypeScript 5.x (strict)
+- TDS React Native 컴포넌트 (40+): Navbar, ListRow, ListHeader, Badge, BarChart, Button, Checkbox, Dialog, Asset 등
+- TDS RN Hooks: useOverlay (모달/시트/다이얼로그 관리)
+- 보충 라이브러리: `@gorhom/bottom-sheet` (바텀시트), `react-native-toast-message` (토스트)
+- 상태관리: TanStack Query v5 (서버상태, RN 호환) + 필요 시 Zustand (로컬상태)
+- 차트: Victory Native + react-native-svg (네이티브 렌더러, BarChart는 TDS 제공)
+- 리스트: React Native FlatList (네이티브 가상화, B2B 40마리+ 성능 보장)
 
 ### 4.2 인증 레이어 (Toss + Supabase 브릿지 패턴)
 1. 클라이언트: `appLogin()` → authorizationCode 획득
@@ -175,9 +192,24 @@
 
 - TDS Colors v5 (지각적 균일 색 공간, 다크/라이트 모드 계층 토큰)
 - TDS Typography (동적 크기 + 접근성 토큰)
-- **컴포넌트 매핑표**: DogCoach 30+ 컴포넌트 → TDS 대응 컴포넌트 1:1 매핑
-- **제거 대상**: Tailwind CSS v4, Radix UI, Framer Motion, Lucide Icons → 전부 TDS로 교체
+- **컴포넌트 매핑표 (TDS React Native)**:
+
+| DogCoach 현행 | TDS RN 대응 | 비고 |
+|--------------|------------|------|
+| 대시보드 카드 | ListRow + Badge + BoardRow | 강아지별 요약 |
+| 행동기록 폼 | useOverlay(BottomSheet) + Button + Checkbox | TextField는 RN TextInput |
+| AI 코칭 카드 | ListRow + BoardRow + Loader | 스켈레톤 로딩 |
+| 훈련 미션 리스트 | ListRow + Badge + ProgressBar | 진행률 표시 |
+| 설정 토글 | ListRow + RN Switch | TDS에 Switch 미확인 → RN 기본 |
+| 차트 (Radar/Bar/Heatmap) | Victory Native + TDS BarChart | 복합 차트 |
+| 모달/다이얼로그 | Dialog + useOverlay | 확인/취소 |
+| 바텀시트 | `@gorhom/bottom-sheet` or useOverlay | TDS Gap 보충 |
+| 토스트 | `react-native-toast-message` | TDS Gap 보충 |
+| 아이콘 | TDS Asset | Lucide 대체 |
+
+- **제거 대상**: Tailwind CSS v4, Radix UI, Framer Motion, Lucide Icons, Glassmorphism → 전부 TDS RN + 표준 RN 라이브러리로 교체
 - Toss UX Writing 가이드 준수 (QA 심사 필수)
+- **다크모드 필수**: TDS Colors v5 계층 토큰 사용 시 다크/라이트 자동 지원. 차트 색상은 별도 테마 대응 필요
 
 ---
 
@@ -235,13 +267,13 @@ dogs, dog_env, behavior_logs, ai_coaching, ai_recommendation_snapshots, ai_recom
 
 ## 7. 아키텍처 & 파일 구조
 
-### 7.1 프론트엔드 신규 구조
+### 7.1 프론트엔드 신규 구조 (React Native)
 ```
-pages/          # 파일 기반 라우팅
-components/     # TDS 래퍼 컴포넌트
-lib/            # API, hooks, utils
-stores/         # Zustand 스토어
-types/          # TypeScript 인터페이스
+screens/          # 파일 기반 라우팅 (@apps-in-toss/react-native-framework)
+components/       # TDS RN 래퍼 컴포넌트 + 커스텀 컴포넌트
+lib/              # API client, hooks, utils (기존 DogCoach에서 ~70% 재사용)
+stores/           # TanStack Query (서버상태) + 필요 시 Zustand
+types/            # TypeScript 인터페이스 (기존 100% 재사용)
 ```
 
 ### 7.2 Supabase Edge Functions (신규 — Toss S2S 브릿지)
@@ -343,6 +375,11 @@ supabase/
   - **예외**: 향후 Toss 프로필 변경 실시간 동기화가 필요하면 재검토 → 그때 암호화 컬럼(`toss_tokens`) + "최신 1개만 유효" + TTL 정책 도입
 - **Supabase 세션 토큰**: `supabase.auth.setSession()`으로 클라이언트에 저장 (Supabase SDK 기본 동작)
 
+**PBKDF2 pepper 회전 프로토콜 (v1 출시 전 설계 필수):**
+- pepper 교체 시 기존 유저의 deterministic password가 달라짐 → 로그인 불가
+- **회전 절차**: (1) 새 pepper 추가 (구 pepper 유지) (2) 로그인 시 구 pepper 우선 시도 → 실패 시 새 pepper (3) 성공 시 새 pepper로 password 갱신 (4) 전환 기간 종료 후 구 pepper 삭제
+- **구현**: Edge Function에서 pepper 버전 관리 (`PEPPER_V1`, `PEPPER_V2`) + `users.pepper_version` 컬럼
+
 **연결해제 콜백:**
 - Toss에서 `userKey + referrer` 전달. referrer 종류:
   - `UNLINK`: 사용자가 직접 연결 해제
@@ -360,6 +397,13 @@ supabase/
 
 - **관리자 `remove-by-user-key`**: UNLINK와 동일 정책 적용
 - **구현**: `referrer` 값에 따라 분기 → 삭제/익명화/유예 처리 + `noti_history`에 처리 로그 기록
+
+**연결해제 후 재연결 시나리오 (L-2 보강):**
+- UNLINK 후 사용자가 다시 미니앱 진입 시 `appLogin()` 호출 → 새 authorizationCode 발급
+- **확인 필요**: Toss가 동일 userKey를 재발급하는지 여부
+  - 동일 userKey → `toss_user_key` 복원 + 기존 데이터 연결 (30일 유예 기간 내)
+  - 새 userKey → 새 계정 생성 (기존 데이터 복원 불가)
+- **구현**: login-with-toss에서 `toss_user_key = NULL`인 기존 유저 매칭 로직 추가 (email/phone 기반, 동의 필요)
 
 **`verify_jwt = false` 고정** — `login-with-toss`는 로그인 전 호출이므로 JWT가 존재하지 않음. SKILL.md Section 8 config 예시는 `true`가 기본이지만, 이 함수만 반드시 `false`로 오버라이드한다 (섹션 13.6 참조)
 
@@ -533,11 +577,11 @@ supabase/
 
 ## 11. 테스트 / 검증 전략
 
-- **Unit**: pytest (BE 80%+), Vitest (FE 75%+)
+- **Unit**: pytest (BE 80%+), Jest + React Native Testing Library (FE 75%+)
 - **Integration**: Toss Auth 모의, IAP 주문 상태 6단계 시뮬레이션
 - **E2E**: **Toss Sandbox App** (필수), QR 테스트 (`intoss-private://`)
 - **Toss QA 심사**: UX Writing 가이드 준수, 다크 패턴 방지, 성능 기준 충족
-- **성능**: WebView 60fps 스크롤, API p95 < 300ms, 차트 렌더링 < 500ms
+- **성능**: 네이티브 60fps 스크롤 (FlatList), API p95 < 300ms, 차트 렌더링 < 500ms
 
 ---
 
@@ -545,7 +589,7 @@ supabase/
 
 - Git: trunk-based + feature branch, Conventional Commits
 - CI: GitHub Actions (build → lint → typecheck → test → e2e)
-- **FE 배포**: 토스 WebView 번들 (Vercel 아님)
+- **FE 배포**: 토스 React Native 번들 (@apps-in-toss/react-native-framework 관리)
 - **BE 배포**: Fly.io (Supabase JWT 검증만, mTLS 불필요)
 - **론칭 파이프라인**: 개발 → Sandbox → QR 테스트 → QA 심사 제출 → 승인 → 론칭
 
@@ -610,7 +654,7 @@ supabase/
 
 ## 15. 성능 & 확장성
 
-- FE: WebView 번들 < 500KB gzipped, 라우트별 코드 스플리팅
+- FE: React Native 네이티브 렌더링, 라우트별 lazy loading, FlatList 가상화
 - BE: AI 캐시-우선 전략 유지, DB 인덱스 최적화, 커넥션 풀링
 - 레이트 리밋: AI 코칭 10회/시간(무료), 50회/시간(PRO)
 
@@ -638,13 +682,16 @@ supabase/
 | Toss QA 심사 반려 | 중 | 높음 | 사전 점검 체크리스트 적용 (부록 C) |
 | mTLS 인증서 장애 | 낮음 | 치명적 | 갱신 30일 전 알림, 모니터링, 인증서 2벌 보관 |
 | TDS 컴포넌트 제약 | 중 | 중간 | 필요 컴포넌트 사전 검증, 커스텀 fallback 준비 |
-| WebView 차트 성능 | 중 | 중간 | 경량 차트 라이브러리, lazy load |
+| ~~WebView 차트 성능~~ RN 차트 라이브러리 호환성 | 중 | 중간 | Victory Native + react-native-svg 벤치마크. TDS BarChart 활용 |
 | IAP 결제성공+지급실패 | **높음** | **높음** | toss_status/grant_status 2축 분리 + 재처리 큐 + getPendingOrders 복구 |
 | IAP 환불 후 상품 미회수 | 중 | 중간 | 연결해제/환불 웹훅 → grant_status=REVOKED + 유예기간 |
 | 포인트 중복 지급 | 중 | 높음 | 멱등키 + key 1회 사용 + 4113 방어 로직 |
 | Edge Function 연쇄 장애 | 낮음 | 높음 | 서킷브레이커(30초 fast-fail) + 알림 |
 | PII 복호화 키 유출 | 낮음 | 치명적 | KMS 저장, 접근 Role 제한, 키 회전 절차 |
 | getPendingOrders 미지원 기기 | 중 | 중간 | 안드 5.234.0 / iOS 5.231.0 미만 → 복구 스킵 + CS 안내 |
+| **PBKDF2 pepper 단일 장애점** | 낮음 | **치명적** | pepper 유출 시 전체 계정 위험. pepper 회전 프로토콜 사전 설계 필수: (1) 새 pepper로 신규 로그인 (2) 구 pepper 유저 → 재인증 시 갱신 (3) 전환 기간 양 pepper 지원 |
+| **Edge Function Cold Start** | 중 | 중간 | cold start 1-3초 + mTLS + Toss API 2회 = 5초+ 가능. 헬스체크 ping으로 warm 유지 or 로그인 UX 로딩 인디케이터 |
+| **프론트엔드 재작성 일정 초과** | **높음** | **높음** | 132 TSX 전면 재작성 3-5주 추정은 낙관적. Phase 2를 (a) 핵심 3화면 우선 (b) 나머지 후속으로 분리 |
 
 **QA 반려 사전 점검 체크리스트:**
 - [ ] UX Writing 가이드 전체 텍스트 검수 완료
@@ -662,7 +709,7 @@ supabase/
 
 ### 18.1 v1 DoD (출시 필수 — Phase 2+ 백로그는 별도)
 - [ ] TypeScript strict zero errors, 테스트 통과, CI green
-- [ ] TDS 전용 (Tailwind/Radix/Framer Motion 임포트 0건)
+- [ ] TDS React Native 전용 (Tailwind/Radix/Framer Motion/Next.js 임포트 0건)
 - [ ] mTLS: Edge Function에서만 처리, Fly.io에 mTLS 코드/인증서 없음 확인
 - [ ] Toss Login → Supabase Auth 브릿지 E2E 통과
 - [ ] IAP 구매+복구+검증 Sandbox 3시나리오 통과
@@ -671,7 +718,7 @@ supabase/
 - [ ] 딥엔트리 3종 진입 정상 확인
 - [ ] 이벤트 분석 핵심 7개 이벤트 토스 대시보드 반영 확인
 - [ ] UX Writing 가이드 전체 텍스트 검수 완료
-- [ ] 성능 SLO 충족 (API p95 < 300ms, WebView 60fps, 번들 < 500KB)
+- [ ] 성능 SLO 충족 (API p95 < 300ms, 네이티브 60fps, 차트 렌더링 < 500ms)
 - [ ] **Toss QA 심사 승인**
 
 ---
@@ -679,14 +726,14 @@ supabase/
 ## 19. Agent 운영 프롬프트
 
 **절대 규칙:**
-- `@apps-in-toss/web-framework` + TDS only (Tailwind/Radix/Framer Motion 임포트 금지)
+- `@apps-in-toss/react-native-framework` + TDS React Native only (Tailwind/Radix/Framer Motion/Next.js 임포트 금지)
 - Toss Login only (기존 OAuth 제거)
 - mTLS는 Edge Function 전담 (FastAPI에 mTLS 코드 금지)
 - Edge Function `verify_jwt` 분리: `login-with-toss`만 `false`, 나머지 `true`
 
 **개발 프로세스:**
 - 파일 읽기 선행, 코드 재사용, BE↔FE 동기화
-- 생성 순서: types → api → hooks → components → pages → backend → tests
+- 생성 순서: types → api → hooks → components → screens → backend → tests
 - 3-Layer Architecture: Router → Service → Repository
 
 **토스 전용 규칙:**
@@ -791,8 +838,8 @@ supabase/
 | 핵심 문서 | `https://developers-apps-in-toss.toss.im/llms.txt` |
 | 전체 문서 | `https://developers-apps-in-toss.toss.im/llms-full.txt` |
 | 예제 코드 | `https://developers-apps-in-toss.toss.im/tutorials/examples.md` |
-| TDS WebView | `https://tossmini-docs.toss.im/tds-mobile/llms-full.txt` |
-| TDS React Native | `https://tossmini-docs.toss.im/tds-react-native/llms-full.txt` **(참조 전용 — 본 프로젝트 WebView only, 미사용)** |
+| TDS WebView | `https://tossmini-docs.toss.im/tds-mobile/llms-full.txt` **(참조 전용 — 본 프로젝트 React Native, 미사용)** |
+| **TDS React Native** | `https://tossmini-docs.toss.im/tds-react-native/llms-full.txt` **(본 프로젝트 주 참조)** |
 
 ### B.3 기존 CLAUDE.md 핵심 원칙 계승
 - 파일 읽기 선행, 폴더별 CLAUDE.md 우선, 파일 헤더 요약 주석
@@ -816,7 +863,7 @@ supabase/
 - [ ] IAP 상품 설명 정확성, 환불 정책 명시
 - [ ] Smart Message 빈도 제한/쿨다운 정책 적용 확인
 - [ ] Sandbox/QR 테스트 완료
-- [ ] WebView 성능 기준 충족 (60fps 스크롤, 앱 진입 2초 이내)
+- [ ] React Native 성능 기준 충족 (60fps 스크롤, 앱 진입 1초 이내)
 - [ ] mTLS 연결 검증, 에러 상태 사용자 친화적 처리
 - [ ] SDK changelog 확인 (getPendingOrders 반환 구조 변경 여부)
 
@@ -839,7 +886,7 @@ supabase/
 ### Phase 0: 셋업 & 인프라 (1-2주)
 1. Toss Developers Console 앱 등록
 2. mTLS 인증서 발급 → Base64 인코딩 → Supabase secrets 저장
-3. `@apps-in-toss/web-framework` 프로젝트 스캐폴드
+3. `@apps-in-toss/react-native-framework` 프로젝트 스캐폴드 + TDS RN PoC
 4. MCP 서버 설정
 5. CI/CD 파이프라인 구성
 6. IAP 테스트 상품 등록 + Smart Message 템플릿 생성

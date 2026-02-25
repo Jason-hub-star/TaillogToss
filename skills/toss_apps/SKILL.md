@@ -85,3 +85,76 @@ Apps in Toss provides an **MCP (Model Context Protocol)** server for Cursor and 
 - **Sandbox App**: Mandatory for local/TDS testing.
 - **QR Test**: Use `intoss-private://` scheme for private bundle testing.
 - **UX Writing**: Review mandatory [UX Writing Guide](https://developers-apps-in-toss.toss.im/design/ux-writing.html) to pass inspection.
+
+## 8. Toss + Supabase Integration Pattern
+
+### End-to-End Login Flow
+Follow this runtime path:
+1. Client calls `appLogin()` from `@apps-in-toss/framework`.
+2. Client sends `{ authorizationCode, referrer }` to Supabase Edge Function (`login-with-toss`).
+3. Edge Function calls Toss OAuth endpoints with mTLS:
+   - `POST /api-partner/v1/apps-in-toss/user/oauth2/generate-token`
+   - `GET /api-partner/v1/apps-in-toss/user/oauth2/login-me`
+4. Edge Function maps Toss `userKey` to Supabase Auth account.
+5. Edge Function returns Supabase session tokens.
+6. Client runs `supabase.auth.setSession()` and continues onboarding.
+
+### Client Baseline
+- Env: `EXPO_PUBLIC_SUPABASE_URL`, `EXPO_PUBLIC_SUPABASE_ANON_KEY`
+- Init:
+```ts
+import { createClient } from '@supabase/supabase-js';
+const supabase = createClient(process.env.EXPO_PUBLIC_SUPABASE_URL!, process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY!);
+```
+- Login bridge:
+```ts
+const { data } = await supabase.functions.invoke('login-with-toss', {
+  body: { authorizationCode, referrer },
+});
+await supabase.auth.setSession({
+  access_token: data.access_token,
+  refresh_token: data.refresh_token,
+});
+```
+
+### Edge Function Baseline
+Use server secrets only:
+- `SUPER_SECRET_PEPPER`
+- `SUPABASE_URL`
+- `SUPABASE_SERVICE_ROLE_KEY`
+- `TOSS_CLIENT_CERT_BASE64`
+- `TOSS_CLIENT_KEY_BASE64`
+
+Function requirements:
+1. Decode cert/key base64 and create `Deno.createHttpClient({ cert, key })`.
+2. Call Toss OAuth APIs using `client: tossHttpClient`.
+3. Derive deterministic password from `tossUserKey + pepper` (PBKDF2).
+4. Sign in existing auth user, otherwise create user and insert `public.users`.
+5. Return session payload (`access_token`, `refresh_token`).
+
+### Supabase Config
+Example `supabase/config.toml`:
+```toml
+[functions.login-with-toss]
+enabled = true
+verify_jwt = true
+import_map = "./functions/login-with-toss/deno.json"
+entrypoint = "./functions/login-with-toss/index.ts"
+```
+
+If pre-login invoke gets 401, use `verify_jwt = false` for this endpoint or ensure JWT exists before invoke.
+
+### DB Contract
+Use UUID identity linked to `auth.users`:
+```sql
+CREATE TABLE IF NOT EXISTS public.users (
+  id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  toss_user_key TEXT UNIQUE NOT NULL,
+  role TEXT DEFAULT 'user' NOT NULL CHECK (role IN ('user', 'trainer', 'admin'))
+);
+ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Allow individual read access" ON public.users FOR SELECT USING (auth.uid() = id);
+CREATE POLICY "Allow individual update access" ON public.users FOR UPDATE USING (auth.uid() = id);
+```
+
+Never mix integer `users.id` schema with Supabase Auth UUID schema.

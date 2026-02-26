@@ -1,24 +1,27 @@
 /**
- * 온보딩 설문 화면 — Stepper Form 레이아웃 (견종/나이/문제행동 수집)
+ * 온보딩 설문 화면 — SurveyContainer(7단계) 래핑
+ * 설문 완료 → survey-result로 이동
  * Parity: AUTH-001
  */
 import { createRoute } from '@granite-js/react-native';
-import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import React, { useCallback } from 'react';
+import { SurveyContainer } from 'components/features/survey/SurveyContainer';
+import type { SurveyData } from 'types/dog';
 
 export const Route = createRoute('/onboarding/survey', {
   component: SurveyPage,
 });
 
 function SurveyPage() {
-  return (
-    <View style={styles.container}>
-      <Text style={styles.text}>Survey</Text>
-    </View>
-  );
-}
+  const handleComplete = useCallback((data: SurveyData) => {
+    // TODO: 설문 데이터 저장 (API) + survey-result로 이동
+    // navigation.push('/onboarding/survey-result', { surveyData: data })
+    void data;
+  }, []);
 
-const styles = StyleSheet.create({
-  container: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#fff' },
-  text: { fontSize: 18, color: '#202632' },
-});
+  const handleBack = useCallback(() => {
+    // TODO: navigation.back() — welcome으로 돌아감
+  }, []);
+
+  return <SurveyContainer onComplete={handleComplete} onBack={handleBack} />;
+}

@@ -7,6 +7,13 @@
 - 작은 단위로 완료 가능한 수직 슬라이스를 우선한다.
 - 각 Wave는 기능/품질/운영 게이트를 모두 통과해야 종료한다.
 
+## 1.1) 정합성 고정 규칙
+
+- `UserRole` 표준은 `user | trainer | org_owner | org_staff`를 사용한다.
+- 광고 배치 계약은 `R1=survey-result`, `R2=dashboard`, `R3=coaching-result`로 고정한다.
+- 백엔드 경로 계약: `Backend/app/...`(FastAPI), `Backend/alembic/...`(마이그레이션), `supabase/functions/...`(Edge Functions).
+- B2B 구현은 Wave 3 진입 전까지 타입/테이블 스텁만 허용하며, 사용자 노출 기능은 금지한다.
+
 ## 2) Wave 계획
 
 ### Wave 0: Foundation

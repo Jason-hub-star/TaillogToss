@@ -320,25 +320,25 @@ $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
 ### 2.1 `users.role` CHECK 확장
 
-> **SKILL.md Section 8 DB Contract 기준**: v1은 `('user','trainer','admin')`. B2B에서 `'org_owner','org_staff'` 2개 추가.
+> **CLAUDE.md 정합성 고정 규칙 기준**: UserRole 표준은 `('user','trainer','org_owner','org_staff')`.
+> 시스템 관리 작업은 Supabase `service_role` + Edge Function으로 수행한다 (별도 admin 역할 불필요).
 
 ```sql
--- 기존 CHECK 제거 후 확장 (B2C 기존 3값 유지 + B2B 2값 추가)
+-- 기존 CHECK 제거 후 4개 역할로 재설정
 ALTER TABLE public.users DROP CONSTRAINT IF EXISTS users_role_check;
 ALTER TABLE public.users ADD CONSTRAINT users_role_check
-  CHECK (role IN ('user', 'trainer', 'admin', 'org_owner', 'org_staff'));
+  CHECK (role IN ('user', 'trainer', 'org_owner', 'org_staff'));
 ```
 
 **역할 매핑**:
 | role | 대상 | B2C/B2B |
 |------|------|---------|
-| `user` | 일반 보호자 | B2C (기존) |
-| `trainer` | 훈련사 (개인/센터 공통) | B2C 기존 + B2B 확장 |
-| `admin` | 시스템 관리자 | B2C (기존) |
+| `user` | 일반 보호자 | B2C |
+| `trainer` | 훈련사 (개인/센터 공통) | B2C + B2B |
 | `org_owner` | 센터 대표 | B2B 전용 |
 | `org_staff` | 센터 직원 | B2B 전용 |
 
-> **Note**: `trainer`는 SKILL.md v1에 이미 존재. B2B에서 새로 추가하는 값은 `org_owner`, `org_staff` 2개뿐.
+> **Note**: `trainer`는 B2C에 이미 존재. B2B에서 새로 추가하는 값은 `org_owner`, `org_staff` 2개.
 
 ---
 

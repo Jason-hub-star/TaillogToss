@@ -222,7 +222,7 @@
 CREATE TABLE IF NOT EXISTS public.users (
   id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
   toss_user_key TEXT UNIQUE NOT NULL,
-  role TEXT DEFAULT 'user' NOT NULL CHECK (role IN ('user', 'trainer', 'admin'))
+  role TEXT DEFAULT 'user' NOT NULL CHECK (role IN ('user', 'trainer', 'org_owner', 'org_staff'))
 );
 ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Allow individual read access" ON public.users FOR SELECT USING (auth.uid() = id);
@@ -231,7 +231,7 @@ CREATE POLICY "Allow individual update access" ON public.users FOR UPDATE USING 
 
 **절대 규칙**: integer `users.id`와 Supabase Auth UUID를 혼용하지 않음
 
-> **B2B 확장 시 role enum 변경**: B2B Phase 7에서 `role` CHECK를 `('user','trainer','admin','org_owner','org_staff')` 로 확장한다. 기존 B2C 값(`'user','trainer','admin'`)은 유지되며, 신규 값은 B2B 전용이다. 상세: [SCHEMA-B2B.md](SCHEMA-B2B.md) 섹션 2
+> **UserRole 표준 (CLAUDE.md 정합성 고정 규칙)**: `('user','trainer','org_owner','org_staff')` 4개. 시스템 관리는 Supabase `service_role`로 수행. `org_owner`/`org_staff`는 B2B 전용. 상세: [SCHEMA-B2B.md](SCHEMA-B2B.md) 섹션 2
 
 ### 6.2 마이그레이션 전략
 

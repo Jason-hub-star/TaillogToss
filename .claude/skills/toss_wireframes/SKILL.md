@@ -478,7 +478,7 @@ DogCoach(Next.js) → TaillogToss(React Native) 마이그레이션 대상 화면
 ```
 
 **사용 컴포넌트**: `Navbar(.Title)`, `Badge`, `Tab`, `ListRow(.Icon, .Texts)`, `FlatList`(RN 기본), `Loader`, `BottomInfo`
-**권한**: `role IN ('trainer', 'admin')` RLS 정책 필수. 일반 사용자 접근 시 `ErrorPage` 표시
+**권한**: `role IN ('trainer', 'org_owner', 'org_staff')` RLS 정책 필수. 일반 사용자 접근 시 `ErrorPage` 표시
 
 ---
 

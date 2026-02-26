@@ -23,7 +23,7 @@ Apps in Toss run within the Toss application, leveraging its massive traffic.
 
 ### Implementations
 - **Web (WebView)**: Uses `@apps-in-toss/web-framework`. Mandatory **TDS WebView** for non-game apps.
-- **React Native**: Uses `@apps-in-toss/react-native-framework` with file-based routing.
+- **React Native**: Uses `@granite-js/react-native` as the runtime baseline (the `@apps-in-toss/react-native-framework` template can be used when scaffolding), with file-based routing.
 - **Game Engine**: Unity/Cocos support via plugins.
 
 ### JavaScript SDK (`AppsInToss` object)
@@ -122,6 +122,7 @@ The `AppsInToss` SDK (likely available globally or via the framework) provides:
 - **Requirement**: All S2S communication **must** use mTLS.
 - **Certificates**: Issued via the Developers Console.
 - **Network**: Allow Toss Inbound/Outbound IP ranges in your firewall.
+- **Repo Path Contract**: This project keeps backend code in-repo at `Backend/app/...` and migrations at `Backend/alembic/...`, while Toss bridge functions stay in `supabase/functions/...`.
 
 ## 5. S2S API & Authentication
 
@@ -148,9 +149,28 @@ Apps in Toss provides an **MCP (Model Context Protocol)** server for Cursor and 
 - **Claude Code**: Install from marketplace.
 
 ## 7. Testing & Launch Checklist
-- **Sandbox App**: Mandatory for local/TDS testing.
-- **QR Test**: Use `intoss-private://` scheme for private bundle testing.
-- **UX Writing**: Review mandatory [UX Writing Guide](https://developers-apps-in-toss.toss.im/design/ux-writing.html) to pass inspection.
+
+### 단계 1: 로컬 개발 (일상 개발 기본)
+- `npm run dev`로 로컬 개발 서버 실행
+- iOS Simulator / Android Emulator에서 토스 샌드박스 앱으로 로컬 검수
+- Android 에뮬레이터 연결: `adb reverse tcp:8081 tcp:8081` + `adb reverse tcp:5173 tcp:5173`
+- 샌드박스 앱에서는 문서 표기(`Bedrock 열기`) 기준으로 개발 서버 진입
+- Hot Reload 중심으로 UI/상태/라우팅 검수
+- 참고: 일상 개발은 폰 연결 없이 가능하지만, 토스 인증/일부 시나리오는 실기기 확인이 필요할 수 있음
+
+### 단계 2: 코드 레벨 테스트 (자동화)
+- FE 단위: Jest + React Native Testing Library
+- BE 단위: pytest
+- 통합: Toss Auth mock, IAP 시뮬레이션, Edge Function contract test
+- IAP 통합 테스트에 `verify-iap-order` 실패 복구 케이스 포함
+
+### 단계 3: Sandbox/실기기 테스트 (출시 전 필수)
+- 토스 Sandbox 앱 실기기 테스트 최소 1회 완료 후 심사 요청
+- `.ait` 번들 업로드 + QR 테스트로 실환경 플로우 확인
+- IAP 필수 3시나리오: 구매 성공 / 결제 성공 후 서버 지급 실패 복구 / 에러 처리
+- 광고는 Sandbox 앱에서 테스트 불가. 토스 앱 QR 테스트로 별도 검증
+- `intoss-private://` 스킴 기반 사설 번들 테스트 활용
+- 릴리즈 전 UX Writing 가이드 필수 점검: [UX Writing Guide](https://developers-apps-in-toss.toss.im/design/ux-writing.html)
 
 ## 7.5 TDS 컴포넌트 갭 및 대안
 
@@ -252,7 +272,7 @@ export function ChartWebView({ type, data, height = 250 }: ChartWebViewProps) {
 
 ### 제약 사항
 - `react-native-google-mobile-ads` 직접 사용 **불가** → 토스 통합 SDK 필수
-- 토스 광고 우선 노출 → AdMob 자동 폴백 (토스 내부 로직)
+- 토스 광고 우선 노출. AdMob 폴백은 토스 SDK 공식 지원 범위에서만 허용 (미지원 시 무광고 폴백)
 - 테스트 ID: `ait-ad-test-rewarded-id`
 
 ### 보상형 광고 터치포인트 (3개)
@@ -310,6 +330,7 @@ Function requirements:
 3. Derive deterministic password from `tossUserKey + pepper` (PBKDF2).
 4. Sign in existing auth user, otherwise create user and insert `public.users`.
 5. Return session payload (`access_token`, `refresh_token`).
+- Path note: Edge Functions live under `supabase/functions/...`; FastAPI server code lives under `Backend/app/...` in this repository.
 
 ### Supabase Config
 Example `supabase/config.toml`:
@@ -329,7 +350,7 @@ Use UUID identity linked to `auth.users`:
 CREATE TABLE IF NOT EXISTS public.users (
   id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
   toss_user_key TEXT UNIQUE NOT NULL,
-  role TEXT DEFAULT 'user' NOT NULL CHECK (role IN ('user', 'trainer', 'admin'))
+  role TEXT DEFAULT 'user' NOT NULL CHECK (role IN ('user', 'trainer', 'org_owner', 'org_staff'))
 );
 ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Allow individual read access" ON public.users FOR SELECT USING (auth.uid() = id);

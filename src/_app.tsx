@@ -13,6 +13,7 @@ import { OrgProvider } from 'stores/OrgContext';
 import { SurveyProvider } from 'stores/SurveyContext';
 import { rewriteInitialUrlForDeepEntry } from 'lib/guards';
 import { usePendingOrderRecovery } from 'lib/hooks/useSubscription';
+import { DevMenu } from 'components/shared/DevMenu';
 
 /** 미완료 IAP 주문 복구 — 앱 마운트 시 자동 실행 */
 function PendingOrderRecovery() {
@@ -28,7 +29,10 @@ function AppContainer({ children }: PropsWithChildren<InitialProps>) {
         <PendingOrderRecovery />
         <ActiveDogProvider>
           <OrgProvider>
-            <SurveyProvider>{children}</SurveyProvider>
+            <SurveyProvider>
+              {children}
+              {__DEV__ && <DevMenu />}
+            </SurveyProvider>
           </OrgProvider>
         </ActiveDogProvider>
       </AuthProvider>

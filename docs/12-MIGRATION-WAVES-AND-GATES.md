@@ -27,14 +27,16 @@
 
 ### Wave 1: Core B2C
 
-- 범위: 대시보드/행동기록/AI 코칭 기본 플로우
-- 대상 Parity: `LOG-001`, `AI-001`, `UI-001`
+- 범위: 대시보드/행동기록/AI 코칭 기본 플로우 + 광고 터치포인트
+- 대상 Parity: `LOG-001`, `AI-001`, `UI-001`, `AD-001`
 - Exit Gate:
   - [x] TDS RN 기반 화면 16개 전환 완료 (3+ 초과 달성)
   - [x] 기록 생성/조회 UI 완료
   - [x] 코칭 UI 완료
+  - [x] AD-001: R1/R2/R3 보상형 광고 훅+컴포넌트+페이지 통합 (mock SDK)
   - [ ] 기록→코칭 E2E 1회 통과 — Supabase 실 연동 대기
-- **상태: 부분 통과 (FE 완료, BE 연동 대기)**
+  - [ ] 사업자등록 후 실제 Ad Unit ID 교체 + Sandbox 광고 검증
+- **상태: 부분 통과 (FE 완료, BE 연동 + 실 광고 SDK 대기)**
 
 ### Wave 2: Toss Core Features
 

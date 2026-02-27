@@ -47,8 +47,7 @@ TDS에 없는 UI 패턴을 React Native 기본 컴포넌트로 구현.
 | `log/` | 7 | LogCard, ABCForm |
 | `coaching/` | 8 | CoachingBlock, PlanSelector |
 | `training/` | 8 | CurriculumCard, MissionChecklist |
-| `dog/` | 9 | DogProfileForm |
-| `settings/` | 9 | SubscriptionCompare |
+| `settings/` | 9 | (비어있음 — SubscriptionCompare는 페이지 인라인) |
 | `ops/` | B2B | OpsList, OpsListItem, OpsBadge, OpsBottomInfo, RecordModal, BulkActionBar, BulkPresetSheet, PresetChipGrid, ReportCard, ReportPreviewSheet, MemberList, InviteSheet, OrgStatsSheet, PresetManager (14개) |
 | `parent/` | B2B | ReportViewer, ReactionForm (2개) |
 

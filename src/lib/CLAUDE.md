@@ -4,7 +4,7 @@
 
 ## 구조
 
-### api/ — Supabase 도메인별 API (11개)
+### api/ — Supabase 도메인별 API (13개)
 
 | 파일 | 도메인 | Parity |
 |------|--------|--------|
@@ -16,23 +16,24 @@
 | `coaching.ts` | AI 코칭 결과 조회/피드백 | AI-001 |
 | `training.ts` | 훈련 진행 상태 CRUD | UI-001 |
 | `subscription.ts` | IAP 구매 검증 (Edge Function) | IAP-001 |
+| `iap.ts` | IAP SDK 래퍼 (createOneTimePurchaseOrder + getPendingOrders 복구) | IAP-001 |
 | `settings.ts` | 알림 선호도, AI 페르소나 | APP-001 |
 | `notification.ts` | Smart Message 발송 (Edge Function) | MSG-001 |
 | `org.ts` | B2B 조직/멤버/강아지/배정 CRUD + today 상태 JOIN + entitlement 카운트 | B2B-001 |
 | `report.ts` | B2B 리포트 생성/조회/발송/보호자 인터랙션 | B2B-001 |
 
-### hooks/ — 도메인별 커스텀 훅 (15개)
+### hooks/ — 도메인별 커스텀 훅 (16개)
 
 각 훅은 대응하는 `api/` 파일을 TanStack Query로 래핑하거나 독립 로직 관리.
 
 | 파일 | 주요 export |
 |------|------------|
 | `useAuth.ts` | `useLogin()`, `useLogout()` |
-| `useDogs.ts` | `useDogList()`, `useDogDetail()`, `useCreateDogFromSurvey()`, `useDeleteDog()` |
+| `useDogs.ts` | `useDogList()`, `useDogDetail()`, `useDogEnv()`, `useUpdateDog()`, `useCreateDogFromSurvey()`, `useDeleteDog()` |
 | `useLogs.ts` | `useLogList()`, `useDailyLogs()`, `useCreateQuickLog()`, `useCreateDetailedLog()` |
 | `useCoaching.ts` | `useCoachingList()`, `useLatestCoaching()`, `useSubmitFeedback()` |
 | `useTraining.ts` | `useTrainingProgress()`, `useStartTraining()`, `useCompleteStep()` |
-| `useSubscription.ts` | `useCurrentSubscription()`, `useIsPro()`, `usePurchaseIAP()` |
+| `useSubscription.ts` | `useCurrentSubscription()`, `useIsPro()`, `usePurchaseIAP()`, `usePendingOrderRecovery()`, `useRestoreSubscription()` |
 | `useSettings.ts` | `useUserSettings()`, `useUpdateSettings()` |
 | `useNotification.ts` | `useNotificationHistory()` |
 | `usePageGuard.ts` | `usePageGuard()` — 11개 페이지 인증/온보딩/기능 가드 |
@@ -42,12 +43,13 @@
 | `useOrg.ts` | `useOrgDogs()`, `useEnrollDog(maxDogs)`, `useInviteMember(maxStaff)`, `useOrgTodayStats()` 등 |
 | `useReport.ts` | `useOrgReports()`, `useGenerateReport()`, `useSendReport()`, `useCreateInteraction()` 등 |
 | `useOrgSubscription.ts` | `useOrgSubscription()`, `useOrgEntitlement()`, `usePurchaseB2BIAP()` |
+| `pageGuardEvaluator.ts` | 페이지 가드 평가 로직 (usePageGuard 내부 유틸) |
 
 ### ads/ — 광고 SDK 설정 (1개) ✅ Phase 12
 
 | 파일 | 용도 |
 |------|------|
-| `config.ts` | 토스 Ads SDK 2.0 인터페이스, mock SDK 싱글턴, AD_UNIT_IDS R1/R2/R3 |
+| `config.ts` | 토스 Ads SDK 2.0 ver2 인터페이스, mock SDK 싱글턴, AD_GROUP_IDS R1/R2/R3 |
 
 ### charts/ — WebView + Chart.js (3개)
 

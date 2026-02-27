@@ -12,6 +12,7 @@ export function useLogin() {
   const loginWithToss = useCallback(
     async (authCode: string) => {
       const result = await authApi.loginWithToss(authCode);
+      await authApi.setSessionFromBridgeResponse(result);
       login(result.user);
       return result;
     },

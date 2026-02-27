@@ -8,12 +8,13 @@ import { createMTLSClient, type MTLSClient } from '../_shared/mTLSClient.ts';
 import { resolvePeppersFromEnv, deriveWithLatestPepper, type PepperConfig } from '../_shared/pepperRotation.ts';
 import { safeLogPayload } from '../_shared/piiGuard.ts';
 import { loginRateLimiter, type InMemoryRateLimiter } from '../_shared/rateLimiter.ts';
+import { decryptTossPiiField, isTossEncryptedField } from '../_shared/tossPiiDecrypt.ts';
 
-type UnlinkReferrer = 'UNLINK' | 'WITHDRAWAL_TERMS' | 'WITHDRAWAL_TOSS';
+type TossLoginReferrer = 'DEFAULT' | 'sandbox' | string;
 
 export interface LoginWithTossRequest {
   authorizationCode: string;
-  referrer?: UnlinkReferrer;
+  referrer?: TossLoginReferrer;
   nonce: string;
 }
 
@@ -39,9 +40,15 @@ interface LoginFailureState {
   blockedUntil?: number;
 }
 
+interface TossStatusError extends Error {
+  status?: number;
+  code?: string;
+}
+
 interface LoginHandlerDeps {
   mTLSClient: MTLSClient;
   peppers: PepperConfig[];
+  tossPiiDecryptionKey: string | null;
   rateLimiter: InMemoryRateLimiter;
   now: () => Date;
   logger?: (event: string, payload: Record<string, unknown>) => void;
@@ -82,23 +89,57 @@ function getBlockRetrySeconds(clientKey: string, nowMs: number): number {
   return Math.ceil(remainingMs / 1000);
 }
 
+function readEnv(name: string): string | undefined {
+  const fromNode = (globalThis as { process?: { env?: Record<string, string | undefined> } })
+    .process?.env?.[name];
+  if (fromNode) return fromNode;
+
+  const fromDeno = (globalThis as { Deno?: { env?: { get: (key: string) => string | undefined } } })
+    .Deno?.env?.get(name);
+  return fromDeno;
+}
+
+function resolveTossPiiDecryptionKey(): string | null {
+  return (
+    readEnv('TOSS_PII_DECRYPTION_KEY_BASE64') ??
+    readEnv('TOSS_PROFILE_DECRYPTION_KEY_BASE64') ??
+    readEnv('TOSS_PROFILE_DECRYPTION_KEY') ??
+    null
+  );
+}
+
+function resolveMtlsMode(): 'real' | 'mock' {
+  const explicit = readEnv('TOSS_MTLS_MODE')?.trim().toLowerCase();
+  if (explicit === 'real') return 'real';
+  if (explicit === 'mock') return 'mock';
+
+  // 기본은 실연동 우선. 단, 인증서/키가 둘 다 없으면 로컬 개발을 위해 mock으로 폴백한다.
+  const cert = readEnv('TOSS_CLIENT_CERT_BASE64');
+  const key = readEnv('TOSS_CLIENT_KEY_BASE64');
+  return cert && key ? 'real' : 'mock';
+}
+
 function defaultLoginDeps(): LoginHandlerDeps {
   return {
-    mTLSClient: createMTLSClient('mock'),
+    mTLSClient: createMTLSClient(resolveMtlsMode()),
     peppers: resolvePeppersFromEnv({
-      SUPER_SECRET_PEPPER: process.env.SUPER_SECRET_PEPPER,
-      SUPER_SECRET_PEPPER_V1: process.env.SUPER_SECRET_PEPPER_V1,
-      SUPER_SECRET_PEPPER_V2: process.env.SUPER_SECRET_PEPPER_V2,
+      SUPER_SECRET_PEPPER: readEnv('SUPER_SECRET_PEPPER'),
+      SUPER_SECRET_PEPPER_V1: readEnv('SUPER_SECRET_PEPPER_V1'),
+      SUPER_SECRET_PEPPER_V2: readEnv('SUPER_SECRET_PEPPER_V2'),
     }),
+    tossPiiDecryptionKey: resolveTossPiiDecryptionKey(),
     rateLimiter: loginRateLimiter,
     now: () => new Date(),
+    logger: (event: string, payload: Record<string, unknown>) => {
+      console.log(`[login-with-toss] ${event}`, JSON.stringify(payload));
+    },
   };
 }
 
 function normalizeRequest(input: LoginWithTossRequest): LoginWithTossRequest {
   return {
     authorizationCode: input.authorizationCode?.trim() ?? '',
-    referrer: input.referrer,
+    referrer: input.referrer?.trim() ?? undefined,
     nonce: input.nonce?.trim() ?? '',
   };
 }
@@ -139,8 +180,44 @@ export function createLoginWithTossHandler(overrides?: Partial<LoginHandlerDeps>
     }
 
     try {
-      const token = await deps.mTLSClient.exchangeAuthorizationCode(request.authorizationCode);
+      const token = await deps.mTLSClient.exchangeAuthorizationCode(
+        request.authorizationCode,
+        request.referrer ?? 'DEFAULT'
+      );
       const profile = await deps.mTLSClient.fetchLoginProfile(token.accessToken);
+      const encryptedPiiCount = [
+        profile.name,
+        profile.phone,
+        profile.birthday,
+        profile.ci,
+        profile.gender,
+        profile.nationality,
+        profile.email,
+      ].filter(isTossEncryptedField).length;
+
+      try {
+        // 복호화 결과는 필요한 순간에만 사용하고, 로그/응답에는 포함하지 않는다.
+        await Promise.all([
+          decryptTossPiiField(profile.name, deps.tossPiiDecryptionKey),
+          decryptTossPiiField(profile.phone, deps.tossPiiDecryptionKey),
+          decryptTossPiiField(profile.birthday, deps.tossPiiDecryptionKey),
+          decryptTossPiiField(profile.ci, deps.tossPiiDecryptionKey),
+          decryptTossPiiField(profile.gender, deps.tossPiiDecryptionKey),
+          decryptTossPiiField(profile.nationality, deps.tossPiiDecryptionKey),
+          decryptTossPiiField(profile.email, deps.tossPiiDecryptionKey),
+        ]);
+      } catch (error) {
+        deps.logger?.(
+          'login_with_toss_pii_decrypt_failed',
+          safeLogPayload({
+            clientKey: context.clientKey,
+            referrer: request.referrer,
+            encryptedPiiCount,
+            keyConfigured: !!deps.tossPiiDecryptionKey,
+            errorMessage: error instanceof Error ? error.message : 'unknown',
+          })
+        );
+      }
 
       const pepper = deriveWithLatestPepper(profile.userKey, deps.peppers);
       const sessionHint = pepper.password.slice(-8);
@@ -169,6 +246,8 @@ export function createLoginWithTossHandler(overrides?: Partial<LoginHandlerDeps>
           clientKey: context.clientKey,
           referrer: request.referrer,
           userKey: profile.userKey,
+          encryptedPiiCount,
+          piiKeyConfigured: !!deps.tossPiiDecryptionKey,
         })
       );
 
@@ -176,17 +255,30 @@ export function createLoginWithTossHandler(overrides?: Partial<LoginHandlerDeps>
       return ok(response);
     } catch (error) {
       const retryAfterSeconds = updateLoginFailure(context.clientKey, nowMs);
+      const statusError = error as TossStatusError;
+      const upstreamStatus = typeof statusError.status === 'number' ? statusError.status : undefined;
+      const upstreamCode = typeof statusError.code === 'string' ? statusError.code : undefined;
+      const upstreamMessage = statusError.message?.slice(0, 240);
+
       deps.logger?.('login_with_toss_failure',
         safeLogPayload({
           clientKey: context.clientKey,
           referrer: request.referrer,
-          errorMessage: error instanceof Error ? error.message : 'unknown',
+          upstreamStatus,
+          upstreamCode,
+          errorMessage: upstreamMessage ?? 'unknown',
         })
       );
 
+      const details: Record<string, unknown> = {};
+      if (retryAfterSeconds > 0) details.retryAfterSeconds = retryAfterSeconds;
+      if (upstreamStatus !== undefined) details.upstreamStatus = upstreamStatus;
+      if (upstreamCode !== undefined) details.upstreamCode = upstreamCode;
+      if (upstreamMessage) details.upstreamMessage = upstreamMessage;
+
       return fail('AUTH_LOGIN_FAILED', 'Failed to complete Toss login', 502, {
         retryable: true,
-        details: retryAfterSeconds > 0 ? { retryAfterSeconds } : undefined,
+        details: Object.keys(details).length > 0 ? details : undefined,
       });
     }
   };

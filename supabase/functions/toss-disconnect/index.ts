@@ -6,7 +6,6 @@
  */
 
 import { fail, ok } from '../_shared/contracts.ts';
-import { safeLogPayload } from '../_shared/piiGuard.ts';
 
 type DisconnectReferrer = 'UNLINK' | 'WITHDRAWAL_TERMS' | 'WITHDRAWAL_TOSS';
 
@@ -16,6 +15,22 @@ interface DisconnectRequest {
 }
 
 const VALID_REFERRERS: DisconnectReferrer[] = ['UNLINK', 'WITHDRAWAL_TERMS', 'WITHDRAWAL_TOSS'];
+const USER_KEY_COLUMNS = ['toss_user_key', 'kakao_sync_id'] as const;
+
+function getSupabaseEnv(): { supabaseUrl: string; serviceKey: string } {
+  const supabaseUrl = Deno.env.get('SUPABASE_URL');
+  const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+  if (!supabaseUrl || !serviceKey) {
+    throw new Error('SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY must be set');
+  }
+  return { supabaseUrl, serviceKey };
+}
+
+function isMissingColumnError(status: number, body: string, column: string): boolean {
+  if (status !== 400) return false;
+  const lowered = body.toLowerCase();
+  return lowered.includes(column.toLowerCase()) && (lowered.includes('could not find') || lowered.includes('column'));
+}
 
 /** 허용 CORS origin: 콘솔 테스트 + Sandbox */
 const ALLOWED_ORIGINS = [
@@ -60,80 +75,115 @@ function hashUserKey(userKey: number): string {
   return `uk_${Math.abs(hash).toString(36)}`;
 }
 
-async function handleUnlink(userKey: number): Promise<void> {
-  const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-  const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+async function patchUserByAnyKey(
+  userKey: number,
+  buildPayload: (column: (typeof USER_KEY_COLUMNS)[number]) => Record<string, unknown>,
+  contextLabel: string,
+): Promise<void> {
+  const { supabaseUrl, serviceKey } = getSupabaseEnv();
+  let lastError = '';
 
-  // toss_user_key → NULL (재연결 가능, 30일 유예 후 데이터 삭제)
-  const res = await fetch(`${supabaseUrl}/rest/v1/users?toss_user_key=eq.${encodeURIComponent(String(userKey))}`, {
-    method: 'PATCH',
-    headers: {
-      'Content-Type': 'application/json',
-      'apikey': serviceKey,
-      'Authorization': `Bearer ${serviceKey}`,
-      'Prefer': 'return=minimal',
-    },
-    body: JSON.stringify({
-      toss_user_key: null,
-      updated_at: new Date().toISOString(),
-    }),
-  });
-  if (!res.ok) throw new Error(`UNLINK PATCH failed: ${res.status}`);
+  for (const column of USER_KEY_COLUMNS) {
+    const res = await fetch(`${supabaseUrl}/rest/v1/users?${column}=eq.${encodeURIComponent(String(userKey))}`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        apikey: serviceKey,
+        Authorization: `Bearer ${serviceKey}`,
+        Prefer: 'return=minimal',
+      },
+      body: JSON.stringify({
+        ...buildPayload(column),
+        updated_at: new Date().toISOString(),
+      }),
+    });
+
+    if (res.ok) return;
+
+    const body = await res.text().catch(() => '');
+    if (isMissingColumnError(res.status, body, column)) {
+      lastError = `${column}:missing`;
+      continue;
+    }
+
+    throw new Error(`${contextLabel} PATCH failed (${column}): ${res.status} ${body}`);
+  }
+
+  throw new Error(`${contextLabel} PATCH failed: no compatible user-key column (${lastError || 'unknown'})`);
+}
+
+async function findUserIdByAnyKey(userKey: number): Promise<string | null> {
+  const { supabaseUrl, serviceKey } = getSupabaseEnv();
+
+  for (const column of USER_KEY_COLUMNS) {
+    const res = await fetch(
+      `${supabaseUrl}/rest/v1/users?${column}=eq.${encodeURIComponent(String(userKey))}&select=id&limit=1`,
+      {
+        headers: {
+          apikey: serviceKey,
+          Authorization: `Bearer ${serviceKey}`,
+        },
+      },
+    );
+
+    if (res.ok) {
+      const users = await res.json();
+      if (users.length > 0) return users[0].id as string;
+      return null;
+    }
+
+    const body = await res.text().catch(() => '');
+    if (isMissingColumnError(res.status, body, column)) {
+      continue;
+    }
+
+    throw new Error(`WITHDRAWAL_TOSS lookup failed (${column}): ${res.status} ${body}`);
+  }
+
+  return null;
+}
+
+function getDisconnectIdempotencyKey(userKeyHash: string, referrer: DisconnectReferrer): string {
+  return `disconnect_${userKeyHash}_${referrer}`.slice(0, 255);
+}
+
+async function handleUnlink(userKey: number): Promise<void> {
+  // 유저키 컬럼이 마이그레이션 상태에 따라 다를 수 있어 둘 다 지원
+  await patchUserByAnyKey(
+    userKey,
+    (column) => ({ [column]: null }),
+    'UNLINK',
+  );
 }
 
 async function handleWithdrawalTerms(userKey: number): Promise<void> {
-  const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-  const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-
   // PII 삭제 + 익명화 (user_xxxxx)
   const anonymId = `user_${String(userKey).slice(-5).padStart(5, '0')}`;
-
-  const res = await fetch(`${supabaseUrl}/rest/v1/users?toss_user_key=eq.${encodeURIComponent(String(userKey))}`, {
-    method: 'PATCH',
-    headers: {
-      'Content-Type': 'application/json',
-      'apikey': serviceKey,
-      'Authorization': `Bearer ${serviceKey}`,
-      'Prefer': 'return=minimal',
-    },
-    body: JSON.stringify({
-      toss_user_key: anonymId,
-      updated_at: new Date().toISOString(),
-    }),
-  });
-  if (!res.ok) throw new Error(`WITHDRAWAL_TERMS PATCH failed: ${res.status}`);
+  await patchUserByAnyKey(
+    userKey,
+    (column) => ({ [column]: anonymId }),
+    'WITHDRAWAL_TERMS',
+  );
 }
 
 async function handleWithdrawalToss(userKey: number): Promise<void> {
-  const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-  const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+  const { supabaseUrl, serviceKey } = getSupabaseEnv();
+  const userId = await findUserIdByAnyKey(userKey);
 
-  // 사용자 조회
-  const userRes = await fetch(
-    `${supabaseUrl}/rest/v1/users?toss_user_key=eq.${encodeURIComponent(String(userKey))}&select=id`,
-    {
-      headers: {
-        'apikey': serviceKey,
-        'Authorization': `Bearer ${serviceKey}`,
-      },
-    }
-  );
-  if (!userRes.ok) throw new Error(`WITHDRAWAL_TOSS lookup failed: ${userRes.status}`);
-  const users = await userRes.json();
-
-  if (users.length > 0) {
-    const userId = users[0].id;
-
+  if (userId) {
     // Supabase Auth 사용자 삭제 → CASCADE로 관련 데이터 삭제
     // 결제 이력은 ON DELETE SET NULL 또는 별도 보존 테이블로 5년 보존
     const delRes = await fetch(`${supabaseUrl}/auth/v1/admin/users/${userId}`, {
       method: 'DELETE',
       headers: {
-        'apikey': serviceKey,
-        'Authorization': `Bearer ${serviceKey}`,
+        apikey: serviceKey,
+        Authorization: `Bearer ${serviceKey}`,
       },
     });
-    if (!delRes.ok) throw new Error(`WITHDRAWAL_TOSS delete failed: ${delRes.status}`);
+    if (!delRes.ok) {
+      const body = await delRes.text().catch(() => '');
+      throw new Error(`WITHDRAWAL_TOSS delete failed: ${delRes.status} ${body}`);
+    }
   }
 }
 
@@ -146,23 +196,24 @@ async function logDisconnect(
   const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
   if (!supabaseUrl || !serviceKey) return;
 
+  const idempotencyKey = getDisconnectIdempotencyKey(userKeyHash, referrer);
   try {
     await fetch(`${supabaseUrl}/rest/v1/noti_history`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'apikey': serviceKey,
-        'Authorization': `Bearer ${serviceKey}`,
-        'Prefer': 'return=minimal',
+        apikey: serviceKey,
+        Authorization: `Bearer ${serviceKey}`,
+        Prefer: 'return=minimal',
       },
       body: JSON.stringify({
-        type: 'toss_disconnect',
-        payload: safeLogPayload({
-          user_key_hash: userKeyHash,
-          referrer,
-          success,
-          processed_at: new Date().toISOString(),
-        }),
+        channel: 'WEB_PUSH',
+        template_code: 'toss_disconnect',
+        template_set_code: `toss_disconnect_${referrer.toLowerCase()}`,
+        sent_at: new Date().toISOString(),
+        success,
+        error_code: success ? null : 'disconnect_failed',
+        idempotency_key: idempotencyKey,
       }),
     });
   } catch {
@@ -178,13 +229,14 @@ async function checkAlreadyProcessed(
   const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
   if (!supabaseUrl || !serviceKey) return false;
 
+  const idempotencyKey = getDisconnectIdempotencyKey(userKeyHash, referrer);
   try {
     const res = await fetch(
-      `${supabaseUrl}/rest/v1/noti_history?type=eq.toss_disconnect&select=payload&limit=1&order=created_at.desc&payload->>user_key_hash=eq.${encodeURIComponent(userKeyHash)}&payload->>referrer=eq.${encodeURIComponent(referrer)}&payload->>success=eq.true`,
+      `${supabaseUrl}/rest/v1/noti_history?select=id&limit=1&idempotency_key=eq.${encodeURIComponent(idempotencyKey)}&success=eq.true`,
       {
         headers: {
-          'apikey': serviceKey,
-          'Authorization': `Bearer ${serviceKey}`,
+          apikey: serviceKey,
+          Authorization: `Bearer ${serviceKey}`,
         },
       },
     );
@@ -215,6 +267,9 @@ Deno.serve(async (req: Request) => {
     );
   }
 
+  let currentUserKeyHash = 'unknown';
+  let currentReferrer: DisconnectReferrer = 'UNLINK';
+
   try {
     let body: DisconnectRequest;
 
@@ -244,6 +299,8 @@ Deno.serve(async (req: Request) => {
     }
 
     const userKeyHash = hashUserKey(userKey);
+    currentUserKeyHash = userKeyHash;
+    currentReferrer = referrer;
 
     // 멱등성: 동일 요청 이미 처리됐으면 즉시 200 반환 (토스 서버 재시도 대응)
     const alreadyProcessed = await checkAlreadyProcessed(userKeyHash, referrer);
@@ -275,8 +332,7 @@ Deno.serve(async (req: Request) => {
       { status: 200, headers }
     );
   } catch (err) {
-    const userKeyHash = 'unknown';
-    await logDisconnect(userKeyHash, 'UNLINK', false);
+    await logDisconnect(currentUserKeyHash, currentReferrer, false);
 
     return new Response(
       JSON.stringify(fail('INTERNAL', String(err), 500)),

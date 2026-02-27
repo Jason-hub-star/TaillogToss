@@ -1,0 +1,93 @@
+---
+name: toss-sandbox-metro
+description: Toss Sandbox 실기기 테스트에서 Metro 서버 연결, 진입 스킴 입력, authorizationCode 기반 로그인 검증을 수행한다. 사용자가 "Sandbox에서 스킴 뭐 입력해", "Metro 어떻게 연결해", "실기기 로그인 테스트 절차"를 물을 때 사용한다.
+---
+
+# Toss Sandbox Metro
+
+## 목적
+- Toss Sandbox 앱에서 로컬 Metro 서버로 앱을 띄우고, 로그인/콜백 검증 증적을 수집한다.
+
+## 빠른 결론
+- 로컬 개발용 진입 스킴: `intoss://{serviceName}`
+- 이 저장소의 `serviceName`: `taillog-app`
+- 따라서 입력값: `intoss://taillog-app`
+
+근거:
+- 공식 Native Quickstart: `intoss://{serviceName}` 형식
+- 이 프로젝트 appName: `taillog-app` (`granite.config.ts`, `src/_app.tsx`)
+
+## 로컬 Metro 연결 절차 (실기기)
+1. 프로젝트 루트에서 `npm run dev` 실행.
+2. Android면 USB 연결 후 아래 실행:
+   - `adb reverse tcp:8081 tcp:8081`
+   - `adb reverse tcp:5173 tcp:5173`
+3. Toss Sandbox 앱(개발자 로그인)에서 진입 스킴 입력 화면으로 이동.
+4. `intoss://taillog-app` 입력 후 진입.
+5. 로그인 버튼을 눌러 Toss Login 플로우 실행.
+
+## 테스트 모드 구분
+- 로컬 코드(지금 편집 중인 코드) 검증: 위 Metro 연결 방식 사용.
+- 콘솔에 업로드한 private 번들 검증: QR / `intoss-private://` 방식 사용.
+
+## 검증 체크리스트
+1. 로그인 성공 케이스
+- 기대: `login-with-toss` 200 + 앱 내 온보딩/대시보드 가드 진입
+- 증적: 전/후 스크린샷, `sb-request-id`, edge log 200
+
+2. 로그인 실패 케이스
+- 기대: 잘못된 코드에서 적절한 에러(예: 400/502)
+- 증적: 에러 화면, edge log 상태코드
+
+3. 연결해제 콜백
+- 기대: 콘솔 테스트 버튼에서 `toss-disconnect` 200
+- 참고: 무인증 직접 호출은 401이 정상
+
+## 트러블슈팅
+- `login-with-toss`가 `WORKER_ERROR(500)`:
+  - `TOSS_MTLS_MODE=real`일 때 `TOSS_CLIENT_CERT_BASE64`, `TOSS_CLIENT_KEY_BASE64` 누락 여부 확인
+- `[Apps In Toss Plugin] 플러그인 옵션이 올바르지 않습니다`:
+  - `granite.config.ts`의 `appsInToss({ brand })` 값 점검
+  - `brand.icon`은 `null` 불가, 문자열이어야 함 (`''` 가능)
+- 스킴 진입 실패:
+  - `intoss://taillog-app` 오탈자 확인
+  - appName이 변경됐으면 `{serviceName}`도 동일하게 변경
+- `GraniteModule could not be found`:
+  - `granite.config.ts`에 `appsInToss()` 플러그인 포함 여부 확인
+  - `src/_app.tsx`가 `AppsInToss.registerApp(...)`를 사용하는지 확인
+  - Sandbox 앱 최신 버전 설치 + Bedrock 경로 진입 재확인
+- `/_404::screen`만 반복:
+  - 초기 진입 URL 보정 필요 (`/_404`를 `/login`으로 normalize)
+  - `pages/_404.tsx`에서 `/login` 리다이렉트 처리 여부 확인
+- Android만 접속 실패:
+  - `adb reverse` 2개 포트 재실행
+
+## 로그인 성공 패턴 (2026-02-27 확정)
+아래 순서를 만족하면 Sandbox 실기기 로그인 성공 패턴으로 본다.
+
+1. 앱 로그 시퀀스
+- `/login::screen` 노출
+- `LOG  [AUTH-001] appLogin referrer SANDBOX`
+- `/onboarding/welcome::screen` 이동
+
+2. Edge 로그 시퀀스
+- 함수: `login-with-toss`
+- 버전: `v11`
+- 상태: `POST 200`
+- request id 예시:
+  - `f52019d7-0162-48bf-b021-de8bc80539de`
+  - `92de76c2-abaa-4d8c-81cc-3e7329fe6d21`
+
+3. 실패 시 분기 포인트(이번 세션 기준)
+- `FunctionsFetchError`: 클라이언트 환경변수/네트워크 점검
+- `FunctionsHttpError + AUTH_LOGIN_FAILED`: Edge 내부 원인 파싱(`upstreamMessage`) 확인
+- `TypeError ... split of undefined`: Edge 응답 래퍼(`{ ok, data }`) 언랩 누락 여부 확인
+
+4. 고정 구현 규칙
+- `referrer`는 대문자/소문자 변환 없이 `appLogin()` 반환값을 그대로 전달
+- `login-with-toss`는 `verify_jwt=false` 유지
+- mTLS 클라이언트는 `Deno.createHttpClient({ cert, key })` 우선, 필요 시 `certChain/privateKey` 폴백
+
+## 공식 문서
+- Native Quickstart (스킴): https://developers-apps-in-toss.toss.im/guide/native/quickstart.html
+- Local server with Metro: https://developers-apps-in-toss.toss.im/guide/native/local-server.html

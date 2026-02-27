@@ -8,20 +8,23 @@
 ## Preconditions
 - [x] Edge Function 4종 배포 `ACTIVE`
 - [x] Runtime invoke 로그(성공/실패) 8건 확보
-- [x] `npm run typecheck`, `npm run lint`, `npm test` 통과
-- [ ] Toss Sandbox 앱 실기기 준비
-- [ ] 사업자등록 후 mTLS cert/key 실환경 반영
-- [ ] 사업자등록 후 실제 Ad Unit ID 반영
+- [ ] `npm run typecheck` 통과 (현재 기존 누적 오류 존재)
+- [x] `npm run lint`, `npm test` 통과
+- [x] Toss Sandbox 앱 실기기 준비 (로컬 Metro 연결 확인)
+- [x] mTLS cert/key 실환경 반영 (secret digest 일치)
+- [x] AUTH-001 실 `authorizationCode` 200 증적 확보 (v11 request id 2건)
+- [ ] 실제 Ad Unit ID 반영
 
 ## E2E Matrix
 
 ### AUTH-001 (Toss Login 브릿지)
-1. 성공: login 버튼 → Edge `login-with-toss` 200 → 대시보드 진입
+1. 성공: login 버튼 → Edge `login-with-toss` 200 → 온보딩/대시보드 가드 진입
 2. 실패: 잘못된 authorization code → 400 처리 + 에러 안내 노출
 
 Evidence:
 - 스크린샷: 로그인 전/후
 - 로그: function status 200/400, request id
+- 진행 메모(2026-02-27): 로컬 Sandbox 라우팅 로그 확인(`/_404` → `/login` → `/onboarding/welcome`), `appLogin referrer=SANDBOX` 확인, Edge `login-with-toss` v11 `POST 200` request id 확보(`f52019d7-0162-48bf-b021-de8bc80539de`, `92de76c2-abaa-4d8c-81cc-3e7329fe6d21`). 남은 항목은 실패 케이스 400 증적 1건.
 
 ### IAP-001 (결제/주문검증)
 1. 성공: 구매 완료 → `verify-iap-order` 200 → 권한/토큰 반영

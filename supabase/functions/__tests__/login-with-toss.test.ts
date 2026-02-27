@@ -1,9 +1,11 @@
 import { InMemoryRateLimiter } from '../_shared/rateLimiter.ts';
+import { createMTLSClient } from '../_shared/mTLSClient.ts';
 import { createLoginWithTossHandler } from '../login-with-toss/index.ts';
 
 describe('login-with-toss handler', () => {
   test('returns session payload on valid request', async () => {
     const handler = createLoginWithTossHandler({
+      mTLSClient: createMTLSClient('mock'),
       rateLimiter: new InMemoryRateLimiter({ windowMs: 60_000, maxRequests: 10 }),
       now: () => new Date('2026-02-26T00:00:00.000Z'),
     });
@@ -22,7 +24,9 @@ describe('login-with-toss handler', () => {
   });
 
   test('rejects short nonce', async () => {
-    const handler = createLoginWithTossHandler();
+    const handler = createLoginWithTossHandler({
+      mTLSClient: createMTLSClient('mock'),
+    });
     const result = await handler(
       {
         authorizationCode: 'valid-code',

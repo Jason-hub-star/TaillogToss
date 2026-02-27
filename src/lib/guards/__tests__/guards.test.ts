@@ -27,24 +27,34 @@ describe('guards', () => {
   });
 
   test('deep entry resolves quick-log route', () => {
-    const route = resolveDeepEntry('granite://taillog-toss?entry=quick-log');
+    const route = resolveDeepEntry('intoss://taillog-app?entry=quick-log');
     expect(route).toBe('/dashboard/quick-log');
   });
 
   test('deep entry with invalid value falls back to dashboard', () => {
-    const route = resolveDeepEntry('granite://taillog-toss?entry=unknown-feature');
+    const route = resolveDeepEntry('intoss://taillog-app?entry=unknown-feature');
     expect(route).toBe('/dashboard');
   });
 
   test('deep entry rewrite removes entry and keeps other query params', () => {
     const rewritten = rewriteInitialUrlForDeepEntry(
-      'granite://taillog-toss?entry=quick-log&type=barking&location=home',
-      'granite'
+      'intoss://taillog-app?entry=quick-log&type=barking&location=home',
+      'intoss'
     );
 
     expect(rewritten).toContain('/dashboard/quick-log');
     expect(rewritten).toContain('type=barking');
     expect(rewritten).toContain('location=home');
     expect(rewritten).not.toContain('entry=');
+  });
+
+  test('deep entry rewrite sends root to login by default', () => {
+    const rewritten = rewriteInitialUrlForDeepEntry('intoss://taillog-app', 'intoss');
+    expect(rewritten).toContain('/login');
+  });
+
+  test('deep entry rewrite normalizes _404 to login', () => {
+    const rewritten = rewriteInitialUrlForDeepEntry('intoss://taillog-app/_404', 'intoss');
+    expect(rewritten).toContain('/login');
   });
 });

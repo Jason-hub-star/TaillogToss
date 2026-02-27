@@ -3,11 +3,21 @@
  * appLogin() → Edge Function(login-with-toss) → setSession → 온보딩/대시보드
  * Parity: AUTH-001
  */
+import { appLogin } from '@apps-in-toss/framework';
 import { createRoute, useNavigation } from '@granite-js/react-native';
 import React, { useState, useCallback } from 'react';
 import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, ActivityIndicator } from 'react-native';
+import * as authApi from 'lib/api/auth';
 import { useAuth } from 'stores/AuthContext';
 import { consumePostLoginRedirect } from 'stores/postLoginRedirect';
+
+interface EdgeFailureMeta {
+  code?: string;
+  message?: string;
+  upstreamStatus?: number;
+  upstreamCode?: string;
+  upstreamMessage?: string;
+}
 
 export const Route = createRoute('/login', {
   component: LoginPage,
@@ -19,30 +29,90 @@ function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const readEdgeFailureMeta = useCallback(async (cause: unknown): Promise<EdgeFailureMeta | null> => {
+    const withContext = cause as { context?: unknown };
+    const context = withContext?.context;
+    if (!context || typeof context !== 'object') return null;
+
+    const response = context as Response;
+    if (typeof response.clone !== 'function') return null;
+
+    try {
+      const payload = await response.clone().json() as {
+        error?: {
+          code?: string;
+          message?: string;
+          details?: Record<string, unknown>;
+        };
+      };
+
+      const details = payload.error?.details ?? {};
+      const upstreamStatusRaw = details.upstreamStatus;
+      const upstreamCodeRaw = details.upstreamCode;
+      const upstreamMessageRaw = details.upstreamMessage;
+
+      return {
+        code: payload.error?.code,
+        message: payload.error?.message,
+        upstreamStatus: typeof upstreamStatusRaw === 'number' ? upstreamStatusRaw : undefined,
+        upstreamCode: typeof upstreamCodeRaw === 'string' ? upstreamCodeRaw : undefined,
+        upstreamMessage: typeof upstreamMessageRaw === 'string' ? upstreamMessageRaw : undefined,
+      };
+    } catch {
+      return null;
+    }
+  }, []);
+
+  const getLoginErrorMessage = useCallback(async (cause: unknown): Promise<string> => {
+    const message = cause instanceof Error ? cause.message : String(cause ?? '');
+    const normalized = message.toLowerCase();
+
+    const edgeMeta = await readEdgeFailureMeta(cause);
+    if (edgeMeta?.code === 'AUTH_LOGIN_FAILED') {
+      const parts: string[] = ['토스 인증 서버 응답 실패'];
+      if (edgeMeta.upstreamStatus !== undefined) {
+        parts.push(`status=${edgeMeta.upstreamStatus}`);
+      }
+      if (edgeMeta.upstreamCode) {
+        parts.push(`code=${edgeMeta.upstreamCode}`);
+      }
+      if (edgeMeta.upstreamMessage) {
+        return `${parts.join(' ')}: ${edgeMeta.upstreamMessage}`;
+      }
+      return `${parts.join(' ')}.`;
+    }
+
+    if (normalized.includes('oauth2clientid')) {
+      return '토스 로그인 설정(oauth2ClientId)이 필요해요. 콘솔 설정을 확인해주세요.';
+    }
+
+    if (normalized.includes('schema') || message.includes('스키마')) {
+      return '토스 앱 스킴 열기에 실패했어요. Sandbox 앱에서 다시 시도해주세요.';
+    }
+
+    if (normalized.includes('cancel')) {
+      return '로그인이 취소되었어요. 다시 시도해주세요.';
+    }
+
+    if (normalized.includes('supabase_env_missing')) {
+      return 'Supabase 설정이 누락되었어요. EXPO_PUBLIC_SUPABASE_URL/EXPO_PUBLIC_SUPABASE_ANON_KEY를 설정해주세요.';
+    }
+
+    return '로그인에 실패했어요. 다시 시도해주세요.';
+  }, [readEdgeFailureMeta]);
+
   const handleTossLogin = useCallback(async () => {
     setIsLoading(true);
     setError(null);
 
     try {
-      // TODO: 사업자등록 후 실제 appLogin() → Edge Function 연동
-      // mock: 1초 후 로그인 성공
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      const { authorizationCode, referrer } = await appLogin();
+      console.log('[AUTH-001] appLogin referrer', referrer ?? '(none)');
+      const loginResult = await authApi.loginWithToss(authorizationCode, referrer);
+      await authApi.setSessionFromBridgeResponse(loginResult);
+      login(loginResult.user);
 
-      const mockUser = {
-        id: 'mock-user-id',
-        toss_user_key: 'mock-toss-key',
-        role: 'user',
-        status: 'active',
-        pepper_version: 1,
-        timezone: 'Asia/Seoul',
-        last_login_at: new Date().toISOString(),
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      } as const;
-
-      login(mockUser);
-
-      const hasCompletedOnboarding = await syncOnboardingStatus(mockUser.id);
+      const hasCompletedOnboarding = await syncOnboardingStatus(loginResult.user.id);
       if (hasCompletedOnboarding) {
         const pending = consumePostLoginRedirect();
         navigation.navigate(pending ?? '/dashboard');
@@ -50,12 +120,14 @@ function LoginPage() {
       }
 
       navigation.navigate('/onboarding/welcome');
-    } catch {
-      setError('로그인에 실패했어요. 다시 시도해주세요.');
+    } catch (cause) {
+      const edgeMeta = await readEdgeFailureMeta(cause);
+      console.error('[AUTH-001] toss login failed', cause, edgeMeta);
+      setError(await getLoginErrorMessage(cause));
     } finally {
       setIsLoading(false);
     }
-  }, [login, navigation, syncOnboardingStatus]);
+  }, [getLoginErrorMessage, login, navigation, readEdgeFailureMeta, syncOnboardingStatus]);
 
   return (
     <SafeAreaView style={styles.safe}>

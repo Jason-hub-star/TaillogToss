@@ -1,0 +1,4 @@
+interface:
+  display_name: "Toss Sandbox Metro"
+  short_description: "Sandbox 스킴/Metro 실기기 검증 가이드"
+  default_prompt: "Toss Sandbox에서 Metro 연결과 진입 스킴 입력, login-with-toss 검증을 진행해줘"

@@ -22,8 +22,8 @@
 - 대상 Parity: `APP-001`, `AUTH-001`
 - Exit Gate:
   - [x] RN 앱 기본 실행 가능
-  - [ ] Toss Login 브릿지 호출 성공(개발 환경) — mock만 완료, 실 mTLS 대기
-- **상태: 부분 통과**
+  - [x] Toss Login 브릿지 호출 성공(개발 환경) — Sandbox 실기기, `login-with-toss` v11 `POST 200` 확인
+- **상태: 통과**
 
 ### Wave 1: Core B2C
 
@@ -35,7 +35,7 @@
   - [x] 코칭 UI 완료
   - [x] AD-001: R1/R2/R3 보상형 광고 훅+컴포넌트+페이지 통합 (mock SDK)
   - [ ] 기록→코칭 E2E 1회 통과 — Supabase 실 연동 대기
-  - [ ] 사업자등록 후 실제 Ad Unit ID 교체 + Sandbox 광고 검증
+  - [ ] 실제 Ad Unit ID 교체 + Sandbox 광고 검증
 - **상태: 부분 통과 (FE 완료, BE 연동 + 실 광고 SDK 대기)**
 
 ### Wave 2: Toss Core Features

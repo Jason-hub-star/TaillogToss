@@ -10,10 +10,31 @@ interface StatusError extends Error {
   code?: string;
 }
 
+import type { TossEncryptedField } from './tossPiiDecrypt.ts';
+
+type TossGenerateTokenReferrer = 'DEFAULT' | 'sandbox' | string;
+
+function readEnv(name: string): string | undefined {
+  const fromNode = (globalThis as { process?: { env?: Record<string, string | undefined> } })
+    .process?.env?.[name];
+  if (fromNode) return fromNode;
+
+  const fromDeno = (globalThis as { Deno?: { env?: { get: (key: string) => string | undefined } } })
+    .Deno?.env?.get(name);
+  return fromDeno;
+}
+
 export interface TossLoginProfile {
   userKey: string;
-  email?: string | null;
-  name?: string | null;
+  email?: string | TossEncryptedField | null;
+  name?: string | TossEncryptedField | null;
+  phone?: string | TossEncryptedField | null;
+  birthday?: string | TossEncryptedField | null;
+  ci?: string | TossEncryptedField | null;
+  gender?: string | TossEncryptedField | null;
+  nationality?: string | TossEncryptedField | null;
+  scope?: string[];
+  agreedTerms?: Array<{ title?: string; required?: boolean; agreed?: boolean }>;
   isNewUser?: boolean;
 }
 
@@ -47,7 +68,10 @@ export interface PointsGrantResult {
 }
 
 export interface MTLSClient {
-  exchangeAuthorizationCode(authorizationCode: string): Promise<{ accessToken: string }>;
+  exchangeAuthorizationCode(
+    authorizationCode: string,
+    referrer?: TossGenerateTokenReferrer
+  ): Promise<{ accessToken: string }>;
   fetchLoginProfile(accessToken: string): Promise<TossLoginProfile>;
   verifyIapOrder(request: {
     orderId: string;
@@ -69,8 +93,36 @@ export interface MTLSClient {
   getPointsGrantResult(executionId: string): Promise<PointsGrantResult>;
 }
 
-const TOSS_API_BASE = 'https://api-partner.toss.im';
+const PRIMARY_TOSS_API_BASE = readEnv('TOSS_API_BASE')?.trim() || 'https://apps-in-toss-api.toss.im';
+const SECONDARY_TOSS_API_BASE = 'https://api-partner.toss.im';
 const TOSS_APP_PATH = '/api-partner/v1/apps-in-toss';
+
+function unwrapTossSuccess<T>(payload: unknown, label: string): T {
+  if (!payload || typeof payload !== 'object') {
+    throw new Error(`Invalid Toss ${label} response`);
+  }
+
+  const row = payload as Record<string, unknown>;
+  const resultType = row.resultType;
+  if (typeof resultType === 'string' && resultType !== 'SUCCESS') {
+    const errorPayload = row.error as Record<string, unknown> | undefined;
+    const reason = typeof errorPayload?.reason === 'string' ? errorPayload.reason : 'unknown';
+    const code = typeof errorPayload?.code === 'string' ? errorPayload.code : undefined;
+    throw new Error(
+      `Toss ${label} failed: reason=${reason}${code ? ` code=${code}` : ''}`
+    );
+  }
+
+  if (resultType === 'SUCCESS' && row.success && typeof row.success === 'object') {
+    return row.success as T;
+  }
+
+  if (row.success && typeof row.success === 'object') {
+    return row.success as T;
+  }
+
+  return row as T;
+}
 
 class RealMTLSClient implements MTLSClient {
   private httpClient: Deno.HttpClient;
@@ -81,10 +133,23 @@ class RealMTLSClient implements MTLSClient {
     if (!certChain || !privateKey) {
       throw new Error('TOSS_CLIENT_CERT_BASE64 and TOSS_CLIENT_KEY_BASE64 must be set');
     }
-    this.httpClient = Deno.createHttpClient({
-      certChain: atob(certChain),
-      privateKey: atob(privateKey),
-    });
+    const decodedCert = atob(certChain);
+    const decodedKey = atob(privateKey);
+
+    // Runtime compatibility: prefer legacy cert/key first (verified in prior sandbox success),
+    // then fall back to certChain/privateKey for newer runtimes.
+    try {
+      const legacyOptions = {
+        cert: decodedCert,
+        key: decodedKey,
+      } as unknown as Parameters<typeof Deno.createHttpClient>[0];
+      this.httpClient = Deno.createHttpClient(legacyOptions);
+    } catch {
+      this.httpClient = Deno.createHttpClient({
+        certChain: decodedCert,
+        privateKey: decodedKey,
+      });
+    }
   }
 
   private async request<T>(
@@ -92,42 +157,118 @@ class RealMTLSClient implements MTLSClient {
     path: string,
     options?: { body?: unknown; headers?: Record<string, string> },
   ): Promise<T> {
-    const url = `${TOSS_API_BASE}${path}`;
-    const res = await fetch(url, {
-      method,
-      client: this.httpClient,
-      headers: {
-        'Content-Type': 'application/json',
-        ...options?.headers,
-      },
-      body: options?.body ? JSON.stringify(options.body) : undefined,
-    } as RequestInit & { client: Deno.HttpClient });
-
-    if (!res.ok) {
-      const text = await res.text().catch(() => '');
-      const error = new Error(`Toss API ${method} ${path} failed: ${res.status} ${text}`) as StatusError;
-      error.status = res.status;
-      throw error;
+    const baseCandidates = [PRIMARY_TOSS_API_BASE];
+    if (PRIMARY_TOSS_API_BASE !== SECONDARY_TOSS_API_BASE) {
+      baseCandidates.push(SECONDARY_TOSS_API_BASE);
     }
-    return res.json();
+
+    let lastError: unknown;
+
+    for (const baseUrl of baseCandidates) {
+      const url = `${baseUrl}${path}`;
+
+      try {
+        const res = await fetch(url, {
+          method,
+          client: this.httpClient,
+          headers: {
+            'Content-Type': 'application/json',
+            ...options?.headers,
+          },
+          body: options?.body ? JSON.stringify(options.body) : undefined,
+        } as RequestInit & { client: Deno.HttpClient });
+
+        if (!res.ok) {
+          const text = await res.text().catch(() => '');
+          const error = new Error(
+            `Toss API ${method} ${path} failed (${baseUrl}): ${res.status} ${text}`
+          ) as StatusError;
+          error.status = res.status;
+          error.code = 'TOSS_UPSTREAM_ERROR';
+
+          if (res.status >= 500 && baseUrl !== baseCandidates[baseCandidates.length - 1]) {
+            lastError = error;
+            continue;
+          }
+
+          throw error;
+        }
+
+        return res.json();
+      } catch (error) {
+        const normalized = (error instanceof Error ? error : new Error(String(error))) as StatusError;
+        if (!normalized.code) {
+          normalized.code = typeof normalized.status === 'number'
+            ? 'TOSS_UPSTREAM_ERROR'
+            : 'TOSS_UPSTREAM_NETWORK';
+        }
+        const status = normalized.status;
+        lastError = normalized;
+
+        if (status && status < 500) {
+          throw normalized;
+        }
+
+        if (baseUrl === baseCandidates[baseCandidates.length - 1]) {
+          throw normalized;
+        }
+      }
+    }
+
+    throw lastError ?? new Error(`Toss API ${method} ${path} failed on all upstreams`);
   }
 
-  async exchangeAuthorizationCode(authorizationCode: string): Promise<{ accessToken: string }> {
-    const appKey = Deno.env.get('TOSS_APP_KEY')!;
-    const result = await this.request<{ accessToken: string }>(
+  async exchangeAuthorizationCode(
+    authorizationCode: string,
+    referrer: TossGenerateTokenReferrer = 'DEFAULT'
+  ): Promise<{ accessToken: string }> {
+    const payload = await this.request<unknown>(
       'POST',
       `${TOSS_APP_PATH}/user/oauth2/generate-token`,
-      { body: { appKey, authorizationCode } },
+      { body: { authorizationCode, referrer } },
     );
-    return { accessToken: result.accessToken };
+    const result = unwrapTossSuccess<{ accessToken?: string; access_token?: string }>(
+      payload,
+      'generate-token'
+    );
+    const accessToken = result.accessToken ?? result.access_token;
+    if (!accessToken) {
+      const preview = JSON.stringify(payload).slice(0, 220);
+      throw new Error(`Toss generate-token response has no accessToken: ${preview}`);
+    }
+    return { accessToken };
   }
 
   async fetchLoginProfile(accessToken: string): Promise<TossLoginProfile> {
-    return this.request<TossLoginProfile>(
+    const payload = await this.request<unknown>(
       'GET',
       `${TOSS_APP_PATH}/user/oauth2/login-me`,
       { headers: { Authorization: `Bearer ${accessToken}` } },
     );
+    const result = unwrapTossSuccess<Record<string, unknown>>(payload, 'login-me');
+    const userKey = result.userKey ?? result.user_key;
+    if (typeof userKey !== 'string' && typeof userKey !== 'number') {
+      const preview = JSON.stringify(payload).slice(0, 220);
+      throw new Error(`Toss login-me response has no userKey: ${preview}`);
+    }
+
+    return {
+      userKey: String(userKey),
+      email: (result.email ?? null) as TossLoginProfile['email'],
+      name: (result.name ?? null) as TossLoginProfile['name'],
+      phone: (result.phone ?? null) as TossLoginProfile['phone'],
+      birthday: (result.birthday ?? null) as TossLoginProfile['birthday'],
+      ci: (result.ci ?? null) as TossLoginProfile['ci'],
+      gender: (result.gender ?? null) as TossLoginProfile['gender'],
+      nationality: (result.nationality ?? null) as TossLoginProfile['nationality'],
+      scope: Array.isArray(result.scope) ? result.scope.filter((v) => typeof v === 'string') as string[] : undefined,
+      agreedTerms: Array.isArray(result.agreedTerms)
+        ? result.agreedTerms.filter((v) => !!v && typeof v === 'object') as TossLoginProfile['agreedTerms']
+        : undefined,
+      isNewUser: typeof result.isNewUser === 'boolean'
+        ? result.isNewUser
+        : (typeof result.is_new_user === 'boolean' ? result.is_new_user : undefined),
+    };
   }
 
   async verifyIapOrder(request: {
@@ -185,7 +326,9 @@ class RealMTLSClient implements MTLSClient {
 class MockMTLSClient implements MTLSClient {
   private readonly retryCounter = new Map<string, number>();
 
-  async exchangeAuthorizationCode(authorizationCode: string): Promise<{ accessToken: string }> {
+  async exchangeAuthorizationCode(
+    authorizationCode: string
+  ): Promise<{ accessToken: string }> {
     if (!authorizationCode.trim()) {
       const error = new Error('Invalid authorization code') as StatusError;
       error.status = 400;

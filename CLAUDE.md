@@ -158,34 +158,33 @@ Backend/             # FastAPI + Alembic
 | Phase | 내용 | 상태 | 비고 |
 |-------|------|------|------|
 | 1~10 | 초기화 → 인증 가드 | Done | FE 전체 완료 |
-| 11 | 보안 (PII가드, rate-limit) | Done | 코드 완료. mTLS 인증서 = 사업자등록 후 |
-| 12 | 광고 (Toss Ads SDK R1/R2/R3) | Done | mock SDK. 실 Ad Group ID = 사업자등록 후 |
-| 13 | E2E 테스트 + 배포 준비 | In progress | Playbook 작성 완료, Sandbox 실기기 검증 대기 |
+| 11 | 보안 (PII가드, rate-limit) | Done | mTLS 실연동 + `login-with-toss` v11 200 증적 확보 |
+| 12 | 광고 (Toss Ads SDK R1/R2/R3) | Done | mock SDK. 실 Ad Group ID 반영/검증 대기 |
+| 13 | E2E 테스트 + 배포 준비 | In progress | Sandbox 실기기 로그인 성공(Edge 200)까지 확보, IAP/광고 E2E 잔여 |
 | B2B | B2B 확장 (P1~P7) + 정합성 수정 | Done | 코드+문서정합성 완료. 성능/실기기 검증 대기 |
 | REG | 토스 콘솔 등록 준비 | Done | legal 4종 + toss-disconnect + RealMTLSClient + 앱 내 약관 페이지 |
 | FIX | 공식 문서 갭 수정 | Done | config.toml 7종, Ads SDK ver2 정렬, Settings 실구현, 뒤로가기 전수, CORS, 멱등성 |
 | IMPL | dog 프로필/추가 + IAP 패턴 | Done | profile.tsx/add.tsx 실 구현, IAP 공식 패턴 래퍼, 미완료 주문 복구 |
 
 ### 현재 Mock/대기 항목
-- **mTLS 인증서**: `supabase/functions/_shared/mTLSClient.ts` — RealMTLSClient 구현 완료, Supabase secrets 등록 필요
-- **Ad Group ID**: `src/lib/ads/config.ts` — 공식 SDK ver2 시그니처 적용 완료, 테스트 ID 사용 중 (사업자등록 후 교체)
-- **Supabase 실 연동**: API 호출은 mock, Edge Function deploy 후 연결
+- **mTLS 인증서**: `supabase/functions/_shared/mTLSClient.ts` — RealMTLSClient + `TOSS_MTLS_MODE` 반영 완료. cert/key secret 등록 + digest 검증 완료
+- **Ad Group ID**: `src/lib/ads/config.ts` — 공식 SDK ver2 시그니처 적용 완료, 테스트 ID 사용 중 (실 ID 교체/검증 대기)
+- **Supabase 실 연동**: Edge Function `login-with-toss` v11 배포 + Sandbox 실기기 `POST 200` 증적 확보 (request id: `f52019d7-0162-48bf-b021-de8bc80539de`, `92de76c2-abaa-4d8c-81cc-3e7329fe6d21`)
 - **ChartWebView**: `@granite-js/native` WebView 실제 연결 대기
 - **IAP SDK**: `lib/api/iap.ts` 래퍼 구현 완료 (createOneTimePurchaseOrder + getPendingOrders). `@apps-in-toss/framework` 확인 후 실 SDK 교체
 
-### 블로커: 사업자등록 미완료
-아래 항목은 **사업자등록 완료 후**에만 진행 가능. 코드 작업으로 해결 불가.
-- mTLS 인증서 발급 (콘솔에서 발급)
-- Ad Group ID 실 교체 (콘솔에서 발급)
-- 토스 콘솔 앱 등록 (사업자 정보 필수)
-- IAP 실 결제 테스트
+### 상태 업데이트 (2026-02-27)
+- 사업자등록 완료 (사용자 보고)
+- 토스 앱 배포 완료 (사용자 보고)
+- Sandbox 실기기+Metro 연결 및 라우팅 로그 확인 (`/_404 -> /login -> /onboarding/welcome -> /onboarding/survey`)
+- Sandbox 실기기 로그인 성공 확인 (`/login -> /onboarding/welcome`, `appLogin referrer=SANDBOX`, Edge `login-with-toss` v11 `POST 200`)
+- 남은 리스크는 외부 승인 이슈가 아니라 **실연동 증적 확보** 영역(로그인/IAP/광고)임
 
 ### 다음 우선순위
-1. Supabase Edge Function deploy (7종 전체) + secrets 등록 — 사업자등록 없이 가능
+1. AUTH-001 실패 케이스(의도적 잘못 코드) 400 증적 1건 추가 확보
 2. Phase 13: E2E 테스트 프레임워크 + Sandbox 검증 시나리오 작성 — 사업자등록 없이 가능
 3. B2B IAP도 동일 공식 패턴으로 정렬 (useOrgSubscription.ts) — 사업자등록 없이 가능
-4. 토스 콘솔 앱 등록 (URL 입력 + 콜백 설정 + mTLS cert) — ⚠️ 사업자등록 필요
-5. Ad Group ID 실 교체 + IAP 실 결제 E2E — ⚠️ 사업자등록 필요
+4. Ad Group ID 실 교체 + IAP 실 결제 E2E
 
 ## 참고 문서
 

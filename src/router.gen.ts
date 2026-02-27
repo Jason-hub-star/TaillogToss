@@ -20,6 +20,8 @@ import { Route as _OpsTodayRoute } from '../pages/ops/today';
 import { Route as _ParentReportsRoute } from '../pages/parent/reports';
 import { Route as _ShareTokenReportRoute } from '../pages/report/[shareToken]';
 import { Route as _OpsSettingsRoute } from '../pages/ops/settings';
+import { Route as _LegalTermsRoute } from '../pages/legal/terms';
+import { Route as _LegalPrivacyRoute } from '../pages/legal/privacy';
 
 declare module '@granite-js/react-native' {
   interface RegisterScreenInput {
@@ -43,6 +45,8 @@ declare module '@granite-js/react-native' {
     '/parent/reports': (typeof _ParentReportsRoute)['_inputType'];
     '/report/[shareToken]': (typeof _ShareTokenReportRoute)['_inputType'];
     '/ops/settings': (typeof _OpsSettingsRoute)['_inputType'];
+    '/legal/terms': (typeof _LegalTermsRoute)['_inputType'];
+    '/legal/privacy': (typeof _LegalPrivacyRoute)['_inputType'];
   }
 
   interface RegisterScreen {
@@ -66,5 +70,7 @@ declare module '@granite-js/react-native' {
     '/parent/reports': (typeof _ParentReportsRoute)['_outputType'];
     '/report/[shareToken]': (typeof _ShareTokenReportRoute)['_outputType'];
     '/ops/settings': (typeof _OpsSettingsRoute)['_outputType'];
+    '/legal/terms': (typeof _LegalTermsRoute)['_outputType'];
+    '/legal/privacy': (typeof _LegalPrivacyRoute)['_outputType'];
   }
 }

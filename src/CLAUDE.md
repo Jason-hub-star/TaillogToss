@@ -11,7 +11,7 @@ pages/                # 실제 페이지 컴포넌트 (createRoute)
 components/           # 3계층: tds-ext ← shared ← features
 lib/                  # API, hooks, charts, guards, analytics, data, security
 types/                # 도메인별 타입 (BE 미러)
-stores/               # QueryClient, AuthContext, ActiveDogContext
+stores/               # QueryClient, AuthContext, ActiveDogContext, OrgContext, SurveyContext
 ```
 
 ## 레이어 의존성 (MUST)

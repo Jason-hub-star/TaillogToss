@@ -14,6 +14,7 @@ export interface Dog {
   breed: string;
   birth_date: string | null; // ISO date
   sex: DogSex;
+  weight_kg?: number; // NUMERIC(5,2) — 체중(kg), 프로필 완전성용
   profile_image_url: string | null;
   created_at: string;
   updated_at: string;

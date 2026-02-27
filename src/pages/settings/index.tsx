@@ -4,7 +4,7 @@
  * Parity: APP-001, IAP-001
  */
 import { createRoute, useNavigation } from '@granite-js/react-native';
-import React, { useCallback, useState } from 'react';
+import React, { useCallback } from 'react';
 import {
   View,
   Text,
@@ -19,6 +19,7 @@ import { usePageGuard } from 'lib/hooks/usePageGuard';
 import { useAuth } from 'stores/AuthContext';
 import { useLogout } from 'lib/hooks/useAuth';
 import { useUserSettings, useUpdateSettings } from 'lib/hooks/useSettings';
+import { withdrawUser } from 'lib/api/auth';
 import { DEFAULT_NOTIFICATION_PREF } from 'types/settings';
 
 export const Route = createRoute('/settings', {
@@ -69,14 +70,18 @@ function SettingsPage() {
         {
           text: '탈퇴하기',
           style: 'destructive',
-          onPress: () => {
-            // TODO: 실제 탈퇴 API 호출 (toss-disconnect WITHDRAWAL_TERMS)
-            logout();
+          onPress: async () => {
+            if (!user?.id) return;
+            try {
+              await withdrawUser(user.id);
+            } catch {
+              Alert.alert('오류', '탈퇴 처리 중 문제가 발생했습니다. 다시 시도해주세요.');
+            }
           },
         },
       ],
     );
-  }, [logout]);
+  }, [user?.id]);
 
   if (!isReady) return null;
 

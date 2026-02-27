@@ -90,6 +90,19 @@ export async function logout(): Promise<void> {
   if (error) throw error;
 }
 
+/**
+ * 회원탈퇴 — 사용자 상태를 inactive로 변경 후 로그아웃.
+ * Toss 연동해제는 toss-disconnect 콜백에서 Toss가 별도 호출.
+ */
+export async function withdrawUser(userId: string): Promise<void> {
+  const { error: updateError } = await supabase
+    .from('users')
+    .update({ status: 'inactive', updated_at: new Date().toISOString() })
+    .eq('id', userId);
+  if (updateError) throw updateError;
+  await logout();
+}
+
 /** 현재 세션 확인 */
 export async function getSession() {
   const { data, error } = await supabase.auth.getSession();

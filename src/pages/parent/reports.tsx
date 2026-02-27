@@ -7,6 +7,7 @@ import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity } from 'react-na
 import { createRoute, useNavigation } from '@granite-js/react-native';
 import { usePageGuard } from 'lib/hooks/usePageGuard';
 import { useAuth } from 'stores/AuthContext';
+import { useActiveDog } from 'stores/ActiveDogContext';
 import { useDogReports, useCreateInteraction } from 'lib/hooks/useReport';
 import { ReportViewer } from 'components/features/parent/ReportViewer';
 import { ReactionForm } from 'components/features/parent/ReactionForm';
@@ -17,9 +18,9 @@ export const Route = createRoute('/parent/reports', { component: ParentReportsPa
 function ParentReportsPage() {
   const { isReady } = usePageGuard({ currentPath: '/parent/reports' as any });
   const { user } = useAuth();
+  const { activeDog } = useActiveDog();
   const navigation = useNavigation();
-  // TODO: 실 연결 시 보호자 강아지 ID로 조회
-  const { data: reports } = useDogReports(undefined);
+  const { data: reports } = useDogReports(activeDog?.id);
   const createInteraction = useCreateInteraction();
 
   const latestReport = reports?.[0];

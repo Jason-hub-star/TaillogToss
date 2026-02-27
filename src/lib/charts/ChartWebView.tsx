@@ -4,7 +4,8 @@
  * Parity: UI-001
  */
 import React, { useMemo } from 'react';
-import { View, StyleSheet } from 'react-native';
+import { StyleSheet } from 'react-native';
+import WebView from '@granite-js/native/react-native-webview';
 
 export type ChartType = 'radar' | 'heatmap' | 'line' | 'bar';
 
@@ -15,35 +16,27 @@ export interface ChartWebViewProps {
 }
 
 /**
- * WebView 차트 래퍼
- * @granite-js/native/react-native-webview 사용
- * TODO: 실제 WebView import는 @granite-js/native에서 가져옴
+ * WebView 차트 래퍼 — @granite-js/native/react-native-webview 사용
+ * generateChartHTML.ts에서 생성한 HTML을 WebView로 렌더링
  */
-export function ChartWebView({ type, html, height = 300 }: ChartWebViewProps) {
-  void type;
-
+export function ChartWebView({ html, height = 300 }: ChartWebViewProps) {
   const source = useMemo(() => ({ html }), [html]);
-  void source;
-
-  // TODO: 실제 구현 — @granite-js/native/react-native-webview 연결
-  // import { WebView } from '@granite-js/native/react-native-webview';
-  // return <WebView source={source} style={{ height }} />;
 
   return (
-    <View style={[styles.placeholder, { height }]}>
-      {/* Phase 4 완료 후 WebView로 교체 */}
-    </View>
+    <WebView
+      source={source}
+      style={[styles.webview, { height }]}
+      scrollEnabled={false}
+      originWhitelist={['*']}
+      javaScriptEnabled
+    />
   );
 }
 
 const styles = StyleSheet.create({
-  placeholder: {
-    backgroundColor: '#F8F9FA',
+  webview: {
+    backgroundColor: 'transparent',
     borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#E5E8EB',
-    borderStyle: 'dashed',
-    alignItems: 'center',
-    justifyContent: 'center',
+    overflow: 'hidden',
   },
 });

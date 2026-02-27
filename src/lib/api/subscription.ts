@@ -59,8 +59,8 @@ export async function getOrders(userId: string): Promise<TossOrder[]> {
   return data as TossOrder[];
 }
 
-/** 구독 복원 */
+/** 구독 복원 — BLOCKED: Toss IAP 복원 API 미공개. 현재는 DB 조회로 대체. */
 export async function restoreSubscription(userId: string): Promise<Subscription | null> {
-  // TODO: Toss IAP 복원 API 연동
+  // BLOCKED: Toss IAP 복원 API가 공개되면 getPendingOrders → grant 로직으로 교체
   return getSubscription(userId);
 }

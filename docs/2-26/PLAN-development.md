@@ -1,6 +1,6 @@
 # TaillogToss — 사업자등록 전 선행 개발 플랜
 
-## 진행 현황 (2026-02-26 기준)
+## 진행 현황 (2026-02-27 기준)
 
 - [x] Phase 1: 프로젝트 초기화 + 16 라우트
 - [x] Phase 2: 타입 시스템 12파일 + index
@@ -12,11 +12,11 @@
 - [x] Phase 8: 코칭/훈련 3페이지 + 7컴포넌트 + curriculum data
 - [x] Phase 9: 반려견/설정 5페이지
 - [x] Phase 10: 순수 가드 4개 + 가드 훅 1개 + 훅 3개 + 온보딩 네비 + 딥엔트리 + 안정화
-- [ ] Phase 11: Supabase Edge Functions + 보안 (진행중: mock 구현 완료, 런타임/배포 검증 대기)
+- [ ] Phase 11: Supabase Edge Functions + 보안 (진행중: 테스트 타임아웃 해소 + noti_history 영속화 완료, 런타임 invoke 증적 대기)
 - [ ] Phase 12: DB 마이그레이션 (Alembic)
 - [ ] Phase 13: Disconnection Webhook + FastAPI
 
-검증: `npm run typecheck` ✅ | `npm test -- --runInBand --watchAll=false` ⚠ (Jest hang 이슈로 완료 로그 미확보)
+검증: `npm run typecheck` ✅ | `npm test` ✅ (`test:app` + `test:edge` 분리, timeout 해소)
 
 ---
 
@@ -53,21 +53,24 @@ lib/hooks/use{Domain}.ts ↔ Backend/app/services/{domain}.py
 - **광고**: 토스 Ads SDK 2.0 — Rewarded만 v1 사용, 터치포인트 R1(survey-result), R2(dashboard), R3(coaching-result)
 - **가격 기준일**: 2026-02-26
 
-### 최근 업데이트 (2026-02-26)
+### 최근 업데이트 (2026-02-27)
 - `supabase/functions/`에 Phase 11 Edge Function 4종 + `_shared` 보안 유틸 7종 구현
 - `supabase/config.toml`에 `verify_jwt` 정책 반영 (`login-with-toss=false`, 나머지 `true`)
 - FE API 계약 정합성 반영 (`authorizationCode`, `idempotencyKey`, `templateCode` 매핑)
 - Parity 문서 업데이트 (`docs/11-FEATURE-PARITY-MATRIX.md`)
+- Jest 실행 경로 분리 (`test:app`, `test:edge`)로 Edge retry timeout 이슈 해소
+- `noti_history` 확장 스키마 적용 + `send-smart-message` service_role 영속 insert 연동
+- Edge Function Deno main 엔트리 추가 (`main.ts`) 및 `supabase/config.toml` entrypoint 전환
 
 ### 다음 플랜 (2026-02-27)
 1. Phase 11 런타임 검증 마감
-   - Jest hang 원인 분리/해결 후 `_shared`/Edge Function 테스트 실행 로그 확보
-   - Edge Function 로컬 invoke 스모크 테스트 (`login-with-toss`, `verify-iap-order`, `send-smart-message`, `grant-toss-points`)
+   - [x] Jest hang 원인 분리/해결 후 `_shared`/Edge Function 테스트 실행 로그 확보
+   - [ ] 앱 수동 호출 + MCP `edge-function` 로그 수집으로 invoke 증적 확보 (`login-with-toss`, `verify-iap-order`, `send-smart-message`, `grant-toss-points`)
 2. Phase 11 게이트 보강
-   - `send-smart-message`의 `noti_history` 영속 기록(DB) 연결
+   - [x] `send-smart-message`의 `noti_history` 영속 기록(DB) 연결
    - `login-with-toss` 요청 서명 검증 경로 추가(mock/실연동 분기)
 3. Phase 12 착수 조건 정리
-   - `Backend/` 경로(또는 별도 Backend 저장소) 확보 후 Alembic 마이그레이션 착수
+   - `Backend/` 경로(또는 별도 Backend 저장소) 확보 후 Alembic 마이그레이션 착수 (다음 구현 세션 시작 시점)
    - 확보 전까지는 Phase 11/문서/테스트 안정화에 집중
 
 ---
@@ -411,7 +414,7 @@ supabase/
 - [ ] login-with-toss: 요청 서명 검증 (실 mTLS 연동 시 활성화)
 - [x] verify-iap-order: 멱등키 + 서킷브레이커 + 5xx만 재시도(최대2회, 지수백오프)
 - [x] send-smart-message: 빈도 제한(10분1회/하루3회, 22~08시 금지)
-- [ ] send-smart-message: noti_history DB 영속 기록
+- [x] send-smart-message: noti_history DB 영속 기록
 - [x] grant-toss-points: key 1회 사용 제한 + 에러코드 분기
 
 ### 검증

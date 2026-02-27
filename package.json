@@ -6,7 +6,9 @@
   "scripts": {
     "dev": "granite dev",
     "build": "granite build",
-    "test": "jest --passWithNoTests",
+    "test": "npm run test:app && npm run test:edge",
+    "test:app": "jest --config jest.config.js --testPathIgnorePatterns=/supabase/functions/ --passWithNoTests",
+    "test:edge": "jest --config jest.edge.config.js --runInBand --testPathPattern=supabase/functions --passWithNoTests",
     "typecheck": "tsc --noEmit",
     "lint": "eslint ."
   },

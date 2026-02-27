@@ -4,19 +4,19 @@
 [functions.login-with-toss]
 enabled = true
 verify_jwt = false
-entrypoint = "./functions/login-with-toss/index.ts"
+entrypoint = "./functions/login-with-toss/main.ts"
 
 [functions.verify-iap-order]
 enabled = true
 verify_jwt = true
-entrypoint = "./functions/verify-iap-order/index.ts"
+entrypoint = "./functions/verify-iap-order/main.ts"
 
 [functions.send-smart-message]
 enabled = true
 verify_jwt = true
-entrypoint = "./functions/send-smart-message/index.ts"
+entrypoint = "./functions/send-smart-message/main.ts"
 
 [functions.grant-toss-points]
 enabled = true
 verify_jwt = true
-entrypoint = "./functions/grant-toss-points/index.ts"
+entrypoint = "./functions/grant-toss-points/main.ts"

@@ -44,8 +44,10 @@
   - [x] IAP UI + featureGuard 완료
   - [x] 주문 검증 + 멱등 처리 코드 구현 (`verify-iap-order`, mock 기준)
   - [x] 메시지 발송 정책(쿨다운/빈도) 코드 구현 (`send-smart-message`)
-  - [ ] Edge Function 런타임 invoke 검증 로그 확보 (Jest hang 이슈 해소 포함)
-- **상태: 부분 통과 (코드 구현 완료, 런타임 검증 대기)**
+  - [x] `noti_history` 실DB 영속 연결 + 확장 스키마 반영
+  - [x] Jest timeout 이슈 해소 (`test:app`/`test:edge` 분리)
+  - [ ] Edge Function 런타임 invoke 검증 로그 확보 (앱 수동호출 + MCP 로그 수집 대기)
+- **상태: 부분 통과 (코드/테스트/DB 완료, 런타임 invoke 증적 대기)**
 
 ### Wave 3: B2B Expansion
 

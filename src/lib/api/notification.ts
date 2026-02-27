@@ -14,6 +14,7 @@ function createIdempotencyKey(userId: string, notificationType: string): string 
 export async function sendSmartMessage(request: SmartMessageRequest): Promise<void> {
   const payload = {
     userId: request.user_id,
+    notificationType: request.notification_type,
     templateCode: request.template.template_set_code,
     variables: request.template.variables,
     idempotencyKey:

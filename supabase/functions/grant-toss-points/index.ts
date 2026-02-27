@@ -3,21 +3,21 @@
  * Parity: IAP-001
  */
 
-import { type EdgeContext, fail, ok, type EdgeResult } from '../_shared/contracts';
+import { type EdgeContext, fail, ok, type EdgeResult } from '../_shared/contracts.ts';
 import {
   createMTLSClient,
   type MTLSClient,
-} from '../_shared/mTLSClient';
+} from '../_shared/mTLSClient.ts';
 import {
   edgeIdempotencyStore,
   type BeginIdempotencyResult,
   type InMemoryIdempotencyStore,
-} from '../_shared/idempotency';
+} from '../_shared/idempotency.ts';
 import {
   pointsCircuitBreaker,
   retryOnServerError,
   type InMemoryCircuitBreaker,
-} from '../_shared/circuitBreaker';
+} from '../_shared/circuitBreaker.ts';
 
 export interface GrantTossPointsRequest {
   userId: string;

@@ -1,4 +1,4 @@
-import { evaluateCooldown } from '../cooldownPolicy';
+import { evaluateCooldown } from '../cooldownPolicy.ts';
 
 describe('cooldownPolicy', () => {
   test('blocks during quiet hours in KST', () => {

@@ -1,4 +1,4 @@
-import { InMemoryIdempotencyStore } from '../idempotency';
+import { InMemoryIdempotencyStore } from '../idempotency.ts';
 
 describe('InMemoryIdempotencyStore', () => {
   test('returns existing completed response for duplicate key', () => {

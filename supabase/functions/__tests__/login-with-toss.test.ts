@@ -1,5 +1,5 @@
-import { InMemoryRateLimiter } from '../_shared/rateLimiter';
-import { createLoginWithTossHandler } from '../login-with-toss';
+import { InMemoryRateLimiter } from '../_shared/rateLimiter.ts';
+import { createLoginWithTossHandler } from '../login-with-toss/index.ts';
 
 describe('login-with-toss handler', () => {
   test('returns session payload on valid request', async () => {

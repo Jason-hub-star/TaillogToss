@@ -4,7 +4,7 @@
  */
 
 /** 알림 채널 */
-export type NotificationChannel = 'smart_message' | 'push';
+export type NotificationChannel = 'ALIMTALK' | 'WEB_PUSH' | 'EMAIL';
 
 /** 알림 유형 */
 export type NotificationType =
@@ -36,10 +36,13 @@ export interface NotificationHistory {
   user_id: string;
   notification_type: NotificationType;
   channel: NotificationChannel;
+  template_code?: string | null;
   template_set_code: string;
   sent_at: string; // ISO 8601
   success: boolean;
   error_code: string | null;
+  idempotency_key?: string | null;
+  provider_channels?: string[];
 }
 
 /** 쿨다운 정책 */

@@ -4,6 +4,7 @@
     "baseUrl": "src",
     "target": "ESNext",
     "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
     "lib": ["ESNext"],
     "types": ["react-native", "jest"],
     "jsx": "react-native",

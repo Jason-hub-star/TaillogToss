@@ -148,6 +148,9 @@ Backend/             # FastAPI + Alembic
 - Files: 변경 파일 목록
 - Validation: 실행/검증 결과
 - Risks: 미해결 리스크와 다음 액션
+- Self-Review: 이번 작업에서 잘한 점 / 부족한 점 / 남은 검증 공백
+- Next-Session Docs: 다음 세션 시작 전에 읽어야 할 문서 + 이번에 업데이트한 문서
+- Next Recommendations: 다음 세션 우선순위 작업 1~3개(짧은 이유 포함)
 ```
 
 ## 참고 문서

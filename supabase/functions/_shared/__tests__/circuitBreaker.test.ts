@@ -1,7 +1,7 @@
 import {
   InMemoryCircuitBreaker,
   retryOnServerError,
-} from '../circuitBreaker';
+} from '../circuitBreaker.ts';
 
 describe('circuitBreaker', () => {
   test('opens after configured failure threshold', async () => {

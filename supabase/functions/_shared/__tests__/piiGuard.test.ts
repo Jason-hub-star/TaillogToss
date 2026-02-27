@@ -1,4 +1,4 @@
-import { isPiiKey, redactPII } from '../piiGuard';
+import { isPiiKey, redactPII } from '../piiGuard.ts';
 
 describe('piiGuard', () => {
   test('detects canonical and snake_case keys', () => {

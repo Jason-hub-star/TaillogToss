@@ -6,6 +6,11 @@ export interface EventPayloadMap {
   iap_purchase_success: { product_type: string };
   training_step_completed: { curriculum_id: string; step: string };
   share_reward_sent: undefined;
+  ad_requested: { placement: string };
+  ad_loaded: { placement: string };
+  ad_rewarded: { placement: string };
+  ad_error: { placement: string };
+  ad_no_fill: { placement: string; reason: string };
 }
 
 export type EventName = keyof EventPayloadMap;
@@ -27,4 +32,10 @@ export const tracker = {
   trainingStepCompleted: (curriculumId: string, step: string) =>
     track('training_step_completed', { curriculum_id: curriculumId, step }),
   shareRewardSent: () => track('share_reward_sent', undefined),
+  adRequested: (placement: string) => track('ad_requested', { placement }),
+  adLoaded: (placement: string) => track('ad_loaded', { placement }),
+  adRewarded: (placement: string) => track('ad_rewarded', { placement }),
+  adError: (placement: string) => track('ad_error', { placement }),
+  adNoFill: (placement: string, reason: string) =>
+    track('ad_no_fill', { placement, reason }),
 };

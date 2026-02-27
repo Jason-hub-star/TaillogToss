@@ -7,9 +7,10 @@ const config = require('@granite-js/react-native/jest').config({
   moduleNameMapper: {
     '@babel/runtime(.*)': `${path.dirname(require.resolve('@babel/runtime/package.json'))}$1`,
   },
+  setupFilesAfterEnv: [],
   testMatch: [
-    '<rootDir>/src/**/*.{spec,test}.{js,jsx,ts,tsx}',
-    '<rootDir>/src/**/__tests__/**/*.{js,jsx,ts,tsx}',
+    '<rootDir>/supabase/functions/**/*.{spec,test}.ts',
+    '<rootDir>/supabase/functions/**/__tests__/**/*.{spec,test}.ts',
   ],
 });
 

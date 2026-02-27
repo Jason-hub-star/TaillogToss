@@ -1,4 +1,4 @@
-import { InMemoryRateLimiter } from '../rateLimiter';
+import { InMemoryRateLimiter } from '../rateLimiter.ts';
 
 describe('InMemoryRateLimiter', () => {
   test('blocks when max request count is exceeded within the same window', () => {

@@ -3,11 +3,11 @@
  * Parity: AUTH-001 (verify_jwt=false)
  */
 
-import { type EdgeContext, fail, ok, type EdgeResult } from '../_shared/contracts';
-import { createMTLSClient, type MTLSClient } from '../_shared/mTLSClient';
-import { resolvePeppersFromEnv, deriveWithLatestPepper, type PepperConfig } from '../_shared/pepperRotation';
-import { safeLogPayload } from '../_shared/piiGuard';
-import { loginRateLimiter, type InMemoryRateLimiter } from '../_shared/rateLimiter';
+import { type EdgeContext, fail, ok, type EdgeResult } from '../_shared/contracts.ts';
+import { createMTLSClient, type MTLSClient } from '../_shared/mTLSClient.ts';
+import { resolvePeppersFromEnv, deriveWithLatestPepper, type PepperConfig } from '../_shared/pepperRotation.ts';
+import { safeLogPayload } from '../_shared/piiGuard.ts';
+import { loginRateLimiter, type InMemoryRateLimiter } from '../_shared/rateLimiter.ts';
 
 type UnlinkReferrer = 'UNLINK' | 'WITHDRAWAL_TERMS' | 'WITHDRAWAL_TOSS';
 

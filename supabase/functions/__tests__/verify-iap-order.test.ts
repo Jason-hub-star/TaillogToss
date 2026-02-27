@@ -1,4 +1,4 @@
-import { createVerifyIapOrderHandler } from '../verify-iap-order';
+import { createVerifyIapOrderHandler } from '../verify-iap-order/index.ts';
 
 describe('verify-iap-order handler', () => {
   test('retries transient 5xx and succeeds', async () => {

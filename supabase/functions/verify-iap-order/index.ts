@@ -3,22 +3,22 @@
  * Parity: IAP-001
  */
 
-import { type EdgeContext, fail, ok, type EdgeResult } from '../_shared/contracts';
+import { type EdgeContext, fail, ok, type EdgeResult } from '../_shared/contracts.ts';
 import {
   createMTLSClient,
   type MTLSClient,
   type TossOrderVerification,
-} from '../_shared/mTLSClient';
+} from '../_shared/mTLSClient.ts';
 import {
   iapCircuitBreaker,
   retryOnServerError,
   type InMemoryCircuitBreaker,
-} from '../_shared/circuitBreaker';
+} from '../_shared/circuitBreaker.ts';
 import {
   edgeIdempotencyStore,
   type BeginIdempotencyResult,
   type InMemoryIdempotencyStore,
-} from '../_shared/idempotency';
+} from '../_shared/idempotency.ts';
 
 export interface VerifyIapOrderRequest {
   orderId: string;
@@ -94,8 +94,10 @@ export function createVerifyIapOrderHandler(overrides?: Partial<VerifyIapDeps>) 
 
   return async (
     request: VerifyIapOrderRequest,
-    _context: EdgeContext
+    context: EdgeContext
   ): Promise<EdgeResult<VerifyIapOrderResponse>> => {
+    void context;
+
     if (!request.orderId || !request.productId || !request.transactionId || !request.idempotencyKey) {
       return fail('VALIDATION_ERROR', 'orderId/productId/transactionId/idempotencyKey are required', 400);
     }

@@ -1,4 +1,4 @@
-import { createGrantTossPointsHandler } from '../grant-toss-points';
+import { createGrantTossPointsHandler } from '../grant-toss-points/index.ts';
 
 describe('grant-toss-points handler', () => {
   test('grants points for staff role', async () => {

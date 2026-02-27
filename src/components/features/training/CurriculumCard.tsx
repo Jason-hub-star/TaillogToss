@@ -135,7 +135,7 @@ const styles = StyleSheet.create({
   progressContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 'auto' as any,
+    marginTop: 'auto',
   },
   progressTrack: {
     flex: 1,

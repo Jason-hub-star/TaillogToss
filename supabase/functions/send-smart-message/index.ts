@@ -86,7 +86,7 @@ function resolveIdempotentResponse(
 }
 
 function isAdminRole(role: EdgeContext['role']): boolean {
-  return role === 'trainer' || role === 'org_owner' || role === 'org_staff';
+  return role === 'trainer' || role === 'org_owner' || role === 'org_staff' || role === 'service_role';
 }
 
 function createFallbackHistory(

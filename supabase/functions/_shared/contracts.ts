@@ -3,7 +3,7 @@
  * Parity: AUTH-001, IAP-001, MSG-001
  */
 
-export type UserRole = 'user' | 'trainer' | 'org_owner' | 'org_staff';
+export type UserRole = 'user' | 'trainer' | 'org_owner' | 'org_staff' | 'service_role';
 
 export interface EdgeContext {
   clientKey: string;

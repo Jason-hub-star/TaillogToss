@@ -27,11 +27,11 @@
 - [x] coaching API를 backend 우선 + supabase fallback 구조로 전환
 - [x] org dogs API를 backend 우선 + supabase fallback 구조로 전환
 
-4. 남은 도메인 전환 (다음 커밋)
-- [ ] dashboard
+4. 남은 도메인 전환 (완료)
+- [x] dashboard
 - [x] log
 - [x] report
-- [ ] training
+- [x] training
 - [x] settings
 - [x] subscription
 - [x] notification
@@ -46,7 +46,7 @@
 ## Risks
 - Supabase auth/user bridge는 `SUPABASE_SERVICE_ROLE_KEY` 환경 의존
 - Backend URL 미설정 시 fallback 경로 동작에 의존
-- training/dashboard는 FE 모델 차이로 backend 전환 시 회귀 위험이 있어 별도 설계 필요
+- training은 FE(`training_progress`)↔BE(`user_training_status`) 모델 차이로 요약 매핑 로직 유지보수 필요
 
 ## Rollback
 - FE API fallback 유지(backend 실패 시 supabase 경로)
@@ -54,6 +54,6 @@
 - 신규 RLS 정책은 정책 단위 DROP으로 롤백 가능
 
 ## Self-Review (interim)
-- 잘한 점: uuid 블로커를 Edge v12 배포까지 닫고, log/report/settings/subscription/notification를 backend-first로 확대함
-- 부족한 점: training/dashboard 도메인은 모델 정합 설계 없이 전환하면 회귀 가능성이 큼
-- 남은 공백: 실기기 E2E(설문 완료→대시보드) 증적 및 training/dashboard 전환 설계/검증 필요
+- 잘한 점: training/dashboard까지 backend-first 확장하고, training 모델 차이를 FE 매핑 레이어로 흡수함
+- 부족한 점: training `changeVariant`는 미사용 경로라 backend 전환 범위에서 제외되어 추후 정리 필요
+- 남은 공백: 실기기 E2E(설문 완료→대시보드) 증적 확보 및 IAP/MSG/AD 시나리오 검증

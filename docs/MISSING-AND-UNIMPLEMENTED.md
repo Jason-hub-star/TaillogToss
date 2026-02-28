@@ -68,7 +68,7 @@
 **남은 백엔드 작업**:
 - INFRA-2: Edge Function 배포 + Secrets 등록 (수동)
 - INFRA-3: 토스 콘솔 등록 + mTLS 인증서 (수동)
-- FE→BE 연결: `src/lib/api/backend.ts` 추가 완료. 도메인별 전환은 `log/report/settings/subscription/notification` 완료, `dashboard/training` 잔여
+- FE→BE 연결: `src/lib/api/backend.ts` 추가 완료. 도메인별 전환은 `coaching/org dogs/log/report/settings/subscription/notification/dashboard/training` 완료
 
 ---
 
@@ -120,7 +120,7 @@
 
 | 테스트 유형 | 상태 | 갭 |
 |-----------|------|-----|
-| FE 단위 테스트 | 완료 | Jest 66 tests (auth 7 + iap 8 + roleGuard 8 + ads 5 + 기타) |
+| FE 단위 테스트 | 완료 | Jest 69 tests (auth 7 + iap 8 + roleGuard 8 + ads 5 + training/dashboard API 포함) |
 | BE 단위 테스트 | 완료 | pytest 39 tests (health 3 + models 12 + schemas 14 + security 7 + routers 6) |
 | BE↔DB 통합 테스트 | 미구현 | FastAPI + 실 Supabase 연결 테스트 (DB 마이그레이션 완료, 연결만 미검증) |
 | E2E 테스트 | 부분 | 로그인만 검증, IAP/광고 미검증 |
@@ -136,7 +136,7 @@
 1. ~~Backend AI 코칭 엔진 (BE-P5)~~ → ✅ 완료
 2. ~~FastAPI 프로젝트 초기화 (BE-P1~P4)~~ → ✅ 완료
 3. **Edge Function Real mTLS (INFRA-3)** — 로그인 외 Toss API 호출 전부 (인증서 발급 필요)
-4. **FE→BE API 연결 잔여 도메인** — backend.ts + coaching/org dogs + log/report/settings/subscription/notification 전환 완료, `dashboard/training` 전환 필요
+4. ~~FE→BE API 연결 잔여 도메인~~ — ✅ dashboard/training 포함 완료 (backend-first + fallback)
 5. **AUTH 브릿지 실기기 재검증** — login-with-toss v12 배포 완료, Sandbox 증적 재수집 필요
 
 ### 🟠 HIGH (주요 기능 미완성)

@@ -216,13 +216,14 @@ Backend/             # FastAPI + Alembic
 - FE/Edge Jest 검증: app 43 tests + edge 30 tests 통과
 - typecheck 0 에러 달성
 - `login-with-toss` v12 배포 완료 (MCP), FE API backend-first 전환(log/report/settings/subscription/notification) 반영
+- FE API backend-first 전환 완료: `dashboard`, `training` 추가 반영 + app test 보강(2026-02-28)
 
 ### 다음 우선순위 (Single Source — 다른 문서는 이 섹션 참조)
 
 **코드 레벨 (실기기 불필요)**:
-1. FE→BE API 연결 잔여 도메인 — `dashboard`, `training` 전환 설계/구현 + 회귀 검증
-2. INFRA-2: Edge Function 나머지 6종 배포 + Secrets 등록 — `supabase functions deploy` + 환경변수
-3. Phase 13 E2E 테스트 프레임워크 — Toss Auth mock + IAP 시뮬레이션 + FE↔BE 통합
+1. INFRA-2: Edge Function 나머지 6종 배포 + Secrets 등록 — `supabase functions deploy` + 환경변수
+2. Phase 13 E2E 테스트 프레임워크 — Toss Auth mock + IAP 시뮬레이션 + FE↔BE 통합
+3. training 모델 정합 후속 — FE `training_progress` ↔ BE `user_training_status` 매핑 검증/정리
 
 **외부/실기기 필요**:
 4. INFRA-3: mTLS 인증서 발급 + 토스 콘솔 등록 — Developers Console 접속 필요
@@ -235,6 +236,7 @@ Backend/             # FastAPI + Alembic
 - ~~useRewardedAd 테스트 실패~~ → mock 메서드명 교정, 5/5 통과
 - ~~Jest 테스트 보강~~ → app 43 + edge 30 tests 통과
 - ~~AUTH uuid user_id 블로커~~ → `login-with-toss` v12 배포 + auth bridge 정렬 완료
+- ~~FE→BE dashboard/training 잔여~~ → backend-first + fallback 전환 완료, API 단위테스트 추가
 
 ## 참고 문서
 

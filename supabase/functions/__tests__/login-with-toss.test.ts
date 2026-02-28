@@ -9,8 +9,8 @@ describe('login-with-toss handler', () => {
       rateLimiter: new InMemoryRateLimiter({ windowMs: 60_000, maxRequests: 10 }),
       now: () => new Date('2026-02-26T00:00:00.000Z'),
       bridgeSession: async () => ({
-        accessToken: 'eyJhbGciOiJIUzI1NiJ9.mock.access',
-        refreshToken: 'eyJhbGciOiJIUzI1NiJ9.mock.refresh',
+        accessToken: 'test.mock.access',
+        refreshToken: 'test.mock.refresh',
         userId: '11111111-1111-4111-8111-111111111111',
       }),
     });
@@ -18,6 +18,7 @@ describe('login-with-toss handler', () => {
     const result = await handler(
       {
         authorizationCode: 'valid-code',
+        referrer: 'SANDBOX',
         nonce: 'nonce-12345678',
       },
       { clientKey: 'client-a' }
@@ -33,14 +34,15 @@ describe('login-with-toss handler', () => {
     const handler = createLoginWithTossHandler({
       mTLSClient: createMTLSClient('mock'),
       bridgeSession: async () => ({
-        accessToken: 'eyJhbGciOiJIUzI1NiJ9.mock.access',
-        refreshToken: 'eyJhbGciOiJIUzI1NiJ9.mock.refresh',
+        accessToken: 'test.mock.access',
+        refreshToken: 'test.mock.refresh',
         userId: '11111111-1111-4111-8111-111111111111',
       }),
     });
     const result = await handler(
       {
         authorizationCode: 'valid-code',
+        referrer: 'DEFAULT',
         nonce: 'short',
       },
       { clientKey: 'client-a' }
@@ -49,5 +51,28 @@ describe('login-with-toss handler', () => {
     expect(result.ok).toBe(false);
     expect(result.status).toBe(400);
     expect(result.error?.code).toBe('VALIDATION_ERROR');
+  });
+
+  test('rejects missing referrer', async () => {
+    const handler = createLoginWithTossHandler({
+      mTLSClient: createMTLSClient('mock'),
+      bridgeSession: async () => ({
+        accessToken: 'test.mock.access',
+        refreshToken: 'test.mock.refresh',
+        userId: '11111111-1111-4111-8111-111111111111',
+      }),
+    });
+    const result = await handler(
+      {
+        authorizationCode: 'valid-code',
+        nonce: 'nonce-12345678',
+      },
+      { clientKey: 'client-a' }
+    );
+
+    expect(result.ok).toBe(false);
+    expect(result.status).toBe(400);
+    expect(result.error?.code).toBe('VALIDATION_ERROR');
+    expect(result.error?.message).toContain('referrer');
   });
 });

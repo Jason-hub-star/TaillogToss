@@ -62,8 +62,8 @@ describe('loginWithToss', () => {
 
   it('성공 시 TossLoginResponse 반환', async () => {
     const mockResponse = {
-      access_token: 'eyJ.abc.def',
-      refresh_token: 'eyJ.ghi.jkl',
+      access_token: 'header.payload.signature',
+      refresh_token: 'header.payload.sig2',
       user: { id: 'user-1' },
       is_new_user: true,
     };
@@ -78,6 +78,27 @@ describe('loginWithToss', () => {
       body: expect.objectContaining({
         authorizationCode: 'valid-code',
         referrer: 'SANDBOX',
+      }),
+    }));
+  });
+
+  it('referrer가 없으면 DEFAULT로 보정', async () => {
+    const mockResponse = {
+      access_token: 'header.payload.signature',
+      refresh_token: 'header.payload.sig2',
+      user: { id: 'user-1' },
+      is_new_user: false,
+    };
+    mockInvoke.mockResolvedValue({
+      data: { ok: true, data: mockResponse },
+      error: null,
+    });
+
+    await loginWithToss('valid-code');
+    expect(mockInvoke).toHaveBeenCalledWith('login-with-toss', expect.objectContaining({
+      body: expect.objectContaining({
+        authorizationCode: 'valid-code',
+        referrer: 'DEFAULT',
       }),
     }));
   });
@@ -104,13 +125,13 @@ describe('setSessionFromBridgeResponse', () => {
     mockSetSession.mockResolvedValue({ error: null });
 
     const result = await setSessionFromBridgeResponse({
-      access_token: 'eyJ.abc.def',
+      access_token: 'header.payload.signature',
       refresh_token: 'plain-refresh-token',
     } as any);
 
     expect(result).toBe(true);
     expect(mockSetSession).toHaveBeenCalledWith({
-      access_token: 'eyJ.abc.def',
+      access_token: 'header.payload.signature',
       refresh_token: 'plain-refresh-token',
     });
   });
@@ -120,7 +141,7 @@ describe('setSessionFromBridgeResponse', () => {
     mockGetUser.mockResolvedValueOnce({ data: { user: null }, error: new Error('Invalid JWT') });
 
     const result = await setSessionFromBridgeResponse({
-      access_token: 'eyJ.abc.def',
+      access_token: 'header.payload.signature',
       refresh_token: 'plain-refresh-token',
     } as any);
 

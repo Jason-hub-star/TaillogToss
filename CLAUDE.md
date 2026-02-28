@@ -37,6 +37,7 @@ DogCoach(Next.js PWA) -> Toss 미니앱(React Native) 마이그레이션.
 5. 사용자 요청 없는 파괴적 명령(`reset --hard`, 대량 삭제) 금지.
 6. 코드 중복보다 기존 타입/훅/함수 재사용 우선.
 7. 코드 파일 상단 1~3줄 기능 요약 주석 유지.
+8. 반복되는 실행/검증 절차가 확인되면 기존 스킬 업데이트 또는 신규 스킬로 즉시 지침화한다.
 
 ## 스택/아키텍처 요약
 
@@ -104,8 +105,9 @@ DogCoach(Next.js PWA) -> Toss 미니앱(React Native) 마이그레이션.
 ## 상태 업데이트 (2026-02-28)
 - FE API backend-first 전환: `dashboard`, `training` 포함 완료
 - Edge invoke/auth-policy 7종 스모크 검증 완료
-- `send-smart-message` v8, `grant-toss-points` v8, `verify-iap-order` v8, `generate-report` v2 배포 완료
+- `send-smart-message` v8, `grant-toss-points` v8, `verify-iap-order` v8, `generate-report` v3 배포 완료
 - 위조 `x-user-role` 우회 재시도 차단 확인(8건 모두 403)
+- IAP happy-path 실증은 fresh Sandbox `authorization_code` 필요(`login-with-toss` stale code 호출 시 502 invalid_grant 확인)
 
 ## 다음 우선순위 (Single Source)
 1. INFRA-2 후속: Edge happy-path payload 검증 + secrets drift 점검

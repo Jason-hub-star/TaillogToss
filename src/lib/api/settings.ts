@@ -24,7 +24,7 @@ function mapBackendSettings(row: BackendSettingsResponse | null | undefined): Us
 export async function getSettings(userId: string): Promise<UserSettings> {
   return withBackendFallback(
     async () => {
-      const data = await requestBackend<BackendSettingsResponse>('/api/v1/settings');
+      const data = await requestBackend<BackendSettingsResponse>('/api/v1/settings/');
       return mapBackendSettings(data);
     },
     async () => {
@@ -53,7 +53,7 @@ export async function updateSettings(
 ): Promise<UserSettings> {
   return withBackendFallback(
     async () => {
-      const data = await requestBackend<BackendSettingsResponse, Partial<UserSettings>>('/api/v1/settings', {
+      const data = await requestBackend<BackendSettingsResponse, Partial<UserSettings>>('/api/v1/settings/', {
         method: 'PATCH',
         body: updates,
       });

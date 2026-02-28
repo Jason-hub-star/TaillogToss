@@ -60,7 +60,21 @@ description: Toss Sandbox 실기기 테스트에서 Metro 서버 연결, 진입 
   - 초기 진입 URL 보정 필요 (`/_404`를 `/login`으로 normalize)
   - `pages/_404.tsx`에서 `/login` 리다이렉트 처리 여부 확인
 - Android만 접속 실패:
-  - `adb reverse` 2개 포트 재실행
+  - `adb reverse tcp:8081 tcp:8081` 재실행 (Metro 번들링)
+  - backend는 LAN IP direct 방식 사용 (adb reverse 8000 불필요)
+- FastAPI 307 Temporary Redirect 반복:
+  - BE 라우터가 `@router.get("/")` 형태면 FE 경로에 trailing slash 필수
+  - 예: `/api/v1/subscription` → `/api/v1/subscription/`
+- `[FE-BE] backend fallback to supabase [TypeError: Network request failed]`:
+  - FastAPI 실행 주소를 `0.0.0.0:8000`으로 열었는지 확인 (`uvicorn app.main:app --host 0.0.0.0 --port 8000`)
+  - **원인**: Metro가 `0.0.0.0`으로 바인딩 → `resolveBackendUrl()`이 `127.0.0.1:8000` 반환 → 실기기에서 `127.0.0.1`은 기기 자신 → 연결 실패
+  - **1차 시도** `adb reverse tcp:8000 tcp:8000` → `Address already in use` 빈발로 불안정
+  - **2차 시도** `adb reverse tcp:18000 tcp:8000` 우회 + `EXPO_PUBLIC_BACKEND_URL` env → Granite이 `EXPO_PUBLIC_*` env를 번들에 인라인하지 않아 실패
+  - **해결 (2026-02-28)**: `backend.ts` `resolveBackendUrl()`에서 `__DEV__` + loopback 감지 시 `DEV_LAN_BACKEND_URL`(PC Wi-Fi LAN IP + `:8000`)로 직접 연결
+  - LAN IP 확인: `ipconfig | grep IPv4` → Wi-Fi 어댑터 IP 사용 (WSL/Hyper-V IP 제외)
+  - 네트워크 변경 시 `backend.ts`의 `DEV_LAN_BACKEND_URL` 상수만 수정
+  - Windows 방화벽에 8000 인바운드 허용 규칙 필요 (`netsh advfirewall firewall add rule name="FastAPI 8000" dir=in action=allow protocol=tcp localport=8000`)
+  - 성공 기준: Metro 로그에 `[FE-BE] backend fallback` 미발생 + Uvicorn에 기기 IP(`172.30.1.x`)에서 `/api/v1/...` 요청 로그 유입
 
 ## 로그인 성공 패턴 (2026-02-27 확정)
 아래 순서를 만족하면 Sandbox 실기기 로그인 성공 패턴으로 본다.

@@ -98,6 +98,10 @@ function LoginPage() {
       return 'Supabase 설정이 누락되었어요. EXPO_PUBLIC_SUPABASE_URL/EXPO_PUBLIC_SUPABASE_ANON_KEY를 설정해주세요.';
     }
 
+    if (normalized.includes('bridge_session_not_established')) {
+      return '로그인 세션 생성에 실패했어요. 앱을 재시작하고 다시 시도해주세요.';
+    }
+
     return '로그인에 실패했어요. 다시 시도해주세요.';
   }, [readEdgeFailureMeta]);
 
@@ -109,7 +113,10 @@ function LoginPage() {
       const { authorizationCode, referrer } = await appLogin();
       console.log('[AUTH-001] appLogin referrer', referrer ?? '(none)');
       const loginResult = await authApi.loginWithToss(authorizationCode, referrer);
-      await authApi.setSessionFromBridgeResponse(loginResult);
+      const sessionEstablished = await authApi.setSessionFromBridgeResponse(loginResult);
+      if (!sessionEstablished) {
+        throw new Error('BRIDGE_SESSION_NOT_ESTABLISHED');
+      }
       login(loginResult.user);
 
       const hasCompletedOnboarding = await syncOnboardingStatus(loginResult.user.id);

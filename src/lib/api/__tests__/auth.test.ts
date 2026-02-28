@@ -91,4 +91,19 @@ describe('setSessionFromBridgeResponse', () => {
     expect(result).toBe(false);
     expect(mockSetSession).not.toHaveBeenCalled();
   });
+
+  it('access token이 JWT면 refresh token 비JWT여도 setSession 호출', async () => {
+    mockSetSession.mockResolvedValue({ error: null });
+
+    const result = await setSessionFromBridgeResponse({
+      access_token: 'eyJ.abc.def',
+      refresh_token: 'plain-refresh-token',
+    } as any);
+
+    expect(result).toBe(true);
+    expect(mockSetSession).toHaveBeenCalledWith({
+      access_token: 'eyJ.abc.def',
+      refresh_token: 'plain-refresh-token',
+    });
+  });
 });

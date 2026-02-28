@@ -51,7 +51,7 @@ function mapBackendOrder(userId: string, row: BackendOrderHistory): TossOrder {
 /** 현재 구독 상태 */
 export async function getSubscription(userId: string): Promise<Subscription | null> {
   return withBackendFallback(
-    () => requestBackend<Subscription | null>('/api/v1/subscription'),
+    () => requestBackend<Subscription | null>('/api/v1/subscription/'),
     async () => {
       const { data, error } = await supabase
         .from('subscriptions')

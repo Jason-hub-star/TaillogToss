@@ -60,7 +60,7 @@ function mapNotificationRow(row: BackendNotificationRow): NotificationHistory {
 export async function getNotificationHistory(userId: string): Promise<NotificationHistory[]> {
   return withBackendFallback(
     async () => {
-      const rows = await requestBackend<BackendNotificationRow[]>('/api/v1/notification');
+      const rows = await requestBackend<BackendNotificationRow[]>('/api/v1/notification/');
       return rows.map(mapNotificationRow);
     },
     async () => {

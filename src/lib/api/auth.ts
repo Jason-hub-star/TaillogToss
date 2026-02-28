@@ -72,7 +72,8 @@ export async function setSessionFromBridgeResponse(payload: TossLoginResponse): 
     throw new Error('INVALID_BRIDGE_TOKENS');
   }
 
-  if (!isJwtLike(payload.access_token) || !isJwtLike(payload.refresh_token)) {
+  // Supabase refresh token은 JWT가 아닐 수 있으므로 access token만 판별한다.
+  if (!isJwtLike(payload.access_token)) {
     return false;
   }
 

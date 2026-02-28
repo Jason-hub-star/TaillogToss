@@ -101,6 +101,7 @@ DogCoach(Next.js PWA) -> Toss 미니앱(React Native) 마이그레이션.
 - Real mTLS 전환(인증서/콘솔) 후속 필요
 - Ad Group ID 실 교체 대기
 - 일부 도메인 happy-path payload 실검증 필요
+- ~~backend-first 실기기 연결 불안정~~ → **해결(2026-02-28)**: LAN IP direct(`DEV_LAN_BACKEND_URL`) 전환으로 `Network request failed` 제거
 
 ## 상태 업데이트 (2026-02-28)
 - FE API backend-first 전환: `dashboard`, `training` 포함 완료
@@ -108,6 +109,7 @@ DogCoach(Next.js PWA) -> Toss 미니앱(React Native) 마이그레이션.
 - `send-smart-message` v8, `grant-toss-points` v8, `verify-iap-order` v8, `generate-report` v3 배포 완료
 - 위조 `x-user-role` 우회 재시도 차단 확인(8건 모두 403)
 - IAP happy-path 실증은 fresh Sandbox `authorization_code` 필요(`login-with-toss` stale code 호출 시 502 invalid_grant 확인)
+- **실기기 backend-first LAN IP direct 연결 성공(2026-02-28)**: `backend.ts` `DEV_LAN_BACKEND_URL` 적용, 기기(172.30.1.51)→PC(172.30.1.1:8000) 직통 확인, 307 trailing slash 수정 완료
 
 ## 다음 우선순위 (Single Source)
 1. INFRA-2 후속: Edge happy-path payload 검증 + secrets drift 점검

@@ -87,7 +87,7 @@ export async function generateReport(input: {
 }): Promise<DailyReport> {
   return withBackendFallback(
     () =>
-      requestBackend<DailyReport, typeof input>('/api/v1/report', {
+      requestBackend<DailyReport, typeof input>('/api/v1/report/', {
         method: 'POST',
         body: input,
       }),

@@ -60,6 +60,11 @@ Evidence:
 3. MSG 성공/실패/예외
 4. AD R1/R2/R3 성공/폴백
 
+## Known Issue (2026-02-28, backend-first 실기기) — RESOLVED
+- 증상: `WARN  [FE-BE] backend fallback to supabase [TypeError: Network request failed]`
+- 해결: `backend.ts` `DEV_LAN_BACKEND_URL`(PC Wi-Fi LAN IP)로 직접 연결 + trailing slash 수정
+- 검증: 기기(172.30.1.51) → PC(172.30.1.1:8000) 200 OK 확인, Metro fallback 경고 미발생
+
 ## Result Template (세션마다 복붙)
 ```
 Date:

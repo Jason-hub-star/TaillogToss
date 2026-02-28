@@ -43,6 +43,18 @@
 - [x] Supabase Edge Function `login-with-toss` v12 배포 확인 (`get_edge_function`)
 - [ ] Sandbox 실기기: survey 완료 -> survey-result -> notification -> dashboard
 
+## Known Issue (2026-02-28) — RESOLVED
+- 현상: 실기기에서 `WARN  [FE-BE] backend fallback to supabase [TypeError: Network request failed]` 반복.
+- 근본 원인: Granite이 `EXPO_PUBLIC_*` env를 번들에 인라인하지 않음 + Metro `0.0.0.0` 바인딩 시 `resolveBackendUrl()`이 `127.0.0.1:8000` 반환 → 실기기에서 `127.0.0.1`은 기기 자신.
+- 해결 (2026-02-28):
+  - `backend.ts`에 `DEV_LAN_BACKEND_URL = 'http://172.30.1.1:8000'` 상수 추가
+  - `resolveBackendUrl()`에서 `__DEV__` + loopback 감지 시 LAN IP 사용
+  - FE API 경로 5건에 trailing slash 추가 (FastAPI 307 redirect 제거)
+- 검증 결과:
+  - 기기(172.30.1.51) → PC(172.30.1.1:8000) LAN direct 연결 성공
+  - Uvicorn 로그: `GET /api/v1/subscription/ HTTP/1.1 200 OK`
+  - Metro 로그: `[FE-BE] backend fallback` 경고 미발생
+
 ## Risks
 - Supabase auth/user bridge는 `SUPABASE_SERVICE_ROLE_KEY` 환경 의존
 - Backend URL 미설정 시 fallback 경로 동작에 의존
@@ -53,7 +65,7 @@
 - 문제 시 `login-with-toss`를 이전 버전으로 롤백 배포
 - 신규 RLS 정책은 정책 단위 DROP으로 롤백 가능
 
-## Self-Review (interim)
-- 잘한 점: training/dashboard까지 backend-first 확장하고, training 모델 차이를 FE 매핑 레이어로 흡수함
+## Self-Review
+- 잘한 점: training/dashboard까지 backend-first 확장, LAN IP direct로 실기기 연결 해결, trailing slash 307 일괄 수정
 - 부족한 점: training `changeVariant`는 미사용 경로라 backend 전환 범위에서 제외되어 추후 정리 필요
 - 남은 공백: 실기기 E2E(설문 완료→대시보드) 증적 확보 및 IAP/MSG/AD 시나리오 검증

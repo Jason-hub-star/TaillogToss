@@ -20,6 +20,10 @@ export const queryKeys = {
     detail: (logId: string) => [...queryKeys.logs.all, 'detail', logId] as const,
     daily: (dogId: string, date: string) => [...queryKeys.logs.all, 'daily', dogId, date] as const,
   },
+  dashboard: {
+    all: ['dashboard'] as const,
+    detail: (dogId: string) => [...queryKeys.dashboard.all, 'detail', dogId] as const,
+  },
   coaching: {
     all: ['coaching'] as const,
     list: (dogId: string) => [...queryKeys.coaching.all, 'list', dogId] as const,

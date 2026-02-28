@@ -7,8 +7,10 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import type { Dog } from 'types/dog';
 
+type DashboardDog = Pick<Dog, 'id' | 'name' | 'breed'>;
+
 export interface DogCardProps {
-  dog: Dog;
+  dog: DashboardDog;
   todayLogCount: number;
   onPress?: () => void;
 }

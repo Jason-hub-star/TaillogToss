@@ -11,7 +11,8 @@ import { View, Text, ScrollView, StyleSheet, ActivityIndicator, TouchableOpacity
 import { useActiveDog } from 'stores/ActiveDogContext';
 import { useAuth } from 'stores/AuthContext';
 import { isB2BRole } from 'stores/OrgContext';
-import { useLogList, useDailyLogs } from 'lib/hooks/useLogs';
+import { useDashboard } from 'lib/hooks/useDashboard';
+import { useDailyLogs } from 'lib/hooks/useLogs';
 import { DogCard } from 'components/features/dashboard/DogCard';
 import { StreakBanner } from 'components/features/dashboard/StreakBanner';
 import { LogCard } from 'components/features/log/LogCard';
@@ -32,8 +33,24 @@ function DashboardPage() {
   const showOpsTab = isB2BRole(user?.role);
 
   const today = useMemo(() => new Date().toISOString().slice(0, 10), []);
-  const { data: allLogs, isLoading: logsLoading, error: logsError, refetch } = useLogList(activeDog?.id);
+  const {
+    data: dashboardData,
+    isLoading: dashboardLoading,
+    error: dashboardError,
+    refetch: refetchDashboard,
+  } = useDashboard(activeDog?.id);
   const { data: todayLogs } = useDailyLogs(activeDog?.id, today);
+  const recentLogs = dashboardData?.recentLogs ?? [];
+  const totalLogs = dashboardData?.stats.total_logs ?? recentLogs.length;
+  const displayDog = activeDog
+    ? { id: activeDog.id, name: activeDog.name, breed: activeDog.breed }
+    : dashboardData?.dogProfile
+      ? {
+          id: dashboardData.dogProfile.id,
+          name: dashboardData.dogProfile.name,
+          breed: dashboardData.dogProfile.breed ?? '',
+        }
+      : null;
 
   const handleQuickLog = useCallback(() => {
     navigation.navigate('/dashboard/quick-log');
@@ -41,27 +58,27 @@ function DashboardPage() {
 
   const recordContent = (
     <View style={styles.tabContent}>
-      {activeDog && (
+      {displayDog && (
         <DogCard
-          dog={activeDog}
+          dog={displayDog}
           todayLogCount={todayLogs?.length ?? 0}
-          onPress={() => navigation.navigate('/dog/profile')}
+          onPress={activeDog ? () => navigation.navigate('/dog/profile') : undefined}
         />
       )}
 
-      {allLogs && <StreakBanner logs={allLogs} />}
+      <StreakBanner logs={recentLogs} streakOverride={dashboardData?.stats.current_streak} />
 
-      {logsLoading && (
+      {dashboardLoading && (
         <View style={styles.center}>
           <ActivityIndicator size="large" color="#0064FF" />
         </View>
       )}
 
-      {logsError && (
-        <ErrorState onRetry={() => { void refetch(); }} />
+      {dashboardError && (
+        <ErrorState onRetry={() => { void refetchDashboard(); }} />
       )}
 
-      {!logsLoading && !logsError && allLogs && allLogs.length === 0 && (
+      {!dashboardLoading && !dashboardError && totalLogs === 0 && (
         <EmptyState
           title="아직 기록이 없어요"
           description="아래 버튼으로 첫 기록을 남겨보세요"
@@ -69,12 +86,12 @@ function DashboardPage() {
         />
       )}
 
-      {!logsLoading && !logsError && allLogs && allLogs.length > 0 && (
+      {!dashboardLoading && !dashboardError && totalLogs > 0 && (
         <ScrollView showsVerticalScrollIndicator={false}>
           <View style={styles.logListHeader}>
-            <Text style={styles.logListTitle}>최근 ABC 기록</Text>
+            <Text style={styles.logListTitle}>최근 기록</Text>
           </View>
-          {allLogs.slice(0, 20).map((log) => (
+          {recentLogs.map((log) => (
             <LogCard key={log.id} log={log} />
           ))}
         </ScrollView>

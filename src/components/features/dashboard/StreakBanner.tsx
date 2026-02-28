@@ -9,6 +9,7 @@ import type { BehaviorLog } from 'types/log';
 
 export interface StreakBannerProps {
   logs: BehaviorLog[];
+  streakOverride?: number;
 }
 
 /** 연속 기록일 계산 — 오늘부터 역산 */
@@ -36,8 +37,8 @@ function calcStreak(logs: BehaviorLog[]): number {
   return streak;
 }
 
-export function StreakBanner({ logs }: StreakBannerProps) {
-  const streak = calcStreak(logs);
+export function StreakBanner({ logs, streakOverride }: StreakBannerProps) {
+  const streak = streakOverride ?? calcStreak(logs);
 
   if (streak === 0) return null;
 

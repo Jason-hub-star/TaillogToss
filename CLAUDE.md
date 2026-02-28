@@ -5,6 +5,23 @@
 DogCoach(Next.js PWA) → Toss 미니앱(React Native) 마이그레이션.
 개 행동 교정 SaaS: ABC 기록 → 데이터 시각화 → AI 코칭.
 
+## 세션 시작 가이드 (MUST)
+
+새 세션/컨텍스트 시작 시 아래 순서로 문서를 읽는다. 이 문서(CLAUDE.md)는 자동 로드되므로 2번부터 실행.
+
+| 순서 | 문서 | 읽는 이유 | 필수 |
+|------|------|----------|------|
+| 1 | `CLAUDE.md` (이 파일) | 규칙 + 스택 + Phase 상태 + 우선순위 | 자동 |
+| 2 | `docs/11-FEATURE-PARITY-MATRIX.md` | Parity ID별 체크리스트 — 작업 전 현재 상태 파악 | ✅ |
+| 3 | `docs/BACKEND-PLAN.md` | BE 구조 + FE↔BE API 매핑 60+ endpoints | ✅ |
+| 4 | `docs/MISSING-AND-UNIMPLEMENTED.md` | 잔여 작업 + 블로커 + Mock 목록 + Edge Function 상태 | ✅ |
+
+**작업별 추가 참조**:
+- DB/마이그레이션 작업 → `docs/SCHEMA-B2B.md`
+- E2E/Sandbox 테스트 → `docs/2-27/PHASE13-E2E-SANDBOX-PLAYBOOK.md`
+- 화면 구현 → `Skill("toss_wireframes")` + `Skill("toss_journey")`
+- 기능 상세 스펙 → `docs/PRD-TailLog-Toss.md` (B2C) / `docs/PRD-TailLog-B2B.md` (B2B)
+
 ## 저장소 경계 (MUST)
 
 | 구분 | 경로 | 권한 |

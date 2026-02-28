@@ -1,6 +1,6 @@
 # TaillogToss 누락 플랜 + 미구현 목록
 
-> 작성일: 2026-02-28 | 기준: commit `67a282d` (Phase C-4 이후)
+> 작성일: 2026-02-28 | 최종 업데이트: 2026-02-28 | 기준: commit `31dc7b6` (INFRA-1 DB 마이그레이션 이후)
 
 ## 1. PRD 미구현 기능 (Phase 2+ Deferred)
 
@@ -46,22 +46,29 @@
 
 ---
 
-## 2. 백엔드 미구현 (Backend/ 디렉토리 없음)
+## 2. 백엔드 구현 상태
 
-**현재 상태**: Backend/ 디렉토리 자체가 존재하지 않음. 0% 구현.
+**현재 상태**: ✅ BE-P1~P8 전체 완료 + INFRA-1 DB 마이그레이션 적용 (2026-02-28)
 
 | Phase | 범위 | 상태 | 핵심 내용 |
 |-------|------|------|----------|
-| BE-P1 | 스캐폴딩 + config | 미구현 | FastAPI 앱, requirements.txt, Dockerfile |
-| BE-P2 | SQL 마이그레이션 | 미구현 | 22테이블 + RLS (Alembic 버전 파일) |
-| BE-P3 | 모델 + 스키마 | 미구현 | SQLAlchemy 11개, Pydantic 스키마 |
-| BE-P4 | Dogs + Log CRUD | 미구현 | 6개 라우터 |
-| **BE-P5** | **AI 코칭 엔진** | 미구현 | **300줄 service.py, 룰 엔진, 예산 게이팅, LLM 호출** |
-| BE-P6 | Training + Settings | 미구현 | 대시보드 집계 |
-| **BE-P7** | **B2B Org + Report** | 미구현 | 14개 Org API, 9개 Report API |
-| BE-P8 | 테스트 | 미구현 | 8개 test_*.py 파일 |
+| BE-P1 | 스캐폴딩 + config | ✅ 완료 | FastAPI 앱, requirements.txt, Dockerfile, Alembic |
+| BE-P2 | SQL 마이그레이션 | ✅ 완료 | Supabase MCP로 적용 (26→38테이블 + RLS 30+정책) |
+| BE-P3 | 모델 + 스키마 | ✅ 완료 | SQLAlchemy 27모델 + 22 enum (models.py 단일 파일) |
+| BE-P4 | Dogs + Log CRUD | ✅ 완료 | auth, onboarding, dogs, log, dashboard (5 feature 모듈) |
+| BE-P5 | AI 코칭 엔진 | ✅ 완료 | 6블록 생성 + 예산 게이팅 + 룰 폴백 |
+| BE-P6 | Training + Settings | ✅ 완료 | training, settings, subscription, notification |
+| BE-P7 | B2B Org + Report | ✅ 완료 | org 14 endpoints, report 9 endpoints |
+| BE-P8 | 테스트 | ✅ 완료 | pytest 39 tests 전체 통과 |
 
-**크리티컬 패스**: BE-P1 → BE-P2 → BE-P3 → BE-P5 (AI 코칭이 핵심)
+**INFRA-1**: Supabase MCP로 DB 마이그레이션 적용 완료
+- `20260228015912_b2c_column_gaps_and_enum_migration` — user_role/user_status enum 마이그레이션 + 8개 테이블 컬럼 추가 + toss_orders/edge_function_requests 신규
+- `20260228020042_b2b_tables_and_extensions` — B2B 10개 테이블 + ALTER 3개 + RLS 헬퍼 3함수 + PII 함수 + RLS 30+정책
+
+**남은 백엔드 작업**:
+- INFRA-2: Edge Function 배포 + Secrets 등록 (수동)
+- INFRA-3: 토스 콘솔 등록 + mTLS 인증서 (수동)
+- FE→BE 연결: `src/lib/api/backend.ts` HTTP 클라이언트 래퍼
 
 ---
 
@@ -69,11 +76,11 @@
 
 | Parity ID | 잔여 TODO |
 |-----------|----------|
-| AUTH-001 | 실패 케이스 400 증적 추가 |
+| AUTH-001 | 실패 케이스 400 증적 추가 (실기기) |
 | APP-001 | 실기기 라우팅 완전 검증 |
 | UI-001 | 실기기 비주얼 QA (17화면) |
 | LOG-001 | Supabase API 실 연동 |
-| AI-001 | Backend/ 미존재 (BE-P5), FastAPI 코칭 API 연동 |
+| AI-001 | ~~Backend/ 미존재~~ → BE-P5 완료. FastAPI 코칭 API FE 연결 필요 |
 | IAP-001 | 결제 E2E (실제 결제) |
 | MSG-001 | Sandbox 실발송 검증 |
 | AD-001 | 실 Ad Group ID 교체, Sandbox 광고 검증 |
@@ -113,8 +120,9 @@
 
 | 테스트 유형 | 상태 | 갭 |
 |-----------|------|-----|
-| 단위 테스트 | 부분 | AI 코칭 (BE 미존재), B2B (수동만) |
-| 통합 테스트 | 미구현 | FastAPI + Supabase (Backend 없음) |
+| FE 단위 테스트 | 완료 | Jest 66 tests (auth 7 + iap 8 + roleGuard 8 + ads 5 + 기타) |
+| BE 단위 테스트 | 완료 | pytest 39 tests (health 3 + models 12 + schemas 14 + security 7 + routers 6) |
+| BE↔DB 통합 테스트 | 미구현 | FastAPI + 실 Supabase 연결 테스트 (DB 마이그레이션 완료, 연결만 미검증) |
 | E2E 테스트 | 부분 | 로그인만 검증, IAP/광고 미검증 |
 | 성능 테스트 | 미구현 | 40마리 FlatList, API p95 < 300ms |
 | 보안 테스트 | 부분 | mTLS real mode, PII 암호화 단위만 |
@@ -125,21 +133,22 @@
 
 ### 🔴 CRITICAL (출시 차단)
 
-1. **Backend AI 코칭 엔진 (BE-P5)** — 앱 핵심 기능. 없으면 코칭 500 에러
-2. **FastAPI 프로젝트 초기화 (BE-P1~P4)** — 모든 BE 기능의 기반
-3. **Edge Function Real mTLS (INFRA-3)** — 로그인 외 Toss API 호출 전부
+1. ~~Backend AI 코칭 엔진 (BE-P5)~~ → ✅ 완료
+2. ~~FastAPI 프로젝트 초기화 (BE-P1~P4)~~ → ✅ 완료
+3. **Edge Function Real mTLS (INFRA-3)** — 로그인 외 Toss API 호출 전부 (인증서 발급 필요)
+4. **FE→BE API 연결** — Backend 코드 존재하지만 FE에서 호출하는 HTTP 클라이언트 미구현
 
 ### 🟠 HIGH (주요 기능 미완성)
 
-4. IAP E2E 테스트 (Sandbox 결제 플로우)
-5. B2B RPC 함수 (verify_parent_phone_last4)
-6. Ads 실 Ad Group ID 교체
+5. IAP E2E 테스트 (Sandbox 결제 플로우)
+6. B2B RPC 함수 (verify_parent_phone_last4)
+7. Ads 실 Ad Group ID 교체
 
 ### 🟡 MEDIUM (론칭 영향 없음)
 
-7. 세그먼트 + 리텐션 자동화 (Phase 2+)
-8. 공유 리워드 (Phase 2+)
-9. 트레이너 마켓플레이스 (Phase 2-3)
+8. 세그먼트 + 리텐션 자동화 (Phase 2+)
+9. 공유 리워드 (Phase 2+)
+10. 트레이너 마켓플레이스 (Phase 2-3)
 
 ---
 
@@ -170,11 +179,11 @@
 ## 9. 다음 실행 순서 (권장)
 
 ```
-1. Supabase MCP 연결 → 실 DB 테이블 확인 (Phase E)
-2. BE-P1 스캐폴딩 → BE-P2 마이그레이션 → BE-P3 모델
-3. BE-P5 AI 코칭 엔진 (가장 중요, DogCoach 참조)
-4. Edge Function real mTLS 전환
-5. IAP E2E + 광고 검증
-6. UI/UX 개선 (Phase C — 애니메이션, 비주얼, UX 플로우)
-7. B2B 온보딩 (Phase D)
+1. ✅ Supabase MCP 연결 + 실 DB 38테이블 완성 (INFRA-1 완료)
+2. ✅ BE-P1~P8 전체 완료 (48파일, 12모듈, 60+ endpoints)
+3. FE→BE API 연결 (src/lib/api/backend.ts HTTP 클라이언트 래퍼)
+4. Edge Function real mTLS 전환 (INFRA-3: 인증서 발급)
+5. IAP E2E + 광고 검증 (실기기 필요)
+6. Phase 13 E2E 테스트 프레임워크
+7. 실기기 비주얼 QA + B2B 성능 테스트
 ```

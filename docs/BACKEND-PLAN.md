@@ -16,10 +16,18 @@
 
 ---
 
-## INFRA-1: Supabase DB 스키마 완성 + MCP 설정
+## INFRA-1: Supabase DB 스키마 완성 + MCP 설정 ✅ 완료
 
 ### 목표
-기존 Supabase DB의 누락 테이블을 추가하여 22테이블 완성. MCP로 DB 작업 효율화.
+기존 Supabase DB의 누락 테이블을 추가하여 38테이블 완성. MCP로 DB 작업 효율화.
+
+### 완료 결과 (2026-02-28)
+- **26 → 38 테이블** (13개 신규: B2B 10 + toss_orders + edge_function_requests + pii_access_log)
+- **Enum 마이그레이션**: user_role (GUEST/USER/PRO_USER/EXPERT/ADMIN → user/trainer/org_owner/org_staff), user_status (ACTIVE → active)
+- **8개 기존 테이블 컬럼 추가**: users(toss_user_key, pepper_version), dogs(weight_kg), behavior_logs(quick_category, daily_activity, location, memo, org_id, recorded_by), ai_coaching(blocks, ai_tokens_used), subscriptions(ai_tokens_remaining/total), action_tracker(action_item_id, completed_at), user_training_status(dog_id, current_variant, memo)
+- **RLS**: 30+ 정책 + 3 헬퍼 함수 (is_org_member, is_parent_of_dog, is_org_member_with_role)
+- **PII**: org_dogs_pii 4방향 차단 + get_parent_contact RPC + purge_expired_pii
+- Supabase 마이그레이션: `20260228015912_b2c_column_gaps_and_enum_migration` + `20260228020042_b2b_tables_and_extensions`
 
 ### 작업 순서
 
@@ -45,8 +53,9 @@
 - FK 관계 정확성 확인
 
 ### 검증
-- MCP로 `SELECT count(*) FROM information_schema.tables WHERE table_schema='public'` → 22+
-- 프론트 타입 파일 필드 ↔ DB 컬럼 전수 매칭
+- ✅ MCP `list_tables` → 38개 테이블 확인
+- ✅ `execute_sql` → 핵심 컬럼 추가 검증 (toss_user_key, weight_kg, blocks, ai_tokens_used 등)
+- ✅ Backend pytest 39/39 통과
 
 ---
 
@@ -749,9 +758,10 @@ DogCoach 참조 파일도 같이 읽어서 패턴 맞춰줘."
 - [ ] `tosstaillog/Backend/.env` 파일 준비 (DB URL, JWT Secret 등)
 
 ### 현재 상태 (2026-02-28 업데이트)
-- INFRA-1~3: 수동 작업 필요 (콘솔 등록, mTLS 등)
+- INFRA-1: ✅ 완료 — Supabase MCP로 B2C+B2B 마이그레이션 적용 (26→38 테이블)
+- INFRA-2~3: 수동 작업 필요 (Edge Function 배포, 콘솔 등록, mTLS 인증서)
 - BE-P1: ✅ 완료 — scaffolding, config, database, security, exceptions, models, main, Dockerfile, alembic
-- BE-P2: ⏸️ 대기 — Supabase MCP 연결 후 SQL 마이그레이션 실행
+- BE-P2: ✅ 완료 — Supabase MCP로 SQL 마이그레이션 실행 (7개 마이그레이션 적용됨)
 - BE-P3: ✅ 완료 — 27 SQLAlchemy 모델 + 22 enum (models.py 단일 파일)
 - BE-P4: ✅ 완료 — auth, onboarding, dogs, log, dashboard (5 feature 모듈)
 - BE-P5: ✅ 완료 — coaching (AI 6블록 생성 + 예산 + 룰 폴백)

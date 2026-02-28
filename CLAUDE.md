@@ -165,6 +165,8 @@ Backend/             # FastAPI + Alembic
 | REG | 토스 콘솔 등록 준비 | Done | legal 4종 + toss-disconnect + RealMTLSClient + 앱 내 약관 페이지 |
 | FIX | 공식 문서 갭 수정 | Done | config.toml 7종, Ads SDK ver2 정렬, Settings 실구현, 뒤로가기 전수, CORS, 멱등성 |
 | IMPL | dog 프로필/추가 + IAP 패턴 | Done | profile.tsx/add.tsx 실 구현, IAP 공식 패턴 래퍼, 미완료 주문 복구 |
+| BE | Backend FastAPI 전체 구현 | Done | BE-P1~P8: 48파일, 12모듈, 60+ endpoints, 27모델, pytest 39 tests |
+| INFRA | Supabase DB 마이그레이션 | Done | INFRA-1: 26→38 테이블, enum 마이그레이션, RLS 30+정책, PII 함수 |
 
 ### 현재 Mock/대기 항목
 - **mTLS 인증서**: `supabase/functions/_shared/mTLSClient.ts` — RealMTLSClient + `TOSS_MTLS_MODE` 반영 완료. cert/key secret 등록 + digest 검증 완료
@@ -180,11 +182,17 @@ Backend/             # FastAPI + Alembic
 - Sandbox 실기기 로그인 성공 확인 (`/login -> /onboarding/welcome`, `appLogin referrer=SANDBOX`, Edge `login-with-toss` v11 `POST 200`)
 - 남은 리스크는 외부 승인 이슈가 아니라 **실연동 증적 확보** 영역(로그인/IAP/광고)임
 
+### 상태 업데이트 (2026-02-28)
+- Backend FastAPI 전체 구현 완료 (BE-P1~P8: 48파일, 12모듈, 60+ endpoints, 27모델, pytest 39 tests)
+- Supabase INFRA-1 DB 마이그레이션 적용 완료 (26→38 테이블, enum 마이그레이션, B2B 10테이블+RLS)
+- FE Jest 테스트 보강: auth 7 + iap 8 + roleGuard 8 + ads 5 = 66 tests 전체 통과
+- typecheck 0 에러 달성
+
 ### 다음 우선순위
-1. AUTH-001 실패 케이스(의도적 잘못 코드) 400 증적 1건 추가 확보 — 실기기 필요
-2. IAP/MSG/AD Sandbox E2E 시나리오 실행 — 실기기 필요
-3. Ad Group ID 실 교체 — 사업자등록 후 Developers Console 발급
-4. lint 44건 일괄 정리 (no-explicit-any) — 실기기 불필요, 선택적
+1. FE→BE API 연결 — `src/lib/api/backend.ts` HTTP 클라이언트 래퍼 작성 (실기기 불필요)
+2. Phase 13 E2E 테스트 프레임워크 구축 (실기기 불필요)
+3. AUTH-001 실패 케이스 400 증적 + IAP/MSG/AD Sandbox E2E — 실기기 필요
+4. Ad Group ID 실 교체 — Developers Console 발급
 
 ### 완료 항목 (2026-02-28)
 - ~~B2B IAP 공식 패턴 정렬~~ → usePurchaseB2BIAP + usePendingOrderRecoveryB2B 구현 완료
@@ -204,4 +212,6 @@ Backend/             # FastAPI + Alembic
 | 마이그레이션 웨이브 | `docs/12-MIGRATION-WAVES-AND-GATES.md` |
 | Phase 11 런타임 증적 | `docs/2-27/PHASE11-RUNTIME-EVIDENCE.md` |
 | Phase 13 E2E/Sandbox 플레이북 | `docs/2-27/PHASE13-E2E-SANDBOX-PLAYBOOK.md` |
+| Backend 구현 플랜 | `docs/BACKEND-PLAN.md` |
+| 누락/미구현 목록 | `docs/MISSING-AND-UNIMPLEMENTED.md` |
 | 원본 DogCoach (읽기 전용) | `C:\Users\gmdqn\DogCoach` |

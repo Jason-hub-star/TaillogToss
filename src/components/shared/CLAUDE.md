@@ -5,7 +5,7 @@
 ## 스킬 참조
 - 레이아웃 패턴 A~E: `Skill("toss_wireframes")` §10
 - 광고 SDK: `Skill("toss_apps")` §9
-- 에셋 가이드: `docs/ASSET-GUIDE.md`
+- 에셋 가이드: `docs/ref/ASSET-GUIDE.md`
 
 ## 하위 폴더
 

@@ -5,7 +5,7 @@ Journey E (B2B Ops): subscription(B2B) → role 전환 → dashboard(운영탭) 
 ## 스킬 참조
 - 와이어프레임: `Skill("toss_wireframes")` §9-10
 - 여정 흐름: `Skill("toss_journey")` Journey E
-- B2B 스키마: `docs/SCHEMA-B2B.md`
+- B2B 스키마: `docs/ref/SCHEMA-B2B.md`
 
 ## 파일
 

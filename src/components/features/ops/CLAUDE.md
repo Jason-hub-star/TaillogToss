@@ -4,7 +4,7 @@ ops/today.tsx, ops/settings.tsx 페이지에서 사용.
 
 ## 스킬 참조
 - 와이어프레임: `Skill("toss_wireframes")` §9-10
-- B2B 스키마: `docs/SCHEMA-B2B.md`
+- B2B 스키마: `docs/ref/SCHEMA-B2B.md`
 - 여정: `Skill("toss_journey")` Journey E
 
 ## 파일

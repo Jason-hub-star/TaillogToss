@@ -3,7 +3,7 @@
 B2B 트레이너가 보낸 리포트를 보호자가 확인하는 화면.
 
 ## 스킬 참조
-- B2B 스키마: `docs/SCHEMA-B2B.md`
+- B2B 스키마: `docs/ref/SCHEMA-B2B.md`
 
 ## 파일
 

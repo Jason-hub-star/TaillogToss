@@ -1,7 +1,7 @@
 # assets/ — 정적 에셋 (Lottie, 이미지, 아이콘)
 
 ## 스킬 참조
-- 에셋 가이드: `docs/ASSET-GUIDE.md`
+- 에셋 가이드: `docs/ref/ASSET-GUIDE.md`
 - 화면별 에셋 매핑: `Skill("toss_wireframes")`
 
 ## 폴더 구조

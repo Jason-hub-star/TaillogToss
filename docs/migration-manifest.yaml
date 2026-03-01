@@ -5,9 +5,9 @@ default_repo_mode:
   read_repo: "DogCoach"
 required_docs:
   - "CLAUDE.md"
-  - "docs/10-MIGRATION-OPERATING-MODEL.md"
-  - "docs/11-FEATURE-PARITY-MATRIX.md"
-  - "docs/12-MIGRATION-WAVES-AND-GATES.md"
+  - "docs/ref/10-MIGRATION-OPERATING-MODEL.md"
+  - "docs/status/11-FEATURE-PARITY-MATRIX.md"
+  - "docs/ref/12-MIGRATION-WAVES-AND-GATES.md"
 status_enum:
   - "Not Started"
   - "In Progress"

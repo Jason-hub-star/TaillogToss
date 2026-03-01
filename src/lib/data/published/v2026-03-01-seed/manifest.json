@@ -1,0 +1,15 @@
+{
+  "version": "v2026-03-01-seed",
+  "generated_at": "2026-03-01T00:00:00+09:00",
+  "source": {
+    "approved_run_id": "bootstrap-2026-03-01",
+    "notes": "seed snapshot from existing static curriculum source"
+  },
+  "counts": {
+    "curriculums": 7,
+    "curriculum_days": 36,
+    "curriculum_steps": 108,
+    "presets": 23
+  },
+  "status": "active"
+}

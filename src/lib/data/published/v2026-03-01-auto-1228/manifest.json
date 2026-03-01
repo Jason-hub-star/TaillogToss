@@ -1,0 +1,14 @@
+{
+  "version": "v2026-03-01-auto-1228",
+  "generated_at": "2026-03-01T12:29:31.416537+09:00",
+  "source": {
+    "run_id": "2026-03-01-auto-1228"
+  },
+  "counts": {
+    "curriculums": 4,
+    "curriculum_days": 28,
+    "curriculum_steps": 84,
+    "presets": 0
+  },
+  "status": "active_candidate"
+}

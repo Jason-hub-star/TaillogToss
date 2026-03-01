@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "updated_at": "2026-03-01T12:30:05.651038+09:00",
+  "active_version": "v2026-03-01-auto-1228",
+  "counts": {
+    "curriculums": 4,
+    "curriculum_days": 28,
+    "curriculum_steps": 84,
+    "presets": 0
+  },
+  "pipeline": {
+    "raw_retention_days": 14,
+    "raw_delete_days": 90,
+    "candidate_rejected_retention_days": 7,
+    "candidate_pending_retention_days": 30,
+    "approved_versions_per_curriculum": 8,
+    "published_hot_versions": 3
+  }
+}

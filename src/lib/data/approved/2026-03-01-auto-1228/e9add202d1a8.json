@@ -1,0 +1,20 @@
+{
+  "source_hash": "e9add202d1a8",
+  "source_url": "https://www.aspca.org/pet-care/dog-care/common-dog-behavior-issues/separation-anxiety",
+  "domain": "www.aspca.org",
+  "title": "Separation Anxiety | ASPCA",
+  "fetched_at": "2026-03-01T12:27:31.207860+09:00",
+  "language": "en",
+  "summary": "ASPCA protocol: predeparture cue desensitization, graduated departures (seconds→minutes→hours), consistent exit/return routines, no punishment. Professional guidance recommended for severe cases.",
+  "credibility_score": 85,
+  "risk_flag": false,
+  "metadata": {
+    "query": "separation anxiety dog training step-by-step",
+    "type": "humane_org"
+  },
+  "normalized_at": "2026-03-01T12:28:05.813645+09:00",
+  "run_id": "2026-03-01-auto-1228",
+  "status": "pending_review",
+  "quality_gate_result": "PASS",
+  "quality_gate_checked_at": "2026-03-01T12:28:35.535656+09:00"
+}

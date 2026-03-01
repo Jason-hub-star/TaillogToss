@@ -35,6 +35,10 @@ export const queryKeys = {
     progress: (dogId: string) => [...queryKeys.training.all, 'progress', dogId] as const,
     detail: (dogId: string, curriculumId: string) =>
       [...queryKeys.training.all, 'detail', dogId, curriculumId] as const,
+    feedback: (dogId: string, curriculumId?: string) =>
+      curriculumId
+        ? ([...queryKeys.training.all, 'feedback', dogId, curriculumId] as const)
+        : ([...queryKeys.training.all, 'feedback', dogId] as const),
   },
   subscription: {
     all: ['subscription'] as const,

@@ -4,8 +4,8 @@
  */
 import { supabase } from './supabase';
 import { requestBackend, withBackendFallback } from './backend';
-import { getCurriculumById } from 'lib/data/curriculum';
-import type { TrainingProgress, CurriculumId, PlanVariant } from 'types/training';
+import { getCurriculumById } from 'lib/data/published/runtime';
+import type { TrainingProgress, CurriculumId, PlanVariant, DogReaction, StepFeedback } from 'types/training';
 
 interface BackendTrainingStatusRow {
   id: string;
@@ -17,15 +17,24 @@ interface BackendTrainingStatusRow {
   status: string;
   current_variant?: string;
   memo?: string | null;
+  reaction?: string | null;
   created_at: string;
 }
 
 const MISSING_RELATION_CODES = new Set(['42P01', 'PGRST205']);
+// 42703 = undefined_column, PGRST204 = column not found in schema cache
+const SCHEMA_MISMATCH_CODES = new Set(['42703', 'PGRST204']);
 
 function isMissingRelationError(error: unknown): boolean {
   if (!error || typeof error !== 'object') return false;
   const code = 'code' in error ? String((error as { code?: unknown }).code ?? '') : '';
   return MISSING_RELATION_CODES.has(code);
+}
+
+function isSchemaMismatchError(error: unknown): boolean {
+  if (!error || typeof error !== 'object') return false;
+  const code = 'code' in error ? String((error as { code?: unknown }).code ?? '') : '';
+  return SCHEMA_MISMATCH_CODES.has(code) || MISSING_RELATION_CODES.has(code);
 }
 
 function normalizeVariant(value: string | undefined): PlanVariant {
@@ -125,16 +134,18 @@ function summarizeBackendRows(rows: BackendTrainingStatusRow[]): TrainingProgres
 }
 
 async function getTrainingProgressFromSupabase(dogId: string): Promise<TrainingProgress[]> {
+  // user_training_status는 row-per-step 구조 → summarizeBackendRows로 요약
   const { data, error } = await supabase
-    .from('training_progress')
+    .from('user_training_status')
     .select('*')
     .eq('dog_id', dogId)
-    .order('started_at', { ascending: false });
+    .order('created_at', { ascending: true });
   if (error) {
     if (isMissingRelationError(error)) return [];
     throw error;
   }
-  return data as TrainingProgress[];
+  if (!data || data.length === 0) return [];
+  return summarizeBackendRows(data as BackendTrainingStatusRow[]);
 }
 
 async function getTrainingProgressFromBackend(dogId: string): Promise<TrainingProgress[]> {
@@ -206,28 +217,44 @@ export async function startTraining(
     },
     async () => {
       const { data, error } = await supabase
-        .from('training_progress')
-        .insert({
-          dog_id: dogId,
-          curriculum_id: curriculumId,
-          current_day: 1,
-          current_variant: variant,
-          status: 'in_progress',
-          completed_steps: [],
-        })
+        .from('user_training_status')
+        .upsert(
+          {
+            dog_id: dogId,
+            curriculum_id: curriculumId,
+            stage_id: 'day_1',
+            step_number: 0,
+            status: 'HIDDEN_BY_AI',
+            current_variant: variant,
+            memo: null,
+          },
+          { onConflict: 'user_id,curriculum_id,stage_id,step_number' },
+        )
         .select()
         .single();
       if (error) throw error;
-      return data as TrainingProgress;
+      const row = data as BackendTrainingStatusRow;
+      return {
+        id: row.id,
+        dog_id: row.dog_id,
+        curriculum_id: curriculumId,
+        current_day: 1,
+        current_variant: normalizeVariant(row.current_variant),
+        status: 'in_progress' as const,
+        completed_steps: [],
+        memo: row.memo ?? null,
+        started_at: row.created_at,
+        updated_at: row.created_at,
+      };
     },
   );
 }
 
 /** 스텝 완료 처리 */
 export async function completeStep(
-  progressId: string,
+  _progressId: string,
   stepId: string,
-  currentSteps: string[],
+  _currentSteps: string[],
   dogId: string,
 ): Promise<void> {
   return withBackendFallback(
@@ -250,10 +277,71 @@ export async function completeStep(
       });
     },
     async () => {
+      const parsed = parseStepIdentifier(stepId);
+      if (!parsed) return;
       const { error } = await supabase
-        .from('training_progress')
-        .update({ completed_steps: [...currentSteps, stepId] })
-        .eq('id', progressId);
+        .from('user_training_status')
+        .upsert(
+          {
+            dog_id: dogId,
+            curriculum_id: parsed.curriculumId,
+            stage_id: `day_${parsed.day}`,
+            step_number: parsed.stepNumber,
+            status: 'COMPLETED',
+            current_variant: 'A',
+            memo: null,
+          },
+          { onConflict: 'user_id,curriculum_id,stage_id,step_number' },
+        );
+      if (error) {
+        if (isMissingRelationError(error)) return;
+        throw error;
+      }
+    },
+  );
+}
+
+/** 스텝 완료 해제 (COMPLETED → HIDDEN_BY_AI) */
+export async function uncompleteStep(
+  stepId: string,
+  dogId: string,
+): Promise<void> {
+  return withBackendFallback(
+    async () => {
+      const parsed = parseStepIdentifier(stepId);
+      if (!parsed) {
+        throw new Error('TRAINING_STEP_ID_INVALID');
+      }
+      await requestBackend('/api/v1/training/status', {
+        method: 'POST',
+        body: {
+          dog_id: dogId,
+          curriculum_id: parsed.curriculumId,
+          stage_id: `day_${parsed.day}`,
+          step_number: parsed.stepNumber,
+          status: 'HIDDEN_BY_AI',
+          current_variant: 'A',
+          memo: null,
+        },
+      });
+    },
+    async () => {
+      const parsed = parseStepIdentifier(stepId);
+      if (!parsed) return;
+      const { error } = await supabase
+        .from('user_training_status')
+        .upsert(
+          {
+            dog_id: dogId,
+            curriculum_id: parsed.curriculumId,
+            stage_id: `day_${parsed.day}`,
+            step_number: parsed.stepNumber,
+            status: 'HIDDEN_BY_AI',
+            current_variant: 'A',
+            memo: null,
+          },
+          { onConflict: 'user_id,curriculum_id,stage_id,step_number' },
+        );
       if (error) {
         if (isMissingRelationError(error)) return;
         throw error;
@@ -268,8 +356,102 @@ export async function changeVariant(
   variant: PlanVariant
 ): Promise<void> {
   const { error } = await supabase
-    .from('training_progress')
+    .from('user_training_status')
     .update({ current_variant: variant })
     .eq('id', progressId);
   if (error) throw error;
+}
+
+/** 스텝 피드백(반응) 저장 — user_training_status.reaction UPDATE */
+export async function submitStepFeedback(
+  dogId: string,
+  stepId: string,
+  reaction: DogReaction,
+  memo: string | null,
+): Promise<void> {
+  const parsed = parseStepIdentifier(stepId);
+  if (!parsed) throw new Error('TRAINING_STEP_ID_INVALID');
+
+  return withBackendFallback(
+    async () => {
+      await requestBackend('/api/v1/training/feedback', {
+        method: 'POST',
+        body: {
+          dog_id: dogId,
+          curriculum_id: parsed.curriculumId,
+          stage_id: `day_${parsed.day}`,
+          step_number: parsed.stepNumber,
+          reaction,
+          memo,
+        },
+      });
+    },
+    async () => {
+      const { error } = await supabase
+        .from('user_training_status')
+        .update({ reaction, memo })
+        .eq('dog_id', dogId)
+        .eq('curriculum_id', parsed.curriculumId)
+        .eq('stage_id', `day_${parsed.day}`)
+        .eq('step_number', parsed.stepNumber);
+      if (error) {
+        // 42703: reaction column not yet migrated — silently skip
+        if (isMissingRelationError(error) || isSchemaMismatchError(error)) return;
+        throw error;
+      }
+    },
+  );
+}
+
+/** 피드백 조회 — reaction IS NOT NULL 행 (migration 미적용 시 빈 배열 반환) */
+export async function getStepFeedback(
+  dogId: string,
+  curriculumId?: string,
+): Promise<StepFeedback[]> {
+  return withBackendFallback(
+    async () => {
+      const url = curriculumId
+        ? `/api/v1/training/feedback/${dogId}?curriculum_id=${curriculumId}`
+        : `/api/v1/training/feedback/${dogId}`;
+      const rows = await requestBackend<BackendTrainingStatusRow[]>(url);
+      if (!Array.isArray(rows)) return [];
+      return rows
+        .filter((r) => r.reaction)
+        .map((r) => ({
+          step_id: toStepId(r.curriculum_id, parseDayNumber(r.stage_id), r.step_number),
+          curriculum_id: r.curriculum_id as CurriculumId,
+          day: parseDayNumber(r.stage_id),
+          step_number: r.step_number,
+          reaction: r.reaction as DogReaction,
+          memo: r.memo ?? null,
+        }));
+    },
+    async () => {
+      let query = supabase
+        .from('user_training_status')
+        .select('*')
+        .eq('dog_id', dogId);
+      if (curriculumId) {
+        query = query.eq('curriculum_id', curriculumId);
+      }
+      const { data, error } = await query;
+      if (error) {
+        // 42703: reaction column not yet migrated — return empty
+        if (isMissingRelationError(error) || isSchemaMismatchError(error)) return [];
+        throw error;
+      }
+      if (!data) return [];
+      // Filter client-side (column may not exist before migration)
+      return (data as BackendTrainingStatusRow[])
+        .filter((r) => r.reaction)
+        .map((r) => ({
+          step_id: toStepId(r.curriculum_id, parseDayNumber(r.stage_id), r.step_number),
+          curriculum_id: r.curriculum_id as CurriculumId,
+          day: parseDayNumber(r.stage_id),
+          step_number: r.step_number,
+          reaction: r.reaction as DogReaction,
+          memo: r.memo ?? null,
+        }));
+    },
+  );
 }

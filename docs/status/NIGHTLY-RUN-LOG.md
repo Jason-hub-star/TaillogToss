@@ -32,3 +32,12 @@ Execution log for docs nightly organizer (22:00 Asia/Seoul).
 - weekly_created_or_updated: none
 - deleted_daily_count: 0
 - errors: none
+
+- run_at: 2026-03-01T22:02:14+09:00
+- dry_run: false
+- moved_ref_count: 0
+- moved_status_count: 0
+- moved_daily_count: 0
+- weekly_created_or_updated: none
+- deleted_daily_count: 0
+- errors: none

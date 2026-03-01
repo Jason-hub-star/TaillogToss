@@ -1,0 +1,20 @@
+{
+  "source_hash": "ff2ee0b350be",
+  "source_url": "https://www.akc.org/expert-advice/training/changing-your-dogs-behavior-with-desensitization-and-counter-conditioning/",
+  "domain": "www.akc.org",
+  "title": "Changing Your Dog's Behavior With Desensitization and Counterconditioning - AKC",
+  "fetched_at": "2026-03-01T12:27:31.207860+09:00",
+  "language": "en",
+  "summary": "AKC guide: identify trigger, find threshold distance, controlled below-threshold exposures, gradually increase intensity, multiple weekly sessions, do not rush progression.",
+  "credibility_score": 78,
+  "risk_flag": false,
+  "metadata": {
+    "query": "reactivity desensitization counterconditioning dog",
+    "type": "authority_org"
+  },
+  "normalized_at": "2026-03-01T12:28:05.950014+09:00",
+  "run_id": "2026-03-01-auto-1228",
+  "status": "approved",
+  "quality_gate_result": "PASS",
+  "quality_gate_checked_at": "2026-03-01T12:28:35.672468+09:00"
+}

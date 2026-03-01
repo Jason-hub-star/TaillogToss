@@ -25,6 +25,8 @@ async def create_quick_log(
         "intensity": data.intensity,
         "occurred_at": utc_occurred,
         "memo": data.memo,
+        "location": data.location,
+        "duration_minutes": data.duration_minutes,
     }
     new_log = await repository.create_log(db, log_data)
     return schemas.LogResponse.model_validate(new_log)

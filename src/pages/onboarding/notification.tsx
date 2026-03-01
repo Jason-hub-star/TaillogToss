@@ -11,7 +11,6 @@ import { useUpdateSettings } from 'lib/hooks/useSettings';
 import { tracker } from 'lib/analytics/tracker';
 import { useAuth } from 'stores/AuthContext';
 import { consumePostLoginRedirect } from 'stores/postLoginRedirect';
-import { useSurvey } from 'stores/SurveyContext';
 import { colors, typography } from 'styles/tokens';
 
 export const Route = createRoute('/onboarding/notification', {
@@ -26,8 +25,7 @@ interface NotifPref {
 
 function NotificationPage() {
   const navigation = useNavigation();
-  const { user, syncOnboardingStatus } = useAuth();
-  const { clearSurveyData } = useSurvey();
+  const { user, setOnboardingComplete } = useAuth();
   const updateSettings = useUpdateSettings();
   const { isReady } = usePageGuard({
     currentPath: '/onboarding/notification',
@@ -46,17 +44,21 @@ function NotificationPage() {
       return;
     }
 
-    const hasCompletedOnboarding = await syncOnboardingStatus(user.id);
-    if (!hasCompletedOnboarding) {
-      navigation.navigate('/onboarding/survey');
-      return;
-    }
-
-    clearSurveyData();
+    setOnboardingComplete();
     tracker.onboardingComplete();
     const pending = consumePostLoginRedirect();
+    if (__DEV__) {
+      console.log('[APP-001][onboarding/notification] completeOnboardingFlow', {
+        userId: user.id,
+        target: pending ?? '/dashboard',
+      });
+    }
     navigation.navigate(pending ?? '/dashboard');
-  }, [clearSurveyData, navigation, syncOnboardingStatus, user]);
+    // NOTE:
+    // survey-result screen is still mounted in back stack.
+    // Clearing survey context here can trigger its "missing data -> /onboarding/survey" redirect.
+    // Keep data until onboarding stack naturally exits.
+  }, [navigation, setOnboardingComplete, user]);
 
   const handleAllow = useCallback(async () => {
     if (!user) {

@@ -1,47 +1,72 @@
 /**
- * 메인 대시보드 화면 — TabLayout 3탭 (기록/분석/훈련)
+ * 메인 대시보드 화면 — TabLayout 2탭 (기록/분석)
  * [기록] 탭: DogCard + StreakBanner + ABC LogCard 리스트
- * [분석] 탭 클릭 → /dashboard/analysis 페이지 이동
- * [훈련] 탭 → Phase 8 EmptyState
+ * [분석] 탭: 인라인 요약 카드 + 상세 분석 링크
+ * 전역 네비게이션: BottomNavBar (훈련/설정/운영)
  * Parity: UI-001, LOG-001
  */
 import { createRoute, useNavigation } from '@granite-js/react-native';
 import React, { useCallback, useMemo } from 'react';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity, SafeAreaView } from 'react-native';
 import { useActiveDog } from 'stores/ActiveDogContext';
-import { useAuth } from 'stores/AuthContext';
-import { isB2BRole } from 'stores/OrgContext';
 import { useDashboard } from 'lib/hooks/useDashboard';
-import { useDailyLogs } from 'lib/hooks/useLogs';
 import { DogCard } from 'components/features/dashboard/DogCard';
 import { StreakBanner } from 'components/features/dashboard/StreakBanner';
 import { LogCard } from 'components/features/log/LogCard';
 import { EmptyState } from 'components/tds-ext/EmptyState';
 import { ErrorState } from 'components/tds-ext/ErrorState';
 import { TabLayout } from 'components/shared/layouts/TabLayout';
+import { BottomNavBar } from 'components/shared/BottomNavBar';
 import { usePageGuard } from 'lib/hooks/usePageGuard';
 import { SkeletonDashboard } from 'components/features/dashboard/SkeletonDashboard';
-import { colors, typography } from 'styles/tokens';
+import type { BehaviorLog } from 'types/log';
+import { colors, typography, spacing } from 'styles/tokens';
 
 export const Route = createRoute('/dashboard', {
   component: DashboardPage,
 });
 
+/** 최근 7일 기록에서 카테고리별 Top 3 집계 */
+function computeAnalysisSummary(logs: BehaviorLog[]) {
+  const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+  const recent = logs.filter((l) => new Date(l.occurred_at).getTime() >= sevenDaysAgo);
+  const counts = new Map<string, number>();
+  for (const log of recent) {
+    const cat = log.quick_category ?? log.type_id ?? 'other';
+    counts.set(cat, (counts.get(cat) ?? 0) + 1);
+  }
+  const sorted = [...counts.entries()].sort((a, b) => b[1] - a[1]);
+  return { totalCount: recent.length, topCategories: sorted.slice(0, 3) };
+}
+
+const CATEGORY_LABELS: Record<string, string> = {
+  barking: '짖기', biting: '물기', jumping: '뛰기', pulling: '당기기',
+  destructive: '파괴', anxiety: '불안', aggression: '공격', other_behavior: '기타',
+  walk: '산책', meal: '식사', training: '훈련', play: '놀이', rest: '휴식', grooming: '미용',
+  manual: '상세기록',
+};
+
+function toLocalDateKey(value: string | Date): string {
+  const d = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(d.getTime())) return '';
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
 function DashboardPage() {
   const { activeDog, dogs } = useActiveDog();
-  const { user } = useAuth();
   const navigation = useNavigation();
   const { isReady } = usePageGuard({ currentPath: '/dashboard' });
-  const showOpsTab = isB2BRole(user?.role);
 
-  const today = useMemo(() => new Date().toISOString().slice(0, 10), []);
+  const today = useMemo(() => toLocalDateKey(new Date()), []);
   const {
     data: dashboardData,
     isLoading: dashboardLoading,
     error: dashboardError,
     refetch: refetchDashboard,
   } = useDashboard(activeDog?.id);
-  const { data: todayLogs } = useDailyLogs(activeDog?.id, today);
   const recentLogs = dashboardData?.recentLogs ?? [];
   const totalLogs = dashboardData?.stats.total_logs ?? recentLogs.length;
   const displayDog = activeDog
@@ -54,6 +79,13 @@ function DashboardPage() {
         }
       : null;
 
+  const todayLogCount = useMemo(() => {
+    if (!recentLogs.length) return 0;
+    return recentLogs.filter((l) => toLocalDateKey(l.occurred_at) === today).length;
+  }, [recentLogs, today]);
+
+  const analysisSummary = useMemo(() => computeAnalysisSummary(recentLogs), [recentLogs]);
+
   const handleQuickLog = useCallback(() => {
     navigation.navigate('/dashboard/quick-log');
   }, [navigation]);
@@ -63,7 +95,7 @@ function DashboardPage() {
       {displayDog && (
         <DogCard
           dog={displayDog}
-          todayLogCount={todayLogs?.length ?? 0}
+          todayLogCount={todayLogCount}
           onPress={activeDog ? () => navigation.navigate('/dog/profile') : undefined}
           onSwitchPress={dogs.length > 1 ? () => navigation.navigate('/dog/switcher') : undefined}
         />
@@ -95,58 +127,57 @@ function DashboardPage() {
           ))}
         </ScrollView>
       )}
+
+      {/* 빠른 기록 CTA */}
+      <View style={styles.bottomCTA}>
+        <TouchableOpacity style={styles.ctaButton} onPress={handleQuickLog} activeOpacity={0.8}>
+          <Text style={styles.ctaText}>+ 빠른 기록</Text>
+        </TouchableOpacity>
+      </View>
     </View>
   );
 
   const analysisContent = (
-    <View style={styles.center}>
-      <TouchableOpacity style={styles.analysisLink} onPress={() => navigation.navigate('/dashboard/analysis')} activeOpacity={0.7}>
+    <View style={styles.tabContent}>
+      {/* 인라인 요약 카드 */}
+      <View style={styles.summaryCard}>
+        <Text style={styles.summaryTitle}>최근 7일 요약</Text>
+        <Text style={styles.summaryCount}>
+          총 {analysisSummary.totalCount}건 기록
+        </Text>
+        {analysisSummary.topCategories.length > 0 && (
+          <View style={styles.topList}>
+            {analysisSummary.topCategories.map(([cat, count], i) => (
+              <View key={cat} style={styles.topItem}>
+                <Text style={styles.topRank}>{i + 1}</Text>
+                <Text style={styles.topLabel}>{CATEGORY_LABELS[cat] ?? cat}</Text>
+                <Text style={styles.topCount}>{count}건</Text>
+              </View>
+            ))}
+          </View>
+        )}
+        {analysisSummary.totalCount === 0 && (
+          <Text style={styles.summaryEmpty}>아직 기록이 없어요. 기록을 시작해보세요!</Text>
+        )}
+      </View>
+
+      {/* 상세 분석 링크 */}
+      <TouchableOpacity
+        style={styles.analysisLink}
+        onPress={() => navigation.navigate('/dashboard/analysis')}
+        activeOpacity={0.7}
+      >
         <Text style={styles.analysisIcon}>{'\uD83D\uDCCA'}</Text>
-        <Text style={styles.analysisText}>행동 분석 보기</Text>
+        <Text style={styles.analysisText}>상세 분석 보기</Text>
         <Text style={styles.analysisArrow}>{'\u2192'}</Text>
       </TouchableOpacity>
     </View>
   );
 
-  const trainingContent = (
-    <View style={styles.center}>
-      <TouchableOpacity
-        style={styles.analysisLink}
-        onPress={() => navigation.navigate('/training/academy')}
-        activeOpacity={0.7}
-      >
-        <Text style={styles.analysisIcon}>{'\uD83C\uDF93'}</Text>
-        <Text style={styles.analysisText}>훈련 아카데미로 이동</Text>
-        <Text style={styles.analysisArrow}>{'\u2192'}</Text>
-      </TouchableOpacity>
-    </View>
-  );
-
-  const opsContent = (
-    <View style={styles.center}>
-      <TouchableOpacity
-        style={styles.analysisLink}
-        onPress={() => navigation.navigate('/ops/today')}
-        activeOpacity={0.7}
-      >
-        <Text style={styles.analysisIcon}>{'\uD83D\uDCCB'}</Text>
-        <Text style={styles.analysisText}>운영 대시보드로 이동</Text>
-        <Text style={styles.analysisArrow}>{'\u2192'}</Text>
-      </TouchableOpacity>
-    </View>
-  );
-
-  const tabs = useMemo(() => {
-    const base = [
-      { key: 'record', label: '기록', content: recordContent },
-      { key: 'analysis', label: '분석', content: analysisContent },
-      { key: 'training', label: '훈련', content: trainingContent },
-    ];
-    if (showOpsTab) {
-      base.push({ key: 'ops', label: '운영', content: opsContent });
-    }
-    return base;
-  }, [recordContent, analysisContent, trainingContent, showOpsTab, opsContent]);
+  const tabs = useMemo(() => [
+    { key: 'record', label: '기록', content: recordContent },
+    { key: 'analysis', label: '분석', content: analysisContent },
+  ], [recordContent, analysisContent]);
 
   if (!isReady) return null;
 
@@ -156,11 +187,7 @@ function DashboardPage() {
         <View style={styles.body}>
           <TabLayout title="테일로그" tabs={tabs} defaultTab="record" />
         </View>
-        <View style={styles.bottomCTA}>
-          <TouchableOpacity style={styles.ctaButton} onPress={handleQuickLog} activeOpacity={0.8}>
-            <Text style={styles.ctaText}>+ 빠른 기록</Text>
-          </TouchableOpacity>
-        </View>
+        <BottomNavBar activeTab="home" />
       </View>
     </SafeAreaView>
   );
@@ -180,33 +207,93 @@ const styles = StyleSheet.create({
   tabContent: {
     flex: 1,
   },
-  center: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 48,
-  },
   logListHeader: {
-    paddingHorizontal: 20,
-    paddingTop: 16,
-    paddingBottom: 8,
+    paddingHorizontal: spacing.screenHorizontal,
+    paddingTop: spacing.lg,
+    paddingBottom: spacing.sm,
   },
   logListTitle: {
     ...typography.bodySmall,
     fontWeight: '600',
     color: colors.textPrimary,
   },
+  bottomCTA: {
+    paddingHorizontal: spacing.screenHorizontal,
+    paddingBottom: spacing.lg,
+    paddingTop: spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  ctaButton: {
+    backgroundColor: colors.primaryBlue,
+    borderRadius: 12,
+    paddingVertical: spacing.lg,
+    alignItems: 'center',
+  },
+  ctaText: {
+    color: colors.white,
+    ...typography.label,
+    fontWeight: '600',
+  },
+  // Analysis tab — inline summary
+  summaryCard: {
+    margin: spacing.screenHorizontal,
+    backgroundColor: colors.surfaceSecondary,
+    borderRadius: 16,
+    padding: spacing.screenHorizontal,
+  },
+  summaryTitle: {
+    ...typography.bodySmall,
+    fontWeight: '700',
+    color: colors.textPrimary,
+    marginBottom: spacing.sm,
+  },
+  summaryCount: {
+    ...typography.sectionTitle,
+    fontWeight: '700',
+    color: colors.primaryBlue,
+    marginBottom: spacing.lg,
+  },
+  summaryEmpty: {
+    ...typography.detail,
+    color: colors.textSecondary,
+  },
+  topList: {
+    gap: spacing.sm,
+  },
+  topItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  topRank: {
+    ...typography.detail,
+    fontWeight: '700',
+    color: colors.primaryBlue,
+    width: 20,
+  },
+  topLabel: {
+    ...typography.bodySmall,
+    color: colors.textPrimary,
+    flex: 1,
+  },
+  topCount: {
+    ...typography.detail,
+    fontWeight: '600',
+    color: colors.textSecondary,
+  },
   analysisLink: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: colors.divider,
-    paddingHorizontal: 24,
-    paddingVertical: 16,
+    paddingHorizontal: spacing.xxl,
+    paddingVertical: spacing.lg,
     borderRadius: 12,
+    marginHorizontal: spacing.screenHorizontal,
+    marginTop: spacing.lg,
   },
   analysisIcon: {
     ...typography.sectionTitle,
-    marginRight: 8,
+    marginRight: spacing.sm,
   },
   analysisText: {
     ...typography.label,
@@ -217,23 +304,5 @@ const styles = StyleSheet.create({
   analysisArrow: {
     ...typography.subtitle,
     color: colors.textSecondary,
-  },
-  bottomCTA: {
-    paddingHorizontal: 20,
-    paddingBottom: 24,
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-  },
-  ctaButton: {
-    backgroundColor: colors.primaryBlue,
-    borderRadius: 12,
-    paddingVertical: 16,
-    alignItems: 'center',
-  },
-  ctaText: {
-    color: colors.white,
-    ...typography.label,
-    fontWeight: '600',
   },
 });

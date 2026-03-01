@@ -15,6 +15,8 @@ import { usePageGuard } from 'lib/hooks/usePageGuard';
 import { tracker } from 'lib/analytics/tracker';
 import { QuickLogForm } from 'components/features/log/QuickLogForm';
 import { ABCForm } from 'components/features/log/ABCForm';
+import { EmptyState } from 'components/tds-ext/EmptyState';
+import { Toast } from 'components/tds-ext/Toast';
 import type { QuickLogInput, DetailedLogInput } from 'types/log';
 
 export const Route = createRoute('/dashboard/quick-log', {
@@ -25,6 +27,7 @@ type TabKey = 'quick' | 'detailed';
 
 function QuickLogPage() {
   const [activeTab, setActiveTab] = useState<TabKey>('quick');
+  const [showToast, setShowToast] = useState(false);
   const { activeDog } = useActiveDog();
   const navigation = useNavigation();
   const { isReady } = usePageGuard({ currentPath: '/dashboard/quick-log' });
@@ -36,23 +39,47 @@ function QuickLogPage() {
     quickLogMutation.mutate(input, {
       onSuccess: () => {
         tracker.behaviorLogCreated('quick');
-        navigation.goBack();
+        setShowToast(true);
       },
     });
-  }, [quickLogMutation, navigation]);
+  }, [quickLogMutation]);
 
   const handleDetailedSubmit = useCallback((input: DetailedLogInput) => {
     detailedLogMutation.mutate(input, {
       onSuccess: () => {
         tracker.behaviorLogCreated('detailed');
-        navigation.goBack();
+        setShowToast(true);
       },
     });
-  }, [detailedLogMutation, navigation]);
+  }, [detailedLogMutation]);
 
-  const dogId = activeDog?.id ?? '';
+  const handleToastDismiss = useCallback(() => {
+    setShowToast(false);
+    navigation.goBack();
+  }, [navigation]);
 
   if (!isReady) return null;
+
+  // activeDog 없으면 기록 불가 — 강아지 먼저 등록 안내
+  if (!activeDog) {
+    return (
+      <SafeAreaView style={styles.safe}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => navigation.goBack()} activeOpacity={0.7}>
+            <Text style={styles.back}>{'\u2190'}</Text>
+          </TouchableOpacity>
+          <Text style={styles.title}>빠른 기록</Text>
+          <View style={styles.placeholder} />
+        </View>
+        <EmptyState
+          title="반려견을 먼저 등록해주세요"
+          description="기록하려면 반려견 정보가 필요해요"
+        />
+      </SafeAreaView>
+    );
+  }
+
+  const dogId = activeDog.id;
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -94,6 +121,11 @@ function QuickLogPage() {
           />
         )}
       </View>
+      <Toast
+        message="기록이 저장되었어요"
+        visible={showToast}
+        onDismiss={handleToastDismiss}
+      />
     </SafeAreaView>
   );
 }

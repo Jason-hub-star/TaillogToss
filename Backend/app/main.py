@@ -5,7 +5,9 @@ DogCoach main.py 마이그레이션. FE src/lib/api/ 도메인별 1:1 라우터 
 import logging
 
 from fastapi import FastAPI, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from app.core.config import settings
 from app.core.exceptions import DomainException, domain_exception_handler
@@ -20,6 +22,22 @@ app = FastAPI(
 
 # Global Exception Handler
 app.add_exception_handler(DomainException, domain_exception_handler)
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    """422 에러 시 요청 body와 검증 실패 상세를 로깅"""
+    body = await request.body()
+    logger.warning(
+        "422 Validation Error on %s %s\n  body: %s\n  errors: %s",
+        request.method, request.url.path,
+        body.decode("utf-8", errors="replace")[:500],
+        exc.errors(),
+    )
+    return JSONResponse(
+        status_code=422,
+        content={"detail": exc.errors()},
+    )
 
 
 # Request Logging Middleware

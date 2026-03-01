@@ -76,12 +76,18 @@
 |------|------|
 | `tracker.ts` | 이벤트 트래커 17종 (onboarding, log, coaching, iap, training, share, ad 5종, B2B 5종) |
 
-### data/ — 정적 데이터 (2개) ✅ Phase 8 + B2B
+### data/ — 훈련 데이터 + 자동화 파이프라인 (6개+) ✅ Phase 8 + B2B
 
 | 파일 | 용도 |
 |------|------|
-| `curriculum.ts` | 커리큘럼 정적 데이터 (7종 x 5~6일 x 3스텝) |
+| `published/runtime.ts` | 앱 런타임의 canonical 커리큘럼 엔트리 |
 | `presets.ts` | B2B 프리셋 정적 데이터 (6카테고리 x 3~5옵션 = 23개) |
+| `mappings/behaviorToCurriculum.ts` | BehaviorType -> CurriculumId 단일 매핑 소스 |
+| `recommendation/engine.ts` | 커리큘럼 추천 엔진 (primary/secondary/reasoning) |
+| `analysis/engine.ts` | 설문 결과 텍스트 생성 엔진 |
+| `catalog.json` | 자동화 인덱스/카운트/활성 버전 메타 |
+| `CHANGELOG.ndjson` | 데이터 자동화 실행 이력(append-only) |
+| `raw/`, `candidates/`, `approved/`, `published/`, `archive/` | 자동 수집/정규화/승인/발행/보관 단계 |
 
 ### security/ — PII 암호화 (1개) ✅ B2B
 

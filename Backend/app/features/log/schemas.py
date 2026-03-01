@@ -16,6 +16,8 @@ class QuickLogCreate(BaseModel):
     intensity: int = Field(..., ge=1, le=10)
     occurred_at: datetime
     memo: Optional[str] = None
+    location: Optional[str] = None
+    duration_minutes: Optional[int] = None
 
 
 class DetailedLogCreate(BaseModel):

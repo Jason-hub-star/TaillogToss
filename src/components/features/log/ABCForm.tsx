@@ -44,7 +44,17 @@ export function ABCForm({ dogId, onSubmit, isLoading = false }: ABCFormProps) {
 
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-      <Text style={styles.label}>행동(B) *</Text>
+      <Text style={styles.label}>선행(A)</Text>
+      <TextInput
+        style={styles.input}
+        placeholder="행동 직전에 어떤 상황이었나요?"
+        value={antecedent}
+        onChangeText={setAntecedent}
+        placeholderTextColor={colors.placeholder}
+        multiline
+      />
+
+      <Text style={[styles.label, { marginTop: 16 }]}>행동(B) *</Text>
       <TextInput
         style={styles.input}
         placeholder="어떤 행동을 했나요?"
@@ -53,27 +63,15 @@ export function ABCForm({ dogId, onSubmit, isLoading = false }: ABCFormProps) {
         placeholderTextColor={colors.placeholder}
       />
 
-      <Accordion title="선행(A)">
-        <TextInput
-          style={styles.input}
-          placeholder="행동 직전에 어떤 상황이었나요?"
-          value={antecedent}
-          onChangeText={setAntecedent}
-          placeholderTextColor={colors.placeholder}
-          multiline
-        />
-      </Accordion>
-
-      <Accordion title="결과(C)">
-        <TextInput
-          style={styles.input}
-          placeholder="행동 후 어떤 결과가 있었나요?"
-          value={consequence}
-          onChangeText={setConsequence}
-          placeholderTextColor={colors.placeholder}
-          multiline
-        />
-      </Accordion>
+      <Text style={[styles.label, { marginTop: 16 }]}>결과(C)</Text>
+      <TextInput
+        style={styles.input}
+        placeholder="행동 후 어떤 결과가 있었나요?"
+        value={consequence}
+        onChangeText={setConsequence}
+        placeholderTextColor={colors.placeholder}
+        multiline
+      />
 
       <Accordion title="강도 / 시간">
         <Text style={styles.subLabel}>강도: {intensity}</Text>
@@ -147,7 +145,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     ...typography.bodySmall,
     color: colors.textPrimary,
-    backgroundColor: '#FAFBFC',
+    backgroundColor: colors.grey50,
   },
   intensityRow: {
     flexDirection: 'row',

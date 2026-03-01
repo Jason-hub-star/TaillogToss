@@ -62,7 +62,7 @@ export async function updateSettings(
     async () => {
       const { data, error } = await supabase
         .from('user_settings')
-        .upsert({ user_id: userId, ...updates })
+        .upsert({ user_id: userId, ...updates }, { onConflict: 'user_id' })
         .select()
         .single();
       if (error) throw error;

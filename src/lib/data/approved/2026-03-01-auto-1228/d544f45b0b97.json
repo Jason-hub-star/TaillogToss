@@ -1,0 +1,20 @@
+{
+  "source_hash": "d544f45b0b97",
+  "source_url": "https://www.humaneworld.org/en/resources/positive-reinforcement-training",
+  "domain": "www.humaneworld.org",
+  "title": "How to reward dogs with positive reinforcement training",
+  "fetched_at": "2026-03-01T12:27:31.207860+09:00",
+  "language": "en",
+  "summary": "Humane Society guide: immediate reward timing (<2s), treat/praise/toy as reinforcers, consistency, never reward undesired behavior.",
+  "credibility_score": 77,
+  "risk_flag": false,
+  "metadata": {
+    "query": "positive reinforcement dog training protocol",
+    "type": "humane_org"
+  },
+  "normalized_at": "2026-03-01T12:28:05.550701+09:00",
+  "run_id": "2026-03-01-auto-1228",
+  "status": "pending_review",
+  "quality_gate_result": "PASS",
+  "quality_gate_checked_at": "2026-03-01T12:28:35.046720+09:00"
+}

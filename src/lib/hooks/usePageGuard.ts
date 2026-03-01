@@ -62,11 +62,32 @@ export function usePageGuard(options: UsePageGuardOptions): { isReady: boolean }
     });
 
     if (evaluated.status === 'pending') {
+      if (__DEV__) {
+        console.log('[APP-001][usePageGuard] pending', {
+          currentPath,
+          isAuthenticated,
+          hasCompletedOnboarding,
+          dogCount,
+          isDogsLoading,
+          isSubscriptionLoading,
+        });
+      }
       setIsReady(false);
       return;
     }
 
     if (evaluated.status === 'redirect') {
+      if (__DEV__) {
+        console.log('[APP-001][usePageGuard] redirect', {
+          currentPath,
+          redirectTo: evaluated.redirectTo,
+          isAuthenticated,
+          hasCompletedOnboarding,
+          dogCount,
+          isDogsLoading,
+          isSubscriptionLoading,
+        });
+      }
       if (evaluated.redirectTo === '/login' && currentPath !== '/login') {
         setPostLoginRedirect(currentPath);
       }

@@ -1,0 +1,20 @@
+{
+  "source_hash": "c427547e0584",
+  "source_url": "https://www.karenoverall.com/wp-content/uploads/2020/06/Protocol-for-understanding-treating-dogs-with-separation-anxiety_Overall.pdf",
+  "domain": "www.karenoverall.com",
+  "title": "Protocol for Understanding and Treating Dogs with Separation Anxiety (Karen Overall)",
+  "fetched_at": "2026-03-01T12:27:31.207860+09:00",
+  "language": "en",
+  "summary": "Dr. Karen Overall's clinical protocol for canine separation anxiety: behavioral assessment, systematic desensitization plan, relapse prevention. Veterinary behaviorist-authored.",
+  "credibility_score": 90,
+  "risk_flag": false,
+  "metadata": {
+    "query": "separation anxiety dog training step-by-step",
+    "type": "clinical_protocol"
+  },
+  "normalized_at": "2026-03-01T12:28:05.467965+09:00",
+  "run_id": "2026-03-01-auto-1228",
+  "status": "pending_review",
+  "quality_gate_result": "PASS",
+  "quality_gate_checked_at": "2026-03-01T12:28:34.924368+09:00"
+}

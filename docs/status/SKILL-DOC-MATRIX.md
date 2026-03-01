@@ -28,6 +28,8 @@ Decision-complete mapping between page skills, code touch points, and required r
 
 ## Global Rules
 
+- Page skill root: `.claude/skills/page-skills/page/`
+- Feature skill root: `.claude/skills/page-skills/feature/`
 - Load one page skill + up to two feature skills.
 - Keep context inputs narrow to route-specific files and docs.
 - Update `PAGE-UPGRADE-BOARD.md` status and date at task end.

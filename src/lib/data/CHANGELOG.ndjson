@@ -1,0 +1,2 @@
+{"run_id":"bootstrap-2026-03-01","timestamp":"2026-03-01T00:00:00+09:00","stage":"bootstrap","changes":{"mappings":"initialized","catalog":"created"},"errors":[]}
+{"run_at": "2026-03-01T12:30:11.452402+09:00", "run_id": "2026-03-01-auto-1228", "dry_run": false, "input_count": 14, "candidate_count": 14, "approved_count": 14, "published_version": "v2026-03-01-auto-1228", "switched_active": true, "errors": []}

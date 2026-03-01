@@ -1,0 +1,20 @@
+{
+  "source_hash": "a5dfef1c61be",
+  "source_url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC7895348/",
+  "domain": "pmc.ncbi.nlm.nih.gov",
+  "title": "Improving dog training methods: Efficacy and efficiency of reward and mixed training methods",
+  "fetched_at": "2026-03-01T12:27:31.207860+09:00",
+  "language": "en",
+  "summary": "Peer-reviewed study comparing reward-based vs mixed training methods. Reward-based methods showed higher efficacy and welfare outcomes. Published in PMC/PLOS ONE.",
+  "credibility_score": 91,
+  "risk_flag": false,
+  "metadata": {
+    "query": "positive reinforcement dog training protocol",
+    "type": "academic_journal"
+  },
+  "normalized_at": "2026-03-01T12:28:05.386225+09:00",
+  "run_id": "2026-03-01-auto-1228",
+  "status": "pending_review",
+  "quality_gate_result": "PASS",
+  "quality_gate_checked_at": "2026-03-01T12:28:34.789322+09:00"
+}

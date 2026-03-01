@@ -7,7 +7,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Animated } from 'react-native';
 import { SkeletonBox } from 'components/tds-ext/SkeletonBox';
 import type { CurriculumId } from 'types/training';
-import { CURRICULUMS } from 'lib/data/curriculum';
+import { CURRICULUMS } from 'lib/data/published/runtime';
 import { colors, typography } from 'styles/tokens';
 
 interface Props {

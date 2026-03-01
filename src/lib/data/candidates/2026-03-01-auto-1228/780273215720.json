@@ -1,0 +1,20 @@
+{
+  "source_hash": "780273215720",
+  "source_url": "https://vcahospitals.com/know-your-pet/introduction-to-desensitization-and-counterconditioning",
+  "domain": "vcahospitals.com",
+  "title": "Introduction to Desensitization and Counterconditioning | VCA Animal Hospitals",
+  "fetched_at": "2026-03-01T12:27:31.207860+09:00",
+  "language": "en",
+  "summary": "VCA veterinary guide: DS/CC definitions, threshold concept, stimulus gradient, pairing trigger+treat, 5-15min sessions, 2-4x/day, progress timeline weeks-months.",
+  "credibility_score": 84,
+  "risk_flag": false,
+  "metadata": {
+    "query": "reactivity desensitization counterconditioning dog",
+    "type": "veterinary_org"
+  },
+  "normalized_at": "2026-03-01T12:28:05.312473+09:00",
+  "run_id": "2026-03-01-auto-1228",
+  "status": "approved",
+  "quality_gate_result": "PASS",
+  "quality_gate_checked_at": "2026-03-01T12:28:34.730740+09:00"
+}

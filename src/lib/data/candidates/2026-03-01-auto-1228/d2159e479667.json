@@ -1,0 +1,20 @@
+{
+  "source_hash": "d2159e479667",
+  "source_url": "https://www.vetmed.ucdavis.edu/sites/g/files/dgvnsk491/files/inline-files/Loose_Leash_Walking.pdf",
+  "domain": "www.vetmed.ucdavis.edu",
+  "title": "Loose Leash Walking - UC Davis School of Veterinary Medicine",
+  "fetched_at": "2026-03-01T12:27:31.207860+09:00",
+  "language": "en",
+  "summary": "UC Davis vet school handout: reward-based loose leash walking protocol. Stop-and-wait on tension, treat for check-ins, front-clip harness recommended. No aversive equipment.",
+  "credibility_score": 87,
+  "risk_flag": false,
+  "metadata": {
+    "query": "leash pulling loose leash training evidence based",
+    "type": "veterinary_academic"
+  },
+  "normalized_at": "2026-03-01T12:28:05.501389+09:00",
+  "run_id": "2026-03-01-auto-1228",
+  "status": "approved",
+  "quality_gate_result": "PASS",
+  "quality_gate_checked_at": "2026-03-01T12:28:34.983961+09:00"
+}

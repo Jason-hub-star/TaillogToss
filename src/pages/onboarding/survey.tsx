@@ -19,7 +19,7 @@ export const Route = createRoute('/onboarding/survey', {
 
 function SurveyPage() {
   const navigation = useNavigation();
-  const { user } = useAuth();
+  const { user, setOnboardingComplete } = useAuth();
   const { setSurveyData } = useSurvey();
   const createDog = useCreateDogFromSurvey();
   const { isReady } = usePageGuard({
@@ -38,6 +38,8 @@ function SurveyPage() {
       { userId: user.id, survey: data },
       {
         onSuccess: () => {
+          // 설문 저장 성공 시 즉시 온보딩 완료 상태를 반영해 후속 화면 회귀를 방지한다.
+          setOnboardingComplete();
           navigation.navigate('/onboarding/survey-result');
         },
         onError: (error) => {
@@ -50,7 +52,7 @@ function SurveyPage() {
         },
       }
     );
-  }, [createDog, navigation, setSurveyData, user]);
+  }, [createDog, navigation, setOnboardingComplete, setSurveyData, user]);
 
   const handleBack = useCallback(() => {
     navigation.navigate('/onboarding/welcome');

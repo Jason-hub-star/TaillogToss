@@ -3,7 +3,7 @@
  * 대시보드 3탭, 분석 주간/월간/전체 등에 사용
  */
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, SafeAreaView } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { colors, typography, spacing } from '../../../styles/tokens';
 
 export interface TabItem {
@@ -24,7 +24,7 @@ export function TabLayout({ title, tabs, defaultTab, headerRight }: TabLayoutPro
   const activeContent = tabs.find((t) => t.key === activeTab)?.content;
 
   return (
-    <SafeAreaView style={styles.safe}>
+    <View style={styles.safe}>
       {title && (
         <View style={styles.header}>
           <Text style={styles.title}>{title}</Text>
@@ -45,7 +45,7 @@ export function TabLayout({ title, tabs, defaultTab, headerRight }: TabLayoutPro
         ))}
       </View>
       <View style={styles.content}>{activeContent}</View>
-    </SafeAreaView>
+    </View>
   );
 }
 

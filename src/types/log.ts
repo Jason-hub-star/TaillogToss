@@ -75,6 +75,8 @@ export interface QuickLogInput {
   intensity: IntensityLevel;
   occurred_at: string;
   memo?: string;
+  location?: string;
+  duration_minutes?: number;
 }
 
 /** ABC 상세 기록 입력 DTO */

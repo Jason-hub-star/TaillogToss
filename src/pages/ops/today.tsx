@@ -19,9 +19,11 @@ import { BulkPresetSheet } from 'components/features/ops/BulkPresetSheet';
 import { EmptyState } from 'components/tds-ext/EmptyState';
 import { ErrorState } from 'components/tds-ext/ErrorState';
 import { TabLayout } from 'components/shared/layouts/TabLayout';
+import { BottomNavBar } from 'components/shared/BottomNavBar';
 import { PRESET_OPTIONS } from 'lib/data/presets';
 import type { OpsItem } from 'components/features/ops/OpsListItem';
 import type { OpsStatus } from 'components/features/ops/OpsBadge';
+import { colors } from 'styles/tokens';
 
 export const Route = createRoute('/ops/today', { component: OpsTodayPage });
 
@@ -241,6 +243,8 @@ function OpsTodayPage() {
           onClose={() => setShowBulkSheet(false)}
         />
       </Modal>
+
+      <BottomNavBar activeTab="ops" />
     </SafeAreaView>
   );
 }
@@ -248,7 +252,7 @@ function OpsTodayPage() {
 const styles = StyleSheet.create({
   safe: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.white,
   },
   container: {
     flex: 1,

@@ -4,6 +4,7 @@
  */
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from 'lib/api/queryKeys';
+import { STALE_TIME_LONG } from 'lib/api/queryConfig';
 import * as settingsApi from 'lib/api/settings';
 import type { UserSettings } from 'types/settings';
 
@@ -12,6 +13,7 @@ export function useUserSettings(userId: string | undefined) {
     queryKey: queryKeys.settings.user(userId ?? ''),
     queryFn: () => settingsApi.getSettings(userId!),
     enabled: !!userId,
+    staleTime: STALE_TIME_LONG,
   });
 }
 

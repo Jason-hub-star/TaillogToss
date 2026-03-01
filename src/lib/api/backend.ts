@@ -85,6 +85,12 @@ export async function requestBackend<TResponse, TBody = unknown>(
   const url = buildUrl(path);
   const accessToken = await getAccessTokenOrThrow();
 
+  const serializedBody = options?.body ? JSON.stringify(options.body) : undefined;
+
+  if (__DEV__ && serializedBody) {
+    console.log(`[FE-BE] ${method} ${path} body:`, serializedBody);
+  }
+
   const response = await fetch(url, {
     method,
     headers: {
@@ -92,7 +98,7 @@ export async function requestBackend<TResponse, TBody = unknown>(
       Authorization: `Bearer ${accessToken}`,
       ...(options?.headers ?? {}),
     },
-    body: options?.body ? JSON.stringify(options.body) : undefined,
+    body: serializedBody,
   });
 
   if (response.status === 204) {
@@ -107,6 +113,9 @@ export async function requestBackend<TResponse, TBody = unknown>(
       typeof parsed === 'object' && parsed !== null && 'detail' in parsed
         ? (parsed as { detail?: unknown }).detail
         : parsed;
+    if (__DEV__) {
+      console.warn(`[FE-BE] ${method} ${path} → ${response.status}`, detail);
+    }
     throw toBackendApiError(`BACKEND_${response.status}`, response.status, detail);
   }
 
@@ -116,14 +125,35 @@ export async function requestBackend<TResponse, TBody = unknown>(
 /**
  * FastAPI 호출 실패 시 기존 Supabase 구현으로 폴백한다.
  * 개발 중 단계 전환에서 회귀를 줄이기 위한 안전장치.
+ *
+ * Network request failed(백엔드 미실행)는 첫 1회만 warn, 이후 무시.
+ * 그 외 에러(4xx/5xx 등)는 항상 warn.
  */
+let _backendUnreachableLogged = false;
+
 export async function withBackendFallback<T>(runBackend: () => Promise<T>, runFallback: () => Promise<T>): Promise<T> {
   try {
     return await runBackend();
   } catch (error) {
     if (__DEV__) {
-      console.warn('[FE-BE] backend fallback to supabase', error);
+      const isNetworkError =
+        error instanceof TypeError && /network request failed/i.test(error.message);
+      if (isNetworkError) {
+        if (!_backendUnreachableLogged) {
+          _backendUnreachableLogged = true;
+          console.warn('[FE-BE] backend unreachable, using supabase fallback (이후 동일 경고 생략)');
+        }
+      } else {
+        console.warn('[FE-BE] backend fallback to supabase', error);
+      }
     }
-    return runFallback();
+    try {
+      return await runFallback();
+    } catch (fallbackError) {
+      if (__DEV__) {
+        console.error('[FE-BE] supabase fallback also failed', fallbackError);
+      }
+      throw fallbackError;
+    }
   }
 }

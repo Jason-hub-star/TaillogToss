@@ -61,22 +61,32 @@ export async function getDailyLogs(dogId: string, date: string): Promise<Behavio
 
 /** 빠른 기록 생성 */
 export async function createQuickLog(input: QuickLogInput): Promise<BehaviorLog> {
+  if (!input.dog_id) throw new Error('dog_id is required for createQuickLog');
+
+  // occurred_at ISO 형식 보장 (BE Pydantic datetime 파싱 호환)
+  const normalizedInput: QuickLogInput = {
+    ...input,
+    occurred_at: new Date(input.occurred_at).toISOString(),
+  };
+
   return withBackendFallback(
     () =>
       requestBackend<BehaviorLog, QuickLogInput>('/api/v1/logs/quick', {
         method: 'POST',
-        body: input,
+        body: normalizedInput,
       }),
     async () => {
       const { data, error } = await supabase
         .from('behavior_logs')
         .insert({
-          dog_id: input.dog_id,
+          dog_id: normalizedInput.dog_id,
           is_quick_log: true,
-          quick_category: input.category,
-          intensity: input.intensity,
-          occurred_at: input.occurred_at,
-          memo: input.memo ?? null,
+          quick_category: normalizedInput.category,
+          intensity: normalizedInput.intensity,
+          occurred_at: normalizedInput.occurred_at,
+          memo: normalizedInput.memo ?? null,
+          location: normalizedInput.location ?? null,
+          duration_minutes: normalizedInput.duration_minutes ?? null,
         })
         .select()
         .single();

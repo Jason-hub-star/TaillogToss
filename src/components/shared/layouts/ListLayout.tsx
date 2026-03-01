@@ -12,10 +12,12 @@ export interface ListLayoutProps {
   headerRight?: React.ReactNode;
   /** 뒤로가기 콜백 — 전달 시 ← 버튼 표시 (심사 필수) */
   onBack?: () => void;
+  /** ScrollView 아래 고정 영역 (BottomNavBar 등) */
+  footer?: React.ReactNode;
   children: React.ReactNode;
 }
 
-export function ListLayout({ title, headerRight, onBack, children }: ListLayoutProps) {
+export function ListLayout({ title, headerRight, onBack, footer, children }: ListLayoutProps) {
   return (
     <SafeAreaView style={styles.safe}>
       <View style={styles.header}>
@@ -32,6 +34,7 @@ export function ListLayout({ title, headerRight, onBack, children }: ListLayoutP
       <ScrollView style={styles.body} contentContainerStyle={styles.content}>
         {children}
       </ScrollView>
+      {footer}
     </SafeAreaView>
   );
 }

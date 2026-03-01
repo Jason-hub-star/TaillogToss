@@ -12,17 +12,20 @@ import { SkeletonBox } from 'components/tds-ext/SkeletonBox';
 import { MissionChecklist } from 'components/features/training/MissionChecklist';
 import { VariantSelector } from 'components/features/training/VariantSelector';
 import { PlanSelector } from 'components/features/coaching/PlanSelector';
+import { StepCompletionSheet } from 'components/features/training/StepCompletionSheet';
+import { DaySummarySheet } from 'components/features/training/DaySummarySheet';
 import { EmptyState } from 'components/tds-ext/EmptyState';
 import { ErrorState } from 'components/tds-ext/ErrorState';
-import { getCurriculumById } from 'lib/data/curriculum';
-import { useTrainingProgress, useCompleteStep, useStartTraining } from 'lib/hooks/useTraining';
+import { Toast } from 'components/tds-ext/Toast';
+import { getCurriculumById } from 'lib/data/published/runtime';
+import { useTrainingProgress, useCompleteStep, useUncompleteStep, useStartTraining, useStepFeedback, useSubmitStepFeedback } from 'lib/hooks/useTraining';
 import { useIsPro } from 'lib/hooks/useSubscription';
 import { usePageGuard } from 'lib/hooks/usePageGuard';
 import { tracker } from 'lib/analytics/tracker';
 import { useActiveDog } from 'stores/ActiveDogContext';
 import { useAuth } from 'stores/AuthContext';
-import type { CurriculumId, PlanVariant, TrainingProgress } from 'types/training';
-import { colors, typography } from 'styles/tokens';
+import type { CurriculumId, PlanVariant, TrainingProgress, DogReaction } from 'types/training';
+import { colors, typography, spacing } from 'styles/tokens';
 
 export const Route = createRoute('/training/detail', {
   validateParams: (params) => params as { curriculum_id: CurriculumId },
@@ -63,9 +66,18 @@ function TrainingDetailPage() {
     }
   }, [progress, hasSyncedProgress]);
 
+  // Feedback state
+  const [feedbackStepId, setFeedbackStepId] = useState<string | null>(null);
+  const [showDaySummary, setShowDaySummary] = useState(false);
+  const [dayReactions, setDayReactions] = useState<DogReaction[]>([]);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
   // Mutations
   const startTraining = useStartTraining();
   const completeStep = useCompleteStep();
+  const uncompleteStep = useUncompleteStep();
+  const submitFeedback = useSubmitStepFeedback();
+  useStepFeedback(activeDog?.id, curriculumId);
 
   const currentDay = useMemo(() => {
     return curriculum?.days.find((d) => d.day_number === selectedDay) ?? null;
@@ -88,37 +100,97 @@ function TrainingDetailPage() {
 
   const handleToggleStep = useCallback(
     (stepId: string) => {
-      if (!progress || !activeDog?.id) {
-        // 훈련 미시작 → 먼저 시작
-        if (activeDog?.id) {
-          startTraining.mutate(
-            { dogId: activeDog.id, curriculumId, variant },
-            {
-              onSuccess: () => {
-                // 시작 후 step 완료는 다음 렌더에서 가능
-              },
+      if (!activeDog?.id) return;
+
+      // 더블탭 방어
+      if (startTraining.isPending || completeStep.isPending || uncompleteStep.isPending) return;
+
+      if (!progress) {
+        // 훈련 미시작 → 시작 후 해당 스텝 자동 완료
+        setFeedbackStepId(stepId); // 바텀시트 즉시 표시
+        startTraining.mutate(
+          { dogId: activeDog.id, curriculumId, variant },
+          {
+            onSuccess: (newProgress) => {
+              completeStep.mutate({
+                progressId: newProgress.id,
+                stepId,
+                currentSteps: [],
+                dogId: activeDog.id,
+              }, {
+                onSuccess: () => tracker.trainingStepCompleted(curriculumId, stepId),
+              });
             },
-          );
-        }
+            onError: () => setFeedbackStepId(null), // 실패 시 시트 닫기
+          },
+        );
         return;
       }
 
       const isAlreadyCompleted = progress.completed_steps.includes(stepId);
-      if (isAlreadyCompleted) return; // 이미 완료된 건 토글 안 함
+      if (isAlreadyCompleted) {
+        // 체크 해제
+        uncompleteStep.mutate({ stepId, dogId: activeDog.id }, {
+          onSuccess: () => setToastMessage('체크 해제됨'),
+        });
+        return;
+      }
 
+      // 스텝 완료 — 바텀시트 즉시 표시 (optimistic)
+      setFeedbackStepId(stepId);
+      tracker.trainingStepCompleted(curriculumId, stepId);
       completeStep.mutate({
         progressId: progress.id,
         stepId,
         currentSteps: progress.completed_steps,
         dogId: activeDog.id,
-      }, {
-        onSuccess: () => {
-          tracker.trainingStepCompleted(curriculumId, stepId);
-        },
       });
     },
-    [progress, activeDog?.id, curriculumId, variant, startTraining, completeStep],
+    [progress, activeDog?.id, curriculumId, variant, startTraining, completeStep, uncompleteStep],
   );
+
+  const handleFeedbackSubmit = useCallback(
+    (reaction: DogReaction, memo: string | null) => {
+      if (!feedbackStepId || !activeDog?.id) return;
+      submitFeedback.mutate({
+        dogId: activeDog.id,
+        stepId: feedbackStepId,
+        reaction,
+        memo,
+      });
+      setDayReactions((prev) => [...prev, reaction]);
+
+      // 시트 내부에서 "저장됐어요" 확인 표시 후 1초 뒤 닫기
+      const closingStepId = feedbackStepId;
+      setTimeout(() => {
+        setFeedbackStepId(null);
+
+        // Check if all day steps are now completed (including this one)
+        if (currentDay) {
+          const updatedCompleted = [...completedStepIds, closingStepId];
+          const allDone = currentDay.steps.every((s) => updatedCompleted.includes(s.id));
+          if (allDone) {
+            setShowDaySummary(true);
+          }
+        }
+      }, 1000);
+    },
+    [feedbackStepId, activeDog?.id, submitFeedback, currentDay, completedStepIds],
+  );
+
+  const handleFeedbackSkip = useCallback(() => {
+    const skippedStepId = feedbackStepId;
+    setFeedbackStepId(null);
+    setToastMessage('훈련 완료');
+
+    if (currentDay && skippedStepId) {
+      const updatedCompleted = [...completedStepIds, skippedStepId];
+      const allDone = currentDay.steps.every((s) => updatedCompleted.includes(s.id));
+      if (allDone) {
+        setShowDaySummary(true);
+      }
+    }
+  }, [feedbackStepId, currentDay, completedStepIds]);
 
   const handleVariantChange = useCallback((v: PlanVariant) => {
     setVariant(v);
@@ -134,6 +206,12 @@ function TrainingDetailPage() {
       setShowCelebration(true);
     }
   }, [curriculum, selectedDay]);
+
+  const handleDaySummaryNext = useCallback(() => {
+    setShowDaySummary(false);
+    setDayReactions([]);
+    handleMissionComplete();
+  }, [handleMissionComplete]);
 
   const handleCelebrationClose = useCallback(() => {
     setShowCelebration(false);
@@ -157,6 +235,10 @@ function TrainingDetailPage() {
     return (
       <DetailLayout title={curriculum.title} onBack={handleBack}>
         <View style={styles.loadingContainer}>
+          <View style={styles.lottieHeader}>
+            <LottieAnimation asset="cute-doggie" size={64} />
+            <Text style={styles.loadingText}>훈련 정보 로딩 중...</Text>
+          </View>
           <SkeletonBox width="60%" height={16} borderRadius={4} />
           <SkeletonBox width="100%" height={4} borderRadius={2} style={{ marginTop: 12 }} />
           <View style={styles.loadingSkeleton}>
@@ -266,6 +348,30 @@ function TrainingDetailPage() {
         </>
       )}
 
+      {/* 스텝 완료 피드백 시트 */}
+      <StepCompletionSheet
+        visible={!!feedbackStepId}
+        dogName={activeDog?.name ?? '강아지'}
+        onSubmit={handleFeedbackSubmit}
+        onSkip={handleFeedbackSkip}
+      />
+
+      {/* Day 완료 요약 시트 */}
+      <DaySummarySheet
+        visible={showDaySummary}
+        dayNumber={selectedDay}
+        reactions={dayReactions}
+        isLastDay={selectedDay >= (curriculum?.total_days ?? 1)}
+        onNext={handleDaySummaryNext}
+      />
+
+      {/* 저장 확인 토스트 */}
+      <Toast
+        message={toastMessage ?? ''}
+        visible={!!toastMessage}
+        onDismiss={() => setToastMessage(null)}
+      />
+
       {/* 커리큘럼 완료 축하 모달 */}
       <Modal visible={showCelebration} transparent animationType="fade">
         <View style={styles.celebrationOverlay}>
@@ -292,6 +398,16 @@ function TrainingDetailPage() {
 const styles = StyleSheet.create({
   loadingContainer: {
     paddingVertical: 20,
+  },
+  lottieHeader: {
+    alignItems: 'center',
+    marginBottom: spacing.md,
+  },
+  loadingText: {
+    ...typography.caption,
+    color: colors.textSecondary,
+    fontWeight: '500',
+    marginTop: spacing.xs,
   },
   loadingSkeleton: {
     marginTop: 20,

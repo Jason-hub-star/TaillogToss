@@ -6,7 +6,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import type { Curriculum, CurriculumStatus } from 'types/training';
-import { CURRICULUM_ICONS } from 'lib/data/curriculum';
+import { CURRICULUM_ICONS } from 'lib/data/published/runtime';
 import { colors, typography } from 'styles/tokens';
 
 type BadgeStatus = 'recommended' | CurriculumStatus | 'locked';

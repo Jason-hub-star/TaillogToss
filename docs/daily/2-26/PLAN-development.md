@@ -210,7 +210,7 @@ supabase/
 
 **목표**: 3계층 컴포넌트 구조 구축 — tds-ext(갭 7종) + shared(레이아웃 5종 + 광고 1종)
 **Parity**: UI-001
-**참조**: `.claude/skills/toss_wireframes/SKILL.md` (레이아웃 패턴 A~E), `.claude/skills/toss_apps/SKILL.md`
+**참조**: `.claude/skills/toss-guide/core/toss_wireframes/SKILL.md` (레이아웃 패턴 A~E), `.claude/skills/toss-guide/core/toss_apps/SKILL.md`
 
 **① tds-ext/ — TDS 갭 보완 프리미티브**
 
@@ -257,7 +257,7 @@ supabase/
 
 **목표**: WebView + Chart.js 기반 Radar/Heatmap 차트
 **Parity**: UI-001
-**참조**: `.claude/skills/toss_apps/SKILL.md` Section 7.6
+**참조**: `.claude/skills/toss-guide/core/toss_apps/SKILL.md` Section 7.6
 
 | # | 작업 | 파일 |
 |---|------|------|
@@ -295,7 +295,7 @@ supabase/
 
 **목표**: Journey A (Cold Start) 전체: login → welcome → survey(7단계) → survey-result → notification
 **Parity**: AUTH-001, UI-001
-**참조**: `.claude/skills/toss_wireframes/SKILL.md` (9-1, 9-2), `.claude/skills/toss_journey/SKILL.md`
+**참조**: `.claude/skills/toss-guide/core/toss_wireframes/SKILL.md` (9-1, 9-2), `.claude/skills/toss-guide/core/toss_journey/SKILL.md`
 
 | # | 화면 | 파일 | 핵심 | 상태 처리 |
 |---|------|------|------|-----------|
@@ -370,7 +370,7 @@ supabase/
 
 **목표**: 33개 화면 전환 라우팅 + 가드 체인 + 인게이지먼트 훅
 **Parity**: APP-001, AUTH-001
-**참조**: `.claude/skills/toss_journey/SKILL.md` Section 11.5 (33행 전환 테이블)
+**참조**: `.claude/skills/toss-guide/core/toss_journey/SKILL.md` Section 11.5 (33행 전환 테이블)
 
 | # | 작업 | 파일 |
 |---|------|------|

@@ -35,6 +35,40 @@ describe('evaluatePageGuard', () => {
     expect(result).toEqual({ status: 'redirect', redirectTo: '/onboarding/welcome' });
   });
 
+  test('onboarding guard waits while dog list is loading for authenticated users', () => {
+    const result = evaluatePageGuard({
+      currentPath: '/dashboard',
+      skipAuth: false,
+      skipOnboarding: false,
+      requireFeature: undefined,
+      isAuthenticated: true,
+      hasCompletedOnboarding: false,
+      isPro: false,
+      dogCount: 0,
+      isSubscriptionLoading: false,
+      isDogsLoading: true,
+    });
+
+    expect(result).toEqual({ status: 'pending' });
+  });
+
+  test('dog presence marks onboarding as complete even when auth state is stale', () => {
+    const result = evaluatePageGuard({
+      currentPath: '/dashboard',
+      skipAuth: false,
+      skipOnboarding: false,
+      requireFeature: undefined,
+      isAuthenticated: true,
+      hasCompletedOnboarding: false,
+      isPro: false,
+      dogCount: 1,
+      isSubscriptionLoading: false,
+      isDogsLoading: false,
+    });
+
+    expect(result).toEqual({ status: 'allow' });
+  });
+
   test('onboarding pages are allowed when skipOnboarding is true', () => {
     const result = evaluatePageGuard({
       currentPath: '/onboarding/survey',

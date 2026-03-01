@@ -43,13 +43,22 @@ export function evaluatePageGuard(input: EvaluatePageGuardInput): GuardEvaluatio
   } = input;
 
   let result: GuardResult = { allow: true };
+  const effectiveHasCompletedOnboarding = hasCompletedOnboarding || dogCount > 0;
 
   if (!skipAuth) {
     result = authGuard({ isAuthenticated, currentPath });
   }
 
   if (result.allow && !skipOnboarding) {
-    result = onboardingGuard({ hasCompletedOnboarding, currentPath });
+    // 설문 직후 대시보드 이동 시점에는 AuthContext 상태 반영보다 dog 목록 조회가 늦을 수 있다.
+    // 이 구간에서 즉시 온보딩 리다이렉트하면 /onboarding/* 루프가 발생하므로 pending으로 대기한다.
+    if (isAuthenticated && !effectiveHasCompletedOnboarding && isDogsLoading) {
+      return { status: 'pending' };
+    }
+    result = onboardingGuard({
+      hasCompletedOnboarding: effectiveHasCompletedOnboarding,
+      currentPath,
+    });
   }
 
   // Role guard (B2B): requireRole이 명시되면 역할 검사

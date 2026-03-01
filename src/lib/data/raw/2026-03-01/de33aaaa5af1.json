@@ -1,0 +1,16 @@
+{
+  "source_hash": "de33aaaa5af1",
+  "source_url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC7743949/",
+  "domain": "pmc.ncbi.nlm.nih.gov",
+  "title": "Does training method matter? Evidence for the negative impact of aversive-based methods",
+  "fetched_at": "2026-03-01T12:27:31.207860+09:00",
+  "language": "en",
+  "raw_text": "PMC study (n=92 dogs): aversive training caused elevated cortisol, more stress behaviors, pessimistic cognitive bias vs reward-based training. Reward training is safer and more effective.",
+  "credibility_score": 92,
+  "risk_flag": false,
+  "metadata": {
+    "query": "positive reinforcement dog training protocol",
+    "type": "academic_journal"
+  },
+  "pipeline_eligible": true
+}

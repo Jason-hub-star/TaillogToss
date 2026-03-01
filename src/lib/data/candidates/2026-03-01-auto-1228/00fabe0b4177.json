@@ -1,0 +1,20 @@
+{
+  "source_hash": "00fabe0b4177",
+  "source_url": "https://positively.com/dog-training/article/philosophy-positive-training",
+  "domain": "positively.com",
+  "title": "Positive Training | Positively.com",
+  "fetched_at": "2026-03-01T12:27:31.207860+09:00",
+  "language": "en",
+  "summary": "Victoria Stilwell's positive training philosophy: focus on bond-building, enrichment, two-quadrant approach (R+ and P-). Endorsed by veterinary/behavioral community.",
+  "credibility_score": 72,
+  "risk_flag": false,
+  "metadata": {
+    "query": "positive reinforcement dog training protocol",
+    "type": "practitioner_org"
+  },
+  "normalized_at": "2026-03-01T12:28:05.063514+09:00",
+  "run_id": "2026-03-01-auto-1228",
+  "status": "approved",
+  "quality_gate_result": "PASS",
+  "quality_gate_checked_at": "2026-03-01T12:28:34.319410+09:00"
+}

@@ -22,6 +22,7 @@ This file only keeps execution rules, priorities, and pointers.
 7. If creating a new folder, add a local `CLAUDE.md` with role/rules.
 8. Use `styles/tokens` for design tokens; avoid hardcoded hex/fontSize.
 9. For page implementation, load one `page-*` skill + at most two `feature-*` skills.
+10. At task end, output Completion Format and sync `docs/daily/MM-DD/page-<route-slug>.md` checkboxes with `docs/status/PAGE-UPGRADE-BOARD.md` status.
 
 ## Nightly Automations (MUST)
 
@@ -29,6 +30,19 @@ This file only keeps execution rules, priorities, and pointers.
 |---|---|---|
 | CLAUDE.md slimming | daily 08:00 | keep this file pointer-only |
 | docs organizer | daily 22:00 (Asia/Seoul) | `.claude/automations/docs-nightly-organizer.prompt.md` |
+
+## Next Automation (MUST)
+
+- Code-doc align: `.claude/automations/code-doc-align.prompt.md` (daily 21:30, Asia/Seoul)
+- Daily work log source: `docs/daily/MM-DD/page-<route-slug>.md`
+- Status board source: `docs/status/PAGE-UPGRADE-BOARD.md`
+- Skill mapping source: `docs/status/SKILL-DOC-MATRIX.md`
+- Route truth policy:
+  - managed routes: `src/components/shared/DevMenu.tsx`
+  - full route inventory: `src/pages/**`
+- Session rule:
+  - 목표 입력 시 route 기준으로 page skill 1개 + feature 최대 2개만 로드
+  - 작업 종료 시 daily 체크박스와 board 상태를 반드시 동기화
 
 ## Architecture Snapshot
 
@@ -43,6 +57,9 @@ This file only keeps execution rules, priorities, and pointers.
 | Ads | Toss Ads SDK 2.0 |
 
 ## Skill Routing Index (MUST)
+
+Skill root: `.claude/skills/toss-guide/`
+Page/feature skill root: `.claude/skills/page-skills/`
 
 ### Base domain skills
 - `Skill("toss_wireframes")`
@@ -90,6 +107,8 @@ This file only keeps execution rules, priorities, and pointers.
 | `docs/status/NIGHTLY-RUN-LOG.md` | nightly organizer execution history |
 | `docs/ref/BACKEND-PLAN.md` | backend implementation details |
 | `docs/ref/SCHEMA-B2B.md` | B2B schema reference |
+| `docs/ref/SUPABASE-SCHEMA-INDEX.md` | Supabase live schema + RLS + migration drift index |
+| `docs/ref/ARCHITECTURE-DIAGRAMS.md` | Toss in-app architecture index (6 diagram set) |
 | `docs/ref/ASSET-GUIDE.md` | asset catalog and usage notes |
 | `docs/ref/10-MIGRATION-OPERATING-MODEL.md` | migration operating model |
 | `docs/ref/12-MIGRATION-WAVES-AND-GATES.md` | migration waves and gate criteria |
@@ -102,6 +121,7 @@ This file only keeps execution rules, priorities, and pointers.
 - Scope: parity IDs
 - Files: changed files
 - Validation: commands/tests and outcomes
+- Daily Sync: `docs/daily/MM-DD/page-<route-slug>.md` checkbox result + board status (`Ready|InProgress|QA|Done|Hold`)
 - Risks: unresolved risks and next actions
 - Self-Review: good / weak / verification gaps
 - Next Recommendations: top 1-3 priorities

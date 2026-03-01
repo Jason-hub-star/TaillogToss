@@ -14,8 +14,9 @@ import {
 import { RewardedAdButton } from 'components/shared/ads/RewardedAdButton';
 import type { BehaviorType } from 'types/dog';
 import { useSurvey } from 'stores/SurveyContext';
+import { useAuth } from 'stores/AuthContext';
 import { usePageGuard } from 'lib/hooks/usePageGuard';
-import { generateSurveyAnalysis } from 'lib/data/surveyAnalysis';
+import { generateSurveyAnalysis } from 'lib/data/analysis/engine';
 import { colors, typography } from 'styles/tokens';
 
 export const Route = createRoute('/onboarding/survey-result', {
@@ -24,6 +25,7 @@ export const Route = createRoute('/onboarding/survey-result', {
 
 function SurveyResultPage() {
   const navigation = useNavigation();
+  const { hasCompletedOnboarding } = useAuth();
   const { surveyData } = useSurvey();
   const { isReady } = usePageGuard({
     currentPath: '/onboarding/survey-result',
@@ -32,9 +34,16 @@ function SurveyResultPage() {
 
   useEffect(() => {
     if (!surveyData) {
-      navigation.navigate('/onboarding/survey');
+      const fallbackRoute = hasCompletedOnboarding ? '/dashboard' : '/onboarding/survey';
+      if (__DEV__) {
+        console.log('[APP-001][onboarding/survey-result] missing surveyData redirect', {
+          hasCompletedOnboarding,
+          fallbackRoute,
+        });
+      }
+      navigation.navigate(fallbackRoute);
     }
-  }, [navigation, surveyData]);
+  }, [hasCompletedOnboarding, navigation, surveyData]);
 
   const behaviors = useMemo<BehaviorType[]>(
     () => surveyData?.step3_behavior.primary_behaviors ?? ['other'],

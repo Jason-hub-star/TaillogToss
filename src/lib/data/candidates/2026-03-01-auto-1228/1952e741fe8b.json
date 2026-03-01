@@ -1,0 +1,20 @@
+{
+  "source_hash": "1952e741fe8b",
+  "source_url": "https://resources.sdhumane.org/Resource_Center/Behavior_and_Training/Dogs_and_Puppies/Training_Should_Be_Fun/Training_Tips:_Loose_Leash_Walking",
+  "domain": "resources.sdhumane.org",
+  "title": "Training Tips: Loose Leash Walking - San Diego Humane Society",
+  "fetched_at": "2026-03-01T12:27:31.207860+09:00",
+  "language": "en",
+  "summary": "SD Humane Society protocol: Red Light/Green Light (stop when pull, go when loose), reward check-ins, consistent cue, front-clip harness, avoid choke/prong/shock collars.",
+  "credibility_score": 80,
+  "risk_flag": false,
+  "metadata": {
+    "query": "leash pulling loose leash training evidence based",
+    "type": "humane_org"
+  },
+  "normalized_at": "2026-03-01T12:28:05.082834+09:00",
+  "run_id": "2026-03-01-auto-1228",
+  "status": "approved",
+  "quality_gate_result": "PASS",
+  "quality_gate_checked_at": "2026-03-01T12:28:34.380060+09:00"
+}

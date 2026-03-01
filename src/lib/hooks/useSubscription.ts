@@ -7,6 +7,7 @@ import { useEffect, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from 'lib/api/queryKeys';
 import { tracker } from 'lib/analytics/tracker';
+import { STALE_TIME_LONG } from 'lib/api/queryConfig';
 import * as subApi from 'lib/api/subscription';
 import {
   createOneTimePurchaseOrder,
@@ -20,6 +21,7 @@ export function useCurrentSubscription(userId: string | undefined) {
     queryKey: queryKeys.subscription.current(userId ?? ''),
     queryFn: () => subApi.getSubscription(userId!),
     enabled: !!userId,
+    staleTime: STALE_TIME_LONG,
   });
 }
 

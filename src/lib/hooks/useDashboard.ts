@@ -4,6 +4,7 @@
  */
 import { useQuery } from '@tanstack/react-query';
 import { queryKeys } from 'lib/api/queryKeys';
+import { STALE_TIME_SHORT } from 'lib/api/queryConfig';
 import { getDashboard } from 'lib/api/dashboard';
 
 export function useDashboard(dogId: string | undefined) {
@@ -11,6 +12,7 @@ export function useDashboard(dogId: string | undefined) {
     queryKey: queryKeys.dashboard.detail(dogId ?? ''),
     queryFn: () => getDashboard(dogId),
     enabled: !!dogId,
+    staleTime: STALE_TIME_SHORT,
   });
 }
 

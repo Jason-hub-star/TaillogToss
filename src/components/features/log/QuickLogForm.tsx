@@ -16,12 +16,27 @@ export interface QuickLogFormProps {
   isLoading?: boolean;
 }
 
+const LOCATION_CHIPS = [
+  { key: 'indoor', label: '실내' },
+  { key: 'outdoor', label: '실외' },
+  { key: 'walking', label: '산책 중' },
+  { key: 'car', label: '차 안' },
+] as const;
+
+const DURATION_CHIPS = [
+  { key: 3, label: '짧게(~5분)' },
+  { key: 10, label: '보통(5~15분)' },
+  { key: 20, label: '길게(15분+)' },
+] as const;
+
 export function QuickLogForm({ dogId, onSubmit, isLoading = false }: QuickLogFormProps) {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [intensity, setIntensity] = useState<IntensityLevel>(3);
   const [occurredAt, setOccurredAt] = useState(new Date());
   const [memo, setMemo] = useState('');
   const [showTimeDetail, setShowTimeDetail] = useState(false);
+  const [selectedLocation, setSelectedLocation] = useState<string | null>(null);
+  const [selectedDuration, setSelectedDuration] = useState<number | null>(null);
 
   const canSubmit = selectedCategory !== null;
 
@@ -41,8 +56,10 @@ export function QuickLogForm({ dogId, onSubmit, isLoading = false }: QuickLogFor
       intensity,
       occurred_at: occurredAt.toISOString(),
       memo: memo || undefined,
+      location: selectedLocation || undefined,
+      duration_minutes: selectedDuration ?? undefined,
     });
-  }, [dogId, selectedCategory, intensity, occurredAt, memo, canSubmit, onSubmit]);
+  }, [dogId, selectedCategory, intensity, occurredAt, memo, selectedLocation, selectedDuration, canSubmit, onSubmit]);
 
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
@@ -75,6 +92,40 @@ export function QuickLogForm({ dogId, onSubmit, isLoading = false }: QuickLogFor
           </TouchableOpacity>
         </View>
         {showTimeDetail && <DateTimePicker value={occurredAt} onChange={setOccurredAt} mode="time" />}
+      </View>
+
+      <View style={styles.section}>
+        <Text style={styles.sectionLabel}>장소</Text>
+        <View style={styles.chipRow}>
+          {LOCATION_CHIPS.map((chip) => (
+            <TouchableOpacity
+              key={chip.key}
+              style={[styles.optionChip, selectedLocation === chip.key && styles.optionChipActive]}
+              onPress={() => setSelectedLocation(selectedLocation === chip.key ? null : chip.key)}
+            >
+              <Text style={[styles.optionChipText, selectedLocation === chip.key && styles.optionChipTextActive]}>
+                {chip.label}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      </View>
+
+      <View style={styles.section}>
+        <Text style={styles.sectionLabel}>지속시간</Text>
+        <View style={styles.chipRow}>
+          {DURATION_CHIPS.map((chip) => (
+            <TouchableOpacity
+              key={chip.key}
+              style={[styles.optionChip, selectedDuration === chip.key && styles.optionChipActive]}
+              onPress={() => setSelectedDuration(selectedDuration === chip.key ? null : chip.key)}
+            >
+              <Text style={[styles.optionChipText, selectedDuration === chip.key && styles.optionChipTextActive]}>
+                {chip.label}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
       </View>
 
       <View style={styles.section}>
@@ -147,6 +198,28 @@ const styles = StyleSheet.create({
     color: colors.primaryBlue,
     fontWeight: '500',
   },
+  chipRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  optionChip: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: colors.divider,
+  },
+  optionChipActive: {
+    backgroundColor: colors.primaryBlue,
+  },
+  optionChipText: {
+    ...typography.detail,
+    color: colors.grey700,
+    fontWeight: '500',
+  },
+  optionChipTextActive: {
+    color: colors.white,
+  },
   memoInput: {
     borderWidth: 1,
     borderColor: colors.border,
@@ -155,7 +228,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     ...typography.detail,
     color: colors.textPrimary,
-    backgroundColor: '#FAFBFC',
+    backgroundColor: colors.grey50,
     minHeight: 60,
   },
   submitButton: {

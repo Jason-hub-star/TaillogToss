@@ -22,6 +22,7 @@ import { useLogout } from 'lib/hooks/useAuth';
 import { useUserSettings, useUpdateSettings } from 'lib/hooks/useSettings';
 import { withdrawUser } from 'lib/api/auth';
 import { ErrorState } from 'components/tds-ext';
+import { BottomNavBar } from 'components/shared/BottomNavBar';
 import { DEFAULT_NOTIFICATION_PREF } from 'types/settings';
 import { colors, typography } from 'styles/tokens';
 
@@ -195,6 +196,7 @@ function SettingsPage() {
 
         <View style={styles.bottomSpacer} />
       </ScrollView>
+      <BottomNavBar activeTab="settings" />
     </SafeAreaView>
   );
 }

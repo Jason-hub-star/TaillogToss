@@ -14,9 +14,10 @@ export interface DogCardProps {
   dog: DashboardDog;
   todayLogCount: number;
   onPress?: () => void;
+  onSwitchPress?: () => void;
 }
 
-export function DogCard({ dog, todayLogCount, onPress }: DogCardProps) {
+export function DogCard({ dog, todayLogCount, onPress, onSwitchPress }: DogCardProps) {
   return (
     <TouchableOpacity style={styles.container} onPress={onPress} activeOpacity={0.7} disabled={!onPress}>
       <View style={styles.avatar}>
@@ -32,6 +33,11 @@ export function DogCard({ dog, todayLogCount, onPress }: DogCardProps) {
       <View style={styles.badge}>
         <Text style={styles.badgeText}>오늘 {todayLogCount}건</Text>
       </View>
+      {onSwitchPress && (
+        <TouchableOpacity style={styles.switchBtn} onPress={onSwitchPress} activeOpacity={0.7}>
+          <Text style={styles.switchIcon}>{'\u21C5'}</Text>
+        </TouchableOpacity>
+      )}
     </TouchableOpacity>
   );
 }
@@ -80,7 +86,7 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   badge: {
-    backgroundColor: '#E8F3FF',
+    backgroundColor: colors.blue50,
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 12,
@@ -89,5 +95,18 @@ const styles = StyleSheet.create({
     ...typography.caption,
     color: colors.primaryBlue,
     fontWeight: '600',
+  },
+  switchBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: colors.surfaceTertiary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 8,
+  },
+  switchIcon: {
+    ...typography.body,
+    color: colors.textSecondary,
   },
 });

@@ -26,7 +26,7 @@ const BADGE_CONFIG: Record<BadgeStatus, { label: string; bg: string; color: stri
   in_progress: { label: '진행중', bg: `${colors.green500}1A`, color: colors.green500 },
   completed: { label: '완료', bg: `${colors.green500}1A`, color: colors.green500 },
   not_started: { label: '미시작', bg: colors.divider, color: colors.textSecondary },
-  locked: { label: 'PRO', bg: '#FF6B351A', color: '#FF6B35' },
+  locked: { label: 'PRO', bg: `${colors.orange700}1A`, color: colors.orange700 },
 };
 
 const DIFFICULTY_LABEL: Record<string, string> = {
@@ -86,11 +86,11 @@ const styles = StyleSheet.create({
   card: {
     backgroundColor: colors.white,
     borderRadius: 16,
-    padding: 16,
+    padding: 20,
     borderWidth: 1,
     borderColor: colors.divider,
     flex: 1,
-    minHeight: 180,
+    minHeight: 190,
   },
   cardLocked: {
     opacity: 0.7,
@@ -128,7 +128,7 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
   },
   difficulty: {
-    fontSize: 12,
+    ...typography.badge,
     color: colors.textSecondary,
     marginBottom: 10,
   },

@@ -15,6 +15,7 @@ import { RewardedAdButton } from 'components/shared/ads/RewardedAdButton';
 import type { BehaviorType } from 'types/dog';
 import { useSurvey } from 'stores/SurveyContext';
 import { usePageGuard } from 'lib/hooks/usePageGuard';
+import { generateSurveyAnalysis } from 'lib/data/surveyAnalysis';
 import { colors, typography } from 'styles/tokens';
 
 export const Route = createRoute('/onboarding/survey-result', {
@@ -44,6 +45,11 @@ function SurveyResultPage() {
   const behaviorType = classifyBehaviorType(behaviors);
   const riskLevel = estimateRiskLevel(behaviors);
   const riskScore = riskLevel === 'critical' ? 90 : riskLevel === 'high' ? 70 : riskLevel === 'medium' ? 50 : 25;
+
+  const analysis = useMemo(
+    () => surveyData ? generateSurveyAnalysis(surveyData) : null,
+    [surveyData]
+  );
 
   const [isDetailUnlocked, setIsDetailUnlocked] = useState(false);
 
@@ -90,17 +96,19 @@ function SurveyResultPage() {
         <View style={styles.detailSection}>
           <Text style={styles.detailHeader}>📋 상세 리포트</Text>
 
-          {isDetailUnlocked ? (
+          {isDetailUnlocked && analysis ? (
             <View style={styles.unlockedContent}>
               <Text style={styles.detailText}>
-                {dogName}의 행동 패턴을 분석한 결과, 불안 관련 행동이 주요 패턴으로 나타납니다.
-                낯선 환경이나 소리에 민감하게 반응할 가능성이 높으며,
-                꾸준한 기록과 맞춤 훈련을 통해 개선할 수 있습니다.
+                {analysis.summaryParagraph}
+                {'\n'}꾸준한 기록과 맞춤 훈련을 통해 개선할 수 있습니다.
               </Text>
               <Text style={styles.detailText}>
-                추천 커리큘럼: 분리불안 극복 프로그램{'\n'}
-                예상 개선 기간: 4~6주
+                추천 커리큘럼: {analysis.recommendedCurriculum}{'\n'}
+                예상 개선 기간: {analysis.estimatedDuration}
               </Text>
+              {analysis.keyInsights.map((insight, i) => (
+                <Text key={i} style={styles.insightText}>• {insight}</Text>
+              ))}
             </View>
           ) : (
             <View style={styles.lockedContent}>
@@ -152,7 +160,7 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: '#F0F4FF',
+    backgroundColor: colors.blue50,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 16,
@@ -172,7 +180,7 @@ const styles = StyleSheet.create({
   },
   summaryText: {
     ...typography.detail,
-    color: '#6B7280',
+    color: colors.grey500,
     lineHeight: 22,
     marginTop: 12,
   },
@@ -195,9 +203,16 @@ const styles = StyleSheet.create({
   },
   detailText: {
     ...typography.detail,
-    color: '#4B5563',
+    color: colors.grey700,
     lineHeight: 22,
     marginBottom: 12,
+  },
+  insightText: {
+    ...typography.detail,
+    color: colors.grey600,
+    lineHeight: 20,
+    marginBottom: 6,
+    paddingLeft: 4,
   },
   lockedContent: {
     backgroundColor: colors.surfaceSecondary,

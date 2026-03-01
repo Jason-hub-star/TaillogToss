@@ -5,18 +5,22 @@
  */
 import { createRoute, useNavigation } from '@granite-js/react-native';
 import React, { useMemo, useCallback } from 'react';
-import { View, Text, StyleSheet, ActivityIndicator, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { ListLayout } from 'components/shared/layouts/ListLayout';
 import { CurriculumCard } from 'components/features/training/CurriculumCard';
 import { EmptyState } from 'components/tds-ext/EmptyState';
 import { ErrorState } from 'components/tds-ext/ErrorState';
 import { CURRICULUMS } from 'lib/data/curriculum';
+import { getRecommendations } from 'lib/data/recommendCurriculum';
 import { useTrainingProgress } from 'lib/hooks/useTraining';
 import { useIsPro } from 'lib/hooks/useSubscription';
 import { usePageGuard } from 'lib/hooks/usePageGuard';
 import { useActiveDog } from 'stores/ActiveDogContext';
 import { useAuth } from 'stores/AuthContext';
+import { useSurvey } from 'stores/SurveyContext';
 import type { Curriculum, CurriculumId, CurriculumStatus, TrainingProgress } from 'types/training';
+import { SkeletonAcademy } from 'components/features/training/SkeletonAcademy';
+import { RecommendationCard } from 'components/features/training/RecommendationCard';
 import { colors, typography } from 'styles/tokens';
 
 export const Route = createRoute('/training/academy', {
@@ -27,6 +31,7 @@ function TrainingAcademyPage() {
   const { user } = useAuth();
   const { activeDog } = useActiveDog();
   const isPro = useIsPro(user?.id);
+  const { surveyData } = useSurvey();
   const { data: progressList, isLoading, isError, refetch } = useTrainingProgress(activeDog?.id);
   const { isReady } = usePageGuard({ currentPath: '/training/academy' });
 
@@ -41,10 +46,21 @@ function TrainingAcademyPage() {
     return map;
   }, [progressList]);
 
-  // 추천 커리큘럼 (설문 결과 기반 — 일단 첫 번째 free를 추천으로 표시)
-  const recommendedId = useMemo(() => {
-    return CURRICULUMS.find((c) => c.access === 'free')?.id ?? CURRICULUMS[0]?.id;
-  }, []);
+  // 완료 커리큘럼 목록
+  const completedIds = useMemo(() => {
+    if (!Array.isArray(progressList)) return [];
+    return progressList
+      .filter((p: TrainingProgress) => p.status === 'completed')
+      .map((p: TrainingProgress) => p.curriculum_id);
+  }, [progressList]);
+
+  // AI 맞춤 추천 (설문 행동 데이터 기반)
+  const recommendation = useMemo(() => {
+    const behaviors = surveyData?.step3_behavior.primary_behaviors ?? ['other'];
+    return getRecommendations(behaviors, completedIds);
+  }, [surveyData, completedIds]);
+
+  const recommendedId = recommendation.primary;
 
   // 현재 진행 중인 커리큘럼
   const activeProgress = useMemo(() => {
@@ -74,9 +90,7 @@ function TrainingAcademyPage() {
   return (
     <ListLayout title="훈련 아카데미" onBack={() => navigation.goBack()}>
       {isLoading ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={colors.primaryBlue} />
-        </View>
+        <SkeletonAcademy />
       ) : CURRICULUMS.length === 0 ? (
         <EmptyState
           title="준비 중인 커리큘럼이에요"
@@ -95,8 +109,20 @@ function TrainingAcademyPage() {
             />
           )}
 
+          {/* AI 맞춤 추천 카드 */}
+          {!activeProgress && (
+            <RecommendationCard
+              curriculumId={recommendation.primary}
+              reasoning={recommendation.reasoning}
+              onPress={() => {
+                const c = CURRICULUMS.find((cur) => cur.id === recommendation.primary);
+                if (c) handleCardPress(c);
+              }}
+            />
+          )}
+
           {/* 커리큘럼 2열 그리드 */}
-          <Text style={styles.sectionTitle}>전체 커리큘럼</Text>
+          <Text style={styles.sectionTitle}>전체 커리큘럼 ({CURRICULUMS.length})</Text>
           <View style={styles.grid}>
             {CURRICULUMS.map((curriculum) => {
               const progress = progressMap.get(curriculum.id);
@@ -204,7 +230,7 @@ const styles = StyleSheet.create({
   proHint: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFF8F0',
+    backgroundColor: colors.surfaceTertiary,
     borderRadius: 12,
     padding: 16,
     marginTop: 24,
@@ -234,7 +260,7 @@ const styles = StyleSheet.create({
   todayLabel: {
     ...typography.caption,
     fontWeight: '600',
-    color: '#FFFFFF99',
+    color: `${colors.white}99`,
   },
   todayDay: {
     ...typography.caption,
@@ -277,6 +303,9 @@ const styles = StyleSheet.create({
   },
   todayCTA: {
     alignItems: 'flex-end',
+    minHeight: 44,
+    paddingVertical: 12,
+    justifyContent: 'center',
   },
   todayCTAText: {
     ...typography.detail,

@@ -5,10 +5,11 @@
  */
 import { createRoute, useNavigation } from '@granite-js/react-native';
 import React, { useState, useCallback, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, ActivityIndicator, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { colors, typography } from 'styles/tokens';
 import { DetailLayout } from 'components/shared/layouts/DetailLayout';
 import { CoachingBlockList } from 'components/features/coaching/CoachingBlockList';
+import { SkeletonCoaching } from 'components/features/coaching/SkeletonCoaching';
 import { EmptyState } from 'components/tds-ext/EmptyState';
 import { ErrorState } from 'components/tds-ext/ErrorState';
 import { useLatestCoaching, useSubmitFeedback } from 'lib/hooks/useCoaching';
@@ -70,10 +71,7 @@ function CoachingResultPage() {
   if (isLoading) {
     return (
       <DetailLayout title="AI 행동 진단" onBack={handleBack}>
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={colors.primaryBlue} />
-          <Text style={styles.loadingText}>코칭 결과를 불러오는 중...</Text>
-        </View>
+        <SkeletonCoaching />
       </DetailLayout>
     );
   }
@@ -196,7 +194,7 @@ const styles = StyleSheet.create({
     ...typography.detail,
     fontWeight: '600',
     color: colors.primaryBlue,
-    backgroundColor: '#0064FF1A',
+    backgroundColor: `${colors.primaryBlue}1A`,
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 8,
@@ -228,6 +226,6 @@ const styles = StyleSheet.create({
     color: colors.grey300,
   },
   starSelected: {
-    color: '#FFB800',
+    color: colors.orange500,
   },
 });

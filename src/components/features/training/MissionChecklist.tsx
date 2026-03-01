@@ -186,6 +186,13 @@ const styles = StyleSheet.create({
   tipsList: {
     paddingHorizontal: 16,
     paddingBottom: 12,
+    backgroundColor: colors.blue50,
+    borderLeftWidth: 3,
+    borderLeftColor: colors.primaryBlue,
+    marginHorizontal: 12,
+    marginBottom: 12,
+    borderRadius: 8,
+    paddingTop: 10,
   },
   tipItem: {
     flexDirection: 'row',

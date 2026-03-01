@@ -5,8 +5,10 @@
  */
 import { createRoute, useNavigation } from '@granite-js/react-native';
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, Modal } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Modal } from 'react-native';
 import { DetailLayout } from 'components/shared/layouts/DetailLayout';
+import { LottieAnimation } from 'components/shared/LottieAnimation';
+import { SkeletonBox } from 'components/tds-ext/SkeletonBox';
 import { MissionChecklist } from 'components/features/training/MissionChecklist';
 import { VariantSelector } from 'components/features/training/VariantSelector';
 import { PlanSelector } from 'components/features/coaching/PlanSelector';
@@ -155,7 +157,13 @@ function TrainingDetailPage() {
     return (
       <DetailLayout title={curriculum.title} onBack={handleBack}>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={colors.primaryBlue} />
+          <SkeletonBox width="60%" height={16} borderRadius={4} />
+          <SkeletonBox width="100%" height={4} borderRadius={2} style={{ marginTop: 12 }} />
+          <View style={styles.loadingSkeleton}>
+            {[1, 2, 3].map((i) => (
+              <SkeletonBox key={i} width="100%" height={80} borderRadius={12} style={{ marginBottom: 8 }} />
+            ))}
+          </View>
         </View>
       </DetailLayout>
     );
@@ -262,7 +270,7 @@ function TrainingDetailPage() {
       <Modal visible={showCelebration} transparent animationType="fade">
         <View style={styles.celebrationOverlay}>
           <View style={styles.celebrationCard}>
-            <Text style={styles.celebrationEmoji}>{'🎉'}</Text>
+            <LottieAnimation asset="cute-doggie" size={120} loop={false} />
             <Text style={styles.celebrationTitle}>축하합니다!</Text>
             <Text style={styles.celebrationDescription}>
               {curriculum.title} 커리큘럼을 모두 완료했어요!
@@ -283,8 +291,11 @@ function TrainingDetailPage() {
 
 const styles = StyleSheet.create({
   loadingContainer: {
-    paddingVertical: 80,
-    alignItems: 'center',
+    paddingVertical: 20,
+  },
+  loadingSkeleton: {
+    marginTop: 20,
+    gap: 8,
   },
   dayIndicator: {
     marginBottom: 16,
@@ -364,9 +375,9 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: 320,
   },
-  celebrationEmoji: {
-    ...typography.emoji,
+  celebrationLottie: {
     marginBottom: 16,
+    alignItems: 'center',
   },
   celebrationTitle: {
     ...typography.pageTitle,

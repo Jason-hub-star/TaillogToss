@@ -20,7 +20,7 @@ import { EmptyState } from 'components/tds-ext/EmptyState';
 import { ErrorState } from 'components/tds-ext/ErrorState';
 import { TabLayout } from 'components/shared/layouts/TabLayout';
 import { usePageGuard } from 'lib/hooks/usePageGuard';
-import { LottieAnimation } from 'components/shared/LottieAnimation';
+import { SkeletonDashboard } from 'components/features/dashboard/SkeletonDashboard';
 import { colors, typography } from 'styles/tokens';
 
 export const Route = createRoute('/dashboard', {
@@ -28,7 +28,7 @@ export const Route = createRoute('/dashboard', {
 });
 
 function DashboardPage() {
-  const { activeDog } = useActiveDog();
+  const { activeDog, dogs } = useActiveDog();
   const { user } = useAuth();
   const navigation = useNavigation();
   const { isReady } = usePageGuard({ currentPath: '/dashboard' });
@@ -65,16 +65,13 @@ function DashboardPage() {
           dog={displayDog}
           todayLogCount={todayLogs?.length ?? 0}
           onPress={activeDog ? () => navigation.navigate('/dog/profile') : undefined}
+          onSwitchPress={dogs.length > 1 ? () => navigation.navigate('/dog/switcher') : undefined}
         />
       )}
 
       <StreakBanner logs={recentLogs} streakOverride={dashboardData?.stats.current_streak} />
 
-      {dashboardLoading && (
-        <View style={styles.center}>
-          <LottieAnimation asset="jackie" size={120} />
-        </View>
-      )}
+      {dashboardLoading && <SkeletonDashboard />}
 
       {dashboardError && (
         <ErrorState onRetry={() => { void refetchDashboard(); }} />

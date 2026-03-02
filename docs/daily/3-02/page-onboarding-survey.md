@@ -25,10 +25,10 @@
   3. 7단계를 3단계 핵심 플로우로 압축하여 이탈률 감소.
 
 ## Status Check
-- [ ] Phase 1: API 파이프라인 구현 (`src/lib/api/dog.ts`)
-- [ ] Phase 2: 타입 및 매퍼 구성
-- [ ] Phase 3: Survey UI (TDS 칩 기반, 견종 검색) 개편
-- [ ] Verification: `dog_env` 테이블에 JSONB 데이터 정상 적재 확인
+- [x] Phase 1: API 파이프라인 구현 (`src/lib/api/dog.ts`)
+- [x] Phase 2: 타입 및 매퍼 구성
+- [x] Phase 3: Survey UI (TDS 칩 기반, 견종 검색) 개편
+- [x] Verification: `dog_env` 테이블에 JSONB 데이터 정상 적재 확인
 
 ---
 *Self-Review: 아키텍처 다이어그램과 일치하는 DB 적재 흐름 복구가 0순위. 이후 UI 컴포넌트 리팩토링으로 AI 분석 품질 향상 도모.*

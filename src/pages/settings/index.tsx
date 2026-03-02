@@ -1,10 +1,10 @@
 /**
- * 설정 메인 화면 — 알림/계정/서비스/로그아웃 4섹션 리스트
- * 와이어프레임 9-9 패턴 A (목록형) 기준.
- * Parity: APP-001, IAP-001
+ * 설정 메인 화면 — 알림/계정/서비스/로그아웃 섹션
+ * 와이어프레임 9-9 패턴 A (목록형) 기반.
+ * Parity: APP-001
  */
 import { createRoute, useNavigation } from '@granite-js/react-native';
-import React, { useCallback } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -12,47 +12,202 @@ import {
   StyleSheet,
   SafeAreaView,
   TouchableOpacity,
-  Switch,
   Alert,
-  ActivityIndicator,
+  Linking,
 } from 'react-native';
 import { usePageGuard } from 'lib/hooks/usePageGuard';
 import { useAuth } from 'stores/AuthContext';
 import { useLogout } from 'lib/hooks/useAuth';
 import { useUserSettings, useUpdateSettings } from 'lib/hooks/useSettings';
 import { withdrawUser } from 'lib/api/auth';
-import { ErrorState } from 'components/tds-ext';
 import { BottomNavBar } from 'components/shared/BottomNavBar';
-import { DEFAULT_NOTIFICATION_PREF } from 'types/settings';
+import {
+  SettingsSectionCard,
+  SettingsToggleRow,
+  SettingsNavRow,
+  SettingsStatusRow,
+  SettingsPermissionBanner,
+  SettingsStepperRow,
+  SettingsScreenSkeleton,
+  SettingsScreenError,
+} from 'components/features/settings';
+import {
+  DEFAULT_NOTIFICATION_PREF,
+  DEFAULT_AI_PERSONA,
+  type AiPersona,
+  type NotificationPref,
+  type UserSettings,
+} from 'types/settings';
 import { colors, typography } from 'styles/tokens';
 
 export const Route = createRoute('/settings', {
   component: SettingsPage,
 });
 
+type StatusTone = 'neutral' | 'success' | 'danger';
+
+function toSettingsErrorMessage(error: unknown): string {
+  const maybeError = error as { code?: string; message?: string };
+  const code = maybeError?.code;
+  const message = maybeError?.message ?? '';
+
+  if (code === '42501' || /row-level security/i.test(message)) {
+    return '권한 정책 문제로 저장에 실패했어요. 잠시 후 다시 시도하거나 다시 로그인해주세요.';
+  }
+
+  if (/network request failed/i.test(message)) {
+    return '네트워크 연결이 불안정해요. 연결 상태를 확인하고 다시 시도해주세요.';
+  }
+
+  return '설정을 저장하지 못했어요. 잠시 후 다시 시도해주세요.';
+}
+
+function formatSavedTime(isoString: string): string {
+  return new Date(isoString).toLocaleTimeString('ko-KR', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  });
+}
+
 function SettingsPage() {
   const { isReady } = usePageGuard({ currentPath: '/settings' });
   const navigation = useNavigation();
   const { user } = useAuth();
   const { logout } = useLogout();
+
   const { data: settings, isLoading, isError, refetch } = useUserSettings(user?.id);
   const updateSettings = useUpdateSettings();
 
-  const notifPref = settings?.notification_pref ?? DEFAULT_NOTIFICATION_PREF;
+  const saveReqSeqRef = useRef(0);
+  const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [syncPhase, setSyncPhase] = useState<'idle' | 'saving' | 'saved' | 'failed'>('idle');
 
-  const toggleNotif = useCallback(
-    (key: 'push' | 'training_reminder' | 'coaching_ready') => {
-      if (!user?.id) return;
-      const updatedPref = { ...notifPref };
-      if (key === 'push') {
-        updatedPref.channels = { ...updatedPref.channels, push: !updatedPref.channels.push };
-      } else {
-        updatedPref.types = { ...updatedPref.types, [key]: !updatedPref.types[key] };
-      }
-      updateSettings.mutate({ userId: user.id, updates: { notification_pref: updatedPref } });
-    },
-    [user?.id, notifPref, updateSettings],
+  const [notifPref, setNotifPref] = useState<NotificationPref>(
+    settings?.notification_pref ?? DEFAULT_NOTIFICATION_PREF,
   );
+  const [aiPersona, setAiPersona] = useState(settings?.ai_persona ?? DEFAULT_AI_PERSONA);
+
+  useEffect(() => {
+    if (settings?.notification_pref) {
+      setNotifPref(settings.notification_pref);
+    }
+    if (settings?.ai_persona) {
+      setAiPersona(settings.ai_persona);
+    }
+  }, [settings?.notification_pref, settings?.ai_persona]);
+
+  const applyUpdates = useCallback(
+    (updates: Partial<UserSettings>) => {
+      if (!user?.id) return;
+
+      const reqSeq = ++saveReqSeqRef.current;
+      setSaveError(null);
+      setSyncPhase('saving');
+      updateSettings.mutate(
+        { userId: user.id, updates },
+        {
+          onSuccess: () => {
+            if (reqSeq !== saveReqSeqRef.current) return;
+            setLastSavedAt(new Date().toISOString());
+            setSyncPhase('saved');
+          },
+          onError: (error) => {
+            if (reqSeq !== saveReqSeqRef.current) return;
+            const message = toSettingsErrorMessage(error);
+            setSaveError(message);
+            setSyncPhase('failed');
+          },
+        },
+      );
+    },
+    [user?.id, updateSettings],
+  );
+
+  const saveNotificationPref = useCallback(
+    (nextPref: NotificationPref) => {
+      applyUpdates({ notification_pref: nextPref });
+    },
+    [applyUpdates],
+  );
+
+  const toggleChannel = useCallback(
+    (key: 'push' | 'smart_message') => {
+      const nextPref: NotificationPref = {
+        ...notifPref,
+        channels: {
+          ...notifPref.channels,
+          [key]: !notifPref.channels[key],
+        },
+      };
+      setNotifPref(nextPref);
+      saveNotificationPref(nextPref);
+    },
+    [notifPref, saveNotificationPref],
+  );
+
+  const toggleType = useCallback(
+    (key: keyof NotificationPref['types']) => {
+      const nextPref: NotificationPref = {
+        ...notifPref,
+        types: {
+          ...notifPref.types,
+          [key]: !notifPref.types[key],
+        },
+      };
+      setNotifPref(nextPref);
+      saveNotificationPref(nextPref);
+    },
+    [notifPref, saveNotificationPref],
+  );
+
+  const toggleQuietHoursEnabled = useCallback(() => {
+    const nextPref: NotificationPref = {
+      ...notifPref,
+      quiet_hours: {
+        ...notifPref.quiet_hours,
+        enabled: !notifPref.quiet_hours.enabled,
+      },
+    };
+    setNotifPref(nextPref);
+    saveNotificationPref(nextPref);
+  }, [notifPref, saveNotificationPref]);
+
+  const shiftQuietHour = useCallback(
+    (key: 'start_hour' | 'end_hour', delta: 1 | -1) => {
+      const current = notifPref.quiet_hours[key];
+      const next = (current + delta + 24) % 24;
+      const nextPref: NotificationPref = {
+        ...notifPref,
+        quiet_hours: {
+          ...notifPref.quiet_hours,
+          [key]: next,
+        },
+      };
+      setNotifPref(nextPref);
+      saveNotificationPref(nextPref);
+    },
+    [notifPref, saveNotificationPref],
+  );
+
+  const toggleAiTone = useCallback(() => {
+    const nextPersona: AiPersona = {
+      ...aiPersona,
+      tone: aiPersona.tone === 'empathetic' ? 'solution' : 'empathetic',
+    };
+    setAiPersona(nextPersona);
+    applyUpdates({ ai_persona: nextPersona });
+  }, [aiPersona, applyUpdates]);
+
+  const toggleAiPerspective = useCallback(() => {
+    const nextPersona: AiPersona = {
+      ...aiPersona,
+      perspective: aiPersona.perspective === 'coach' ? 'dog' : 'coach',
+    };
+    setAiPersona(nextPersona);
+    applyUpdates({ ai_persona: nextPersona });
+  }, [aiPersona, applyUpdates]);
 
   const handleLogout = useCallback(() => {
     Alert.alert('로그아웃', '정말 로그아웃하시겠어요?', [
@@ -87,21 +242,26 @@ function SettingsPage() {
     );
   }, [user?.id]);
 
+  const handleOpenDeviceSettings = useCallback(() => {
+    void Linking.openSettings().catch(() => {
+      Alert.alert('안내', '기기 설정을 열지 못했어요. 설정 앱에서 직접 권한을 확인해주세요.');
+    });
+  }, []);
+
+  const syncStatus = useMemo<{ text: string; tone: StatusTone }>(() => {
+    if (syncPhase === 'saving') return { text: '동기화 중...', tone: 'neutral' };
+    if (syncPhase === 'failed' && saveError) return { text: '동기화 실패', tone: 'danger' };
+    if (lastSavedAt) return { text: `${formatSavedTime(lastSavedAt)} 저장됨`, tone: 'success' };
+    return { text: '동기화 대기', tone: 'neutral' };
+  }, [syncPhase, saveError, lastSavedAt]);
+
   if (!isReady) return null;
 
   if (isLoading) {
     return (
       <SafeAreaView style={styles.safe}>
-        <View style={styles.navbar}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-            <Text style={styles.backText}>{'←'}</Text>
-          </TouchableOpacity>
-          <Text style={styles.navTitle}>설정</Text>
-          <View style={styles.backButton} />
-        </View>
-        <View style={styles.centered}>
-          <ActivityIndicator size="large" color={colors.primaryBlue} />
-        </View>
+        <TopBar onBack={() => navigation.goBack()} />
+        <SettingsScreenSkeleton />
       </SafeAreaView>
     );
   }
@@ -109,79 +269,134 @@ function SettingsPage() {
   if (isError) {
     return (
       <SafeAreaView style={styles.safe}>
-        <View style={styles.navbar}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-            <Text style={styles.backText}>{'←'}</Text>
-          </TouchableOpacity>
-          <Text style={styles.navTitle}>설정</Text>
-          <View style={styles.backButton} />
-        </View>
-        <ErrorState onRetry={() => void refetch()} />
+        <TopBar onBack={() => navigation.goBack()} />
+        <SettingsScreenError onRetry={() => void refetch()} />
       </SafeAreaView>
     );
   }
 
   return (
     <SafeAreaView style={styles.safe}>
-      <View style={styles.navbar}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Text style={styles.backText}>{'←'}</Text>
-        </TouchableOpacity>
-        <Text style={styles.navTitle}>설정</Text>
-        <View style={styles.backButton} />
-      </View>
+      <TopBar onBack={() => navigation.goBack()} />
 
       <ScrollView style={styles.scroll}>
-        {/* 알림 설정 */}
-        <Text style={styles.sectionHeader}>알림 설정</Text>
-        <View style={styles.section}>
-          <SettingRow
+        <SettingsSectionCard title="알림 설정">
+          <SettingsStatusRow statusText={syncStatus.text} tone={syncStatus.tone} />
+          <View style={styles.divider} />
+
+          <SettingsToggleRow
             label="푸시 알림"
             value={notifPref.channels.push}
-            onToggle={() => toggleNotif('push')}
+            onToggle={() => toggleChannel('push')}
           />
           <View style={styles.divider} />
-          <SettingRow
+          <SettingsToggleRow
+            label="스마트 메시지"
+            value={notifPref.channels.smart_message}
+            onToggle={() => toggleChannel('smart_message')}
+          />
+          <View style={styles.divider} />
+          <SettingsToggleRow
+            label="기록 리마인더"
+            value={notifPref.types.log_reminder}
+            onToggle={() => toggleType('log_reminder')}
+          />
+          <View style={styles.divider} />
+          <SettingsToggleRow
+            label="행동 급증 알림"
+            description="평소보다 문제 행동 기록이 늘면 알려드려요."
+            value={notifPref.types.surge_alert}
+            onToggle={() => toggleType('surge_alert')}
+          />
+          <View style={styles.divider} />
+          <SettingsToggleRow
+            label="코칭 완료 알림"
+            value={notifPref.types.coaching_ready}
+            onToggle={() => toggleType('coaching_ready')}
+          />
+          <View style={styles.divider} />
+          <SettingsToggleRow
             label="훈련 리마인더"
             value={notifPref.types.training_reminder}
-            onToggle={() => toggleNotif('training_reminder')}
+            onToggle={() => toggleType('training_reminder')}
           />
           <View style={styles.divider} />
-          <SettingRow
-            label="코칭 알림"
-            value={notifPref.types.coaching_ready}
-            onToggle={() => toggleNotif('coaching_ready')}
+          <SettingsToggleRow
+            label="프로모션 알림"
+            value={notifPref.types.promo}
+            onToggle={() => toggleType('promo')}
           />
-        </View>
+          <View style={styles.divider} />
+          <SettingsToggleRow
+            label="방해 금지 시간"
+            value={notifPref.quiet_hours.enabled}
+            onToggle={toggleQuietHoursEnabled}
+          />
+          <View style={styles.divider} />
+          <SettingsStepperRow
+            label="시작 시간"
+            value={notifPref.quiet_hours.start_hour}
+            onDecrease={() => shiftQuietHour('start_hour', -1)}
+            onIncrease={() => shiftQuietHour('start_hour', 1)}
+            disabled={!notifPref.quiet_hours.enabled}
+          />
+          <View style={styles.divider} />
+          <SettingsStepperRow
+            label="종료 시간"
+            value={notifPref.quiet_hours.end_hour}
+            onDecrease={() => shiftQuietHour('end_hour', -1)}
+            onIncrease={() => shiftQuietHour('end_hour', 1)}
+            disabled={!notifPref.quiet_hours.enabled}
+          />
+        </SettingsSectionCard>
 
-        {/* 계정 */}
-        <Text style={styles.sectionHeader}>계정</Text>
-        <View style={styles.section}>
-          <NavRow label="프로필 편집" onPress={() => navigation.navigate('/dog/profile' as never)} />
+        <SettingsPermissionBanner onOpenSettings={handleOpenDeviceSettings} />
+
+        <SettingsSectionCard title="AI 코칭">
+          <SettingsNavRow
+            label="코칭 톤"
+            rightLabel={aiPersona.tone === 'empathetic' ? '공감형' : '솔루션형'}
+            onPress={toggleAiTone}
+          />
           <View style={styles.divider} />
-          <NavRow label="이용약관" onPress={() => navigation.navigate('/legal/terms' as never)} />
+          <SettingsNavRow
+            label="코칭 관점"
+            rightLabel={aiPersona.perspective === 'coach' ? '코치 관점' : '강아지 관점'}
+            onPress={toggleAiPerspective}
+          />
+        </SettingsSectionCard>
+
+        <SettingsSectionCard title="계정">
+          <SettingsNavRow
+            label="프로필 편집"
+            onPress={() => navigation.navigate('/dog/profile' as never)}
+          />
           <View style={styles.divider} />
-          <NavRow
+          <SettingsNavRow
+            label="이용약관"
+            onPress={() => navigation.navigate('/legal/terms' as never)}
+          />
+          <View style={styles.divider} />
+          <SettingsNavRow
             label="개인정보 처리방침"
             onPress={() => navigation.navigate('/legal/privacy' as never)}
           />
-        </View>
+        </SettingsSectionCard>
 
-        {/* 서비스 */}
-        <Text style={styles.sectionHeader}>서비스</Text>
-        <View style={styles.section}>
-          <NavRow
+        <SettingsSectionCard title="서비스">
+          <SettingsNavRow
             label="구독 관리"
             onPress={() => navigation.navigate('/settings/subscription' as never)}
           />
           <View style={styles.divider} />
-          <NavRow
+          <SettingsNavRow
             label="내 반려견"
             onPress={() => navigation.navigate('/dog/profile' as never)}
           />
-        </View>
+          <View style={styles.divider} />
+          <SettingsNavRow label="기기 알림 권한" onPress={handleOpenDeviceSettings} />
+        </SettingsSectionCard>
 
-        {/* 로그아웃/탈퇴 */}
         <View style={styles.dangerSection}>
           <TouchableOpacity style={styles.dangerButton} onPress={handleLogout}>
             <Text style={styles.dangerText}>로그아웃</Text>
@@ -191,9 +406,7 @@ function SettingsPage() {
           </TouchableOpacity>
         </View>
 
-        {/* 앱 정보 */}
         <Text style={styles.versionText}>v0.1.0</Text>
-
         <View style={styles.bottomSpacer} />
       </ScrollView>
       <BottomNavBar activeTab="settings" />
@@ -201,42 +414,20 @@ function SettingsPage() {
   );
 }
 
-/** 토글 스위치가 있는 설정 행 */
-function SettingRow({
-  label,
-  value,
-  onToggle,
-}: {
-  label: string;
-  value: boolean;
-  onToggle: () => void;
-}) {
+function TopBar({ onBack }: { onBack: () => void }) {
   return (
-    <View style={styles.row}>
-      <Text style={styles.rowLabel}>{label}</Text>
-      <Switch
-        value={value}
-        onValueChange={onToggle}
-        trackColor={{ false: colors.border, true: colors.primaryBlue }}
-        thumbColor={colors.white}
-      />
+    <View style={styles.navbar}>
+      <TouchableOpacity onPress={onBack} style={styles.backButton}>
+        <Text style={styles.backText}>{'←'}</Text>
+      </TouchableOpacity>
+      <Text style={styles.navTitle}>설정</Text>
+      <View style={styles.backButton} />
     </View>
-  );
-}
-
-/** 네비게이션 화살표가 있는 설정 행 */
-function NavRow({ label, onPress }: { label: string; onPress: () => void }) {
-  return (
-    <TouchableOpacity style={styles.row} onPress={onPress} activeOpacity={0.6}>
-      <Text style={styles.rowLabel}>{label}</Text>
-      <Text style={styles.chevron}>{'›'}</Text>
-    </TouchableOpacity>
   );
 }
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.surfaceTertiary },
-  centered: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   navbar: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -251,29 +442,6 @@ const styles = StyleSheet.create({
   backText: { ...typography.sectionTitle, color: colors.grey950 },
   navTitle: { ...typography.body, fontWeight: '600', color: colors.grey950 },
   scroll: { flex: 1 },
-  sectionHeader: {
-    ...typography.caption,
-    fontWeight: '600',
-    color: colors.textSecondary,
-    paddingHorizontal: 20,
-    paddingTop: 24,
-    paddingBottom: 8,
-  },
-  section: {
-    backgroundColor: colors.white,
-    borderTopWidth: 1,
-    borderBottomWidth: 1,
-    borderColor: colors.surfaceTertiary,
-  },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingVertical: 14,
-  },
-  rowLabel: { ...typography.label, color: colors.grey950 },
-  chevron: { ...typography.sectionTitle, color: colors.textSecondary },
   divider: { height: 1, backgroundColor: colors.surfaceTertiary, marginLeft: 20 },
   dangerSection: {
     marginTop: 32,

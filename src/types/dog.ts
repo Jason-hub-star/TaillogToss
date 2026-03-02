@@ -68,12 +68,13 @@ export interface SurveyData {
   step7_preferences: SurveyStep7;
 }
 
-/** Step 1: 기본 정보 (이름, 품종, 나이, 성별) */
+/** Step 1: 기본 정보 (이름, 품종, 나이, 성별, 사진) */
 export interface SurveyStep1 {
   name: string;
   breed: string;
   age_months: number;
   sex: DogSex;
+  profile_image_url?: string; // S3/Supabase Storage URL
 }
 
 /** Step 2: 생활 환경 */

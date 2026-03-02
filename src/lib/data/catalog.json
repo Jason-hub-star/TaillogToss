@@ -1,11 +1,11 @@
 {
   "version": 1,
-  "updated_at": "2026-03-01T12:30:05.651038+09:00",
-  "active_version": "v2026-03-01-auto-1228",
+  "updated_at": "2026-03-02T08:09:00+09:00",
+  "active_version": "v2026-03-02-auto-080532",
   "counts": {
-    "curriculums": 4,
-    "curriculum_days": 28,
-    "curriculum_steps": 84,
+    "curriculums": 7,
+    "curriculum_days": 35,
+    "curriculum_steps": 109,
     "presets": 0
   },
   "pipeline": {

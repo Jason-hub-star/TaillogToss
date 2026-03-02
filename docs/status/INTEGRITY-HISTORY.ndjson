@@ -1,0 +1,1 @@
+{"run_at": "2026-03-01T18:06:04Z", "managed_count": 21, "drift_count": 2, "auto_fixed_count": 2, "manual_required_count": 0, "unmanaged_routes": ["/_404", "/", "/report/[shareToken]"], "errors": "none"}

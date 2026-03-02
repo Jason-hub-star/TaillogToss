@@ -87,11 +87,13 @@ Page/feature skill root: `.claude/skills/page-skills/`
 - `feature-error-and-retry-state`
 - `feature-analytics-and-tracking`
 
-## Current Priority (Last Updated: 2026-03-01)
-1. UIUX-001: dashboard analysis/training empty-state and skeleton stabilization
-2. UIUX-002: training academy AI-generated-feel UX redesign
-3. UIUX-003: curriculum visibility and navigation ergonomics
-4. UIUX-004: onboarding survey parity with web baseline
+## Current Priority (Last Updated: 2026-03-02)
+1. UIUX-004: Onboarding survey parity (Progress: Phase 1 & 2 Done, Phase 3 InProgress)
+   - Completed: API rescue (dog_env integration), `survey-mapper.ts` creation, `breeds.json` migration, Step 1 Smart Breed Search.
+   - Next: Step 3 (Behavior severity UI) enrichment and Result Page data binding.
+2. UIUX-001: dashboard analysis/training empty-state and skeleton stabilization
+3. UIUX-002: training academy AI-generated-feel UX redesign
+4. UIUX-003: curriculum visibility and navigation ergonomics
 5. UIUX-005: coaching result and training detail completeness
 6. UIUX-006: dog profile real-data restore + dog switcher UX
 

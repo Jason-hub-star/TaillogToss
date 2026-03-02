@@ -17,7 +17,7 @@ import { DaySummarySheet } from 'components/features/training/DaySummarySheet';
 import { EmptyState } from 'components/tds-ext/EmptyState';
 import { ErrorState } from 'components/tds-ext/ErrorState';
 import { Toast } from 'components/tds-ext/Toast';
-import { getCurriculumById } from 'lib/data/published/runtime';
+import { getCurriculumById, CURRICULUM_ICONS } from 'lib/data/published/runtime';
 import { useTrainingProgress, useCompleteStep, useUncompleteStep, useStartTraining, useStepFeedback, useSubmitStepFeedback } from 'lib/hooks/useTraining';
 import { useIsPro } from 'lib/hooks/useSubscription';
 import { usePageGuard } from 'lib/hooks/usePageGuard';
@@ -272,6 +272,15 @@ function TrainingDetailPage() {
           : undefined
       }
     >
+      {/* 히어로 이미지 (placeholder) */}
+      <View style={styles.heroContainer}>
+        <View style={styles.heroPlaceholder}>
+          <Text style={styles.heroEmoji}>{CURRICULUM_ICONS[curriculumId] ?? '\u{1F4DA}'}</Text>
+          <Text style={styles.heroTitle}>{curriculum.title}</Text>
+          <Text style={styles.heroSub}>{curriculum.difficulty === 'beginner' ? '초급' : curriculum.difficulty === 'intermediate' ? '중급' : '고급'}</Text>
+        </View>
+      </View>
+
       {/* Day 진행 상태 */}
       <View style={styles.dayIndicator}>
         <Text style={styles.dayIndicatorText}>
@@ -396,6 +405,30 @@ function TrainingDetailPage() {
 }
 
 const styles = StyleSheet.create({
+  heroContainer: {
+    marginBottom: spacing.lg,
+  },
+  heroPlaceholder: {
+    height: 160,
+    borderRadius: 16,
+    backgroundColor: colors.surfaceSecondary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  heroEmoji: {
+    fontSize: 48,
+    marginBottom: spacing.sm,
+  },
+  heroTitle: {
+    ...typography.sectionTitle,
+    fontWeight: '700',
+    color: colors.textPrimary,
+  },
+  heroSub: {
+    ...typography.caption,
+    color: colors.textSecondary,
+    marginTop: 4,
+  },
   loadingContainer: {
     paddingVertical: 20,
   },

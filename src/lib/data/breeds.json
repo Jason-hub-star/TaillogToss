@@ -1,0 +1,1002 @@
+[
+  {
+    "id": "6017ace1-04a6-4fa8-bace-ed4425498f66",
+    "ko": "고든 세터",
+    "en": "Gordon Setter"
+  },
+  {
+    "id": "3628fa71-5115-436a-9409-e1dc17f51000",
+    "ko": "골든 리트리버",
+    "en": "Golden Retriever"
+  },
+  {
+    "id": "4544121e-9059-4188-9df5-006205a325ba",
+    "ko": "그랑 바세 그리폰 뱅뎅",
+    "en": "Grand Basset Griffon Vendéen"
+  },
+  {
+    "id": "a901f04e-ffa5-46c4-bdaf-1a8b89ba6b61",
+    "ko": "그레이트 데인",
+    "en": "Great Dane"
+  },
+  {
+    "id": "940b9d5a-69fa-4581-940f-9a249c0b8bdd",
+    "ko": "그레이트 피레네 산맥",
+    "en": "Great Pyrenees"
+  },
+  {
+    "id": "57572e7f-25e7-476a-b2bc-db53a74d4d3d",
+    "ko": "그레이하운드",
+    "en": "Greyhound"
+  },
+  {
+    "id": "b571b618-afc0-408c-8b4a-f78f85e1258d",
+    "ko": "글렌 오브 이말 테리어",
+    "en": "Glen of Imaal Terrier"
+  },
+  {
+    "id": "767d49d7-931b-4278-bd2c-301809e5a955",
+    "ko": "노르웨이 룬데훈트",
+    "en": "Norwegian Lundehund"
+  },
+  {
+    "id": "33a1d9fe-0ac3-4d70-8262-29bc42bfa3b0",
+    "ko": "노리치 테리어",
+    "en": "Norwich Terrier"
+  },
+  {
+    "id": "2c58f8e5-8cad-4530-a833-462301607c47",
+    "ko": "노바스코샤 덕 톨링 리트리버",
+    "en": "Nova Scotia Duck Tolling Retriever"
+  },
+  {
+    "id": "6bc9f1a1-b673-43d9-8eae-7a802e8b27a3",
+    "ko": "노퍽 테리어",
+    "en": "Norfolk Terrier"
+  },
+  {
+    "id": "9573b833-3e83-4bed-a06c-325892bd783b",
+    "ko": "뉴펀들랜드",
+    "en": "Newfoundland"
+  },
+  {
+    "id": "bbcb7d04-5074-417d-b09d-6cf6f54b9759",
+    "ko": "닥스훈트",
+    "en": "Basset Bleu de Gascogne"
+  },
+  {
+    "id": "1fb14e37-d8d2-4232-8e8b-9cc9c6ef7169",
+    "ko": "달마시안",
+    "en": "Dalmatian"
+  },
+  {
+    "id": "5c496646-0715-499f-928d-16048fd92f32",
+    "ko": "대니시 스웨디시 팜독",
+    "en": "Danish-Swedish Farmdog"
+  },
+  {
+    "id": "30d743b1-6471-4546-b341-8ecb7d5728c8",
+    "ko": "더치 셰퍼드",
+    "en": "Dutch Shepherd"
+  },
+  {
+    "id": "845275fd-2c62-4d18-aa2c-7160dd04343c",
+    "ko": "도고 아르헨티노",
+    "en": "Dogo Argentino"
+  },
+  {
+    "id": "9b8c0cd3-6066-4982-a011-e1d5c0071849",
+    "ko": "도베르만",
+    "en": "Doberman"
+  },
+  {
+    "id": "cebeec6a-bc24-4c5c-9997-c00dc28e586c",
+    "ko": "도베르만 핀셔",
+    "en": "Doberman Pinscher"
+  },
+  {
+    "id": "bf2ed664-6722-48b5-8e64-3b224e95cd57",
+    "ko": "독일 쇼트헤어드 포인터",
+    "en": "German Shorthaired Pointer"
+  },
+  {
+    "id": "bb18d1c9-1ac1-4a4e-9305-87f322e9aab7",
+    "ko": "독일 핀셔",
+    "en": "German Pinscher"
+  },
+  {
+    "id": "4f65dbcc-13ab-493a-bc09-e56630e1b48f",
+    "ko": "라고토 로마뇰로",
+    "en": "Lagotto Romagnolo"
+  },
+  {
+    "id": "7cb91317-934a-405f-8861-2f171a674bf3",
+    "ko": "라브라도 리트리버",
+    "en": "Labrador Retriever"
+  },
+  {
+    "id": "0f36f485-08ad-4980-a61b-46d0f63eb9a0",
+    "ko": "라사압소",
+    "en": "Lhasa Apso"
+  },
+  {
+    "id": "3608c5ab-2bc1-4c78-a6e2-9a67f2cadcf4",
+    "ko": "랫 테리어",
+    "en": "Rat Terrier"
+  },
+  {
+    "id": "ff5ff97e-7431-46b0-8f37-4e3e18c0fa5e",
+    "ko": "랭커셔 힐러",
+    "en": "Lancashire Heeler"
+  },
+  {
+    "id": "a65d7dd1-d49a-46fe-9dd2-7b2d9a5a24a1",
+    "ko": "러시안 토이",
+    "en": "Russian Toy"
+  },
+  {
+    "id": "71fbfc3e-f0fc-4497-835a-0912d278d03c",
+    "ko": "러프 콜리",
+    "en": "Rough Collie"
+  },
+  {
+    "id": "3fa08f01-3da9-43d1-9136-b039a8ea92c5",
+    "ko": "레드본 쿤하운드",
+    "en": "Redbone Coonhound"
+  },
+  {
+    "id": "8b221bb3-ed69-4c93-9f17-977d6b22e7b4",
+    "ko": "레온베르거",
+    "en": "Leonberger"
+  },
+  {
+    "id": "ce026e44-2c2c-48a4-afde-db184831a737",
+    "ko": "로디지안 리지백",
+    "en": "Rhodesian Ridgeback"
+  },
+  {
+    "id": "734b7675-cd7c-4303-928d-e12c6de28055",
+    "ko": "로트바일러",
+    "en": "Rottweiler"
+  },
+  {
+    "id": "b59871b6-c026-4576-b59f-788ed515942f",
+    "ko": "말티숑",
+    "en": "Maltichon"
+  },
+  {
+    "id": "4e19bda8-30ae-46da-8c9e-d8a2d5baea63",
+    "ko": "말티폼",
+    "en": "Maltipom"
+  },
+  {
+    "id": "21994baf-5e16-424c-890c-ba941fbe5257",
+    "ko": "말티즈",
+    "en": "Maltese"
+  },
+  {
+    "id": "21eb2c83-6f73-454d-9cc3-ca6810ea7d91",
+    "ko": "무디",
+    "en": "Mudi"
+  },
+  {
+    "id": "20e5e9b0-8223-4a14-8a13-e74396699a28",
+    "ko": "미니어처 슈나우저",
+    "en": "Miniature Schnauzer"
+  },
+  {
+    "id": "b4dc0b5a-277c-4108-a255-7f25fb596cae",
+    "ko": "미니어처 아메리칸 셰퍼드",
+    "en": "Miniature American Shepherd"
+  },
+  {
+    "id": "38396c8d-e4d9-4e57-8433-c6d644d1f01b",
+    "ko": "미니어처 핀셔",
+    "en": "Miniature Pinscher"
+  },
+  {
+    "id": "ab2f3db3-1862-4c39-a4ac-cb4407440ad2",
+    "ko": "믹스",
+    "en": "Mixed Breed"
+  },
+  {
+    "id": "2a996909-d3d4-46ae-a01d-f57dee2c6322",
+    "ko": "바벳",
+    "en": "Barbet"
+  },
+  {
+    "id": "10310af4-33ff-4b2a-9dca-0b2363c90152",
+    "ko": "바셋 하운드",
+    "en": "Basset Hound"
+  },
+  {
+    "id": "161df103-9bdb-4d00-8a2f-d29982785a4a",
+    "ko": "바이마라너",
+    "en": "Weimaraner"
+  },
+  {
+    "id": "4aed9607-43df-4f3e-902e-c0f14b65e1d6",
+    "ko": "베들링턴 테리어",
+    "en": "Bedlington Terrier"
+  },
+  {
+    "id": "a61da245-6979-473f-9960-61b0e3f80d85",
+    "ko": "베르가마스코 셰퍼드",
+    "en": "Bergamasco Sheepdog"
+  },
+  {
+    "id": "0c844132-0fca-4c1f-bce5-17ce3dbf9af2",
+    "ko": "베르네즈 마운틴 독",
+    "en": "Bernese Mountain Dog"
+  },
+  {
+    "id": "e466cf1b-5d8f-4d7f-9eb1-0949dde9f2fc",
+    "ko": "벨기에 말리누아",
+    "en": "Belgian Malinois"
+  },
+  {
+    "id": "22dfaccb-202e-4d1d-a28a-a4d16ba97916",
+    "ko": "벨기에 테르뷔렌",
+    "en": "Belgian Tervuren"
+  },
+  {
+    "id": "c42f9a3e-4bdf-42f9-a0a3-f15519639e90",
+    "ko": "보더 콜리",
+    "en": "Border Collie"
+  },
+  {
+    "id": "59b78dfb-f418-4c34-8ce5-3c13aee2c0d9",
+    "ko": "보더 테리어",
+    "en": "Border Terrier"
+  },
+  {
+    "id": "d5c29fa4-2e75-4dcf-9426-a4051577d436",
+    "ko": "보세롱",
+    "en": "Beauceron"
+  },
+  {
+    "id": "d3a4016f-e84c-4c6c-b762-1ff8e733caf2",
+    "ko": "보스턴 테리어",
+    "en": "Boston Terrier"
+  },
+  {
+    "id": "61d56f67-1c03-40c7-a68b-1a60f169ba39",
+    "ko": "보어보엘",
+    "en": "Boerboel"
+  },
+  {
+    "id": "96e58a66-f34e-47fd-86ed-dc22c90e053f",
+    "ko": "보이킨 스패니얼",
+    "en": "Boykin Spaniel"
+  },
+  {
+    "id": "08d09969-a3ec-4861-a7b9-ada750d5a0af",
+    "ko": "복서",
+    "en": "Boxer"
+  },
+  {
+    "id": "e9d5521d-d7d9-4a7c-b7eb-cc619f59a5b4",
+    "ko": "부비에 데 플랑드르",
+    "en": "Bouvier des Flandres"
+  },
+  {
+    "id": "e06051fe-0419-4b1b-b7ee-f851116bf9e8",
+    "ko": "불 테리어",
+    "en": "Bull Terrier"
+  },
+  {
+    "id": "a660cc64-b4a5-4d6e-96ea-d9ba9e6c65a5",
+    "ko": "불 테리어(미니어처)",
+    "en": "Bull Terrier (Miniature)"
+  },
+  {
+    "id": "c10acaed-eff1-4961-a278-83ad0009ddb3",
+    "ko": "불마스티프",
+    "en": "Bullmastiff"
+  },
+  {
+    "id": "f775203d-a653-4dd3-90d1-a059758d974d",
+    "ko": "브뤼셀 그리폰",
+    "en": "Griffon Bruxellois"
+  },
+  {
+    "id": "5a628ecd-8302-4854-84b9-2492db430f80",
+    "ko": "브리아르",
+    "en": "Briard"
+  },
+  {
+    "id": "7155e609-fb2a-46a8-a0ee-e7e18890029e",
+    "ko": "브리타니",
+    "en": "Brittany"
+  },
+  {
+    "id": "4a424aa2-2e0f-485c-a5af-4f8e46a7aa0e",
+    "ko": "브리타니 스파니엘",
+    "en": "Brittany Spaniel"
+  },
+  {
+    "id": "5d1a6fe6-0315-45db-873f-124a69210354",
+    "ko": "블랙 앤 탄 쿤하운드",
+    "en": "Black and Tan Coonhound"
+  },
+  {
+    "id": "689ab86b-e697-4cf2-89fd-d83540861d50",
+    "ko": "블루틱 쿤하운드",
+    "en": "Bluetick Coonhound"
+  },
+  {
+    "id": "c66c397d-e5cc-4ff7-947f-7679a4130125",
+    "ko": "비글",
+    "en": "Beagle"
+  },
+  {
+    "id": "4f252e57-c728-4545-96a5-bf1d62a4eb8c",
+    "ko": "비숑 프리제",
+    "en": "Bichon Frise"
+  },
+  {
+    "id": "be061e73-c329-4384-835e-370f772e84f4",
+    "ko": "비즐라",
+    "en": "Vizsla"
+  },
+  {
+    "id": "3e5a1aa6-9ece-428d-9e0d-6a0637bafed0",
+    "ko": "사모예드",
+    "en": "Samoyed"
+  },
+  {
+    "id": "050596c5-5a0d-49ea-8682-aa2a4f0eaec3",
+    "ko": "살루키",
+    "en": "Saluki"
+  },
+  {
+    "id": "3655fc67-3372-4c22-ac85-fde269193a44",
+    "ko": "삽살개",
+    "en": "Sapsali"
+  },
+  {
+    "id": "2125fa32-3d8c-4151-90c5-6e25a8fa55b2",
+    "ko": "샤일로 셰퍼드",
+    "en": "Shiloh Shepherd"
+  },
+  {
+    "id": "a84795ab-10c8-4d40-8d2e-c7b8939aeae6",
+    "ko": "샤페이",
+    "en": "Shar Pei"
+  },
+  {
+    "id": "718f3574-2bd7-4053-b5fc-5860e894248d",
+    "ko": "세인트 버나드",
+    "en": "Saint Bernard"
+  },
+  {
+    "id": "29f86d9b-e830-47ae-8aa4-16a848f6c96c",
+    "ko": "셰틀랜드 쉽독",
+    "en": "Shetland Sheepdog"
+  },
+  {
+    "id": "51d9a971-7000-4870-bab3-b3646d3fe7ce",
+    "ko": "소프트 코티드 휘튼 테리어",
+    "en": "Soft Coated Wheaten Terrier"
+  },
+  {
+    "id": "d19d2efd-13e7-431c-a5ff-a27d9fa8b0aa",
+    "ko": "쇼로이츠쿠인틀리",
+    "en": "Xoloitzcuintli"
+  },
+  {
+    "id": "5062e507-ec08-4d3c-b9a7-0f701a314fbf",
+    "ko": "수염 콜리",
+    "en": "Bearded Collie"
+  },
+  {
+    "id": "969db77b-2b04-435a-a445-2b4b4ab5293b",
+    "ko": "스무스 폭스 테리어",
+    "en": "Smooth Fox Terrier"
+  },
+  {
+    "id": "b775e061-802e-453b-b221-c5fd9d763410",
+    "ko": "스웨디시 발훈트",
+    "en": "Swedish Vallhund"
+  },
+  {
+    "id": "fe89633c-96bc-4180-8938-a0cd5f1454cb",
+    "ko": "스코티시 디어하운드",
+    "en": "Scottish Deerhound"
+  },
+  {
+    "id": "20cbb66d-5494-4711-afd0-aa4954d26423",
+    "ko": "스코티시 테리어",
+    "en": "Scottish Terrier"
+  },
+  {
+    "id": "9034b55d-9750-4197-86e2-0f5fb985643f",
+    "ko": "스키퍼케",
+    "en": "Schipperke"
+  },
+  {
+    "id": "6f6c80c4-980c-4c25-a690-7aca2377b180",
+    "ko": "스태포드셔 불 테리어",
+    "en": "Staffordshire Bull Terrier"
+  },
+  {
+    "id": "6f2d97a9-8090-48d9-a919-0dadf863127f",
+    "ko": "스탠다드 슈나우저",
+    "en": "Standard Schnauzer"
+  },
+  {
+    "id": "925d5e57-f31a-446c-b25a-16aad51272f7",
+    "ko": "스페인 워터독",
+    "en": "Spanish Water Dog"
+  },
+  {
+    "id": "83f77c30-ec61-4a81-bd8e-2969e0f0792b",
+    "ko": "슬루기",
+    "en": "Sloughi"
+  },
+  {
+    "id": "ee15a212-972f-4262-bcf1-c2550be57e30",
+    "ko": "시바 이누",
+    "en": "Shiba Inu"
+  },
+  {
+    "id": "af228e43-c8ab-43e4-a05f-8e8b9862aa5b",
+    "ko": "시베리안 허스키",
+    "en": "Siberian Husky"
+  },
+  {
+    "id": "b39cd0cc-5d34-432d-acfe-562d8d2e52c9",
+    "ko": "시추",
+    "en": "Shih Tzu"
+  },
+  {
+    "id": "472e001e-3c56-4c6e-a30c-40f7f06fbdb5",
+    "ko": "실키 테리어",
+    "en": "Silky Terrier"
+  },
+  {
+    "id": "bfedbd08-36e2-48cf-8887-d27125526edc",
+    "ko": "아나톨리아 셰퍼드견",
+    "en": "Anatolian Shepherd Dog"
+  },
+  {
+    "id": "bbc95e0d-8767-442b-a9b4-b1d15b18354f",
+    "ko": "아메리칸 불독",
+    "en": "American Bulldog"
+  },
+  {
+    "id": "fbfc3595-30c9-4e67-b110-7c5b1c06e734",
+    "ko": "아메리칸 불리",
+    "en": "American Bully"
+  },
+  {
+    "id": "48b0b756-65db-421f-b6cc-380a6e189db7",
+    "ko": "아메리칸 스태포드셔 테리어",
+    "en": "American Staffordshire Terrier"
+  },
+  {
+    "id": "5c80052b-fbed-4806-8c94-f89baf2580f9",
+    "ko": "아메리칸 에스키모견",
+    "en": "American Eskimo Dog"
+  },
+  {
+    "id": "7242fcb8-c272-4d82-a572-ee6b30d9ddc1",
+    "ko": "아메리칸 에스키모견(미니어처)",
+    "en": "American Eskimo Dog (Miniature)"
+  },
+  {
+    "id": "add6b680-79f5-4c75-b6f9-336e28eba8b1",
+    "ko": "아메리칸 워터 스패니얼",
+    "en": "American Water Spaniel"
+  },
+  {
+    "id": "d08ad417-7ad0-492b-96ca-147e7c4ea1a2",
+    "ko": "아메리칸 폭스하운드",
+    "en": "American Foxhound"
+  },
+  {
+    "id": "773c6c5f-4beb-491f-bc24-d230240531b4",
+    "ko": "아메리칸 피트불 테리어",
+    "en": "American Pit Bull Terrier"
+  },
+  {
+    "id": "9b682cc3-24ee-4870-ac2f-9c319a8f652d",
+    "ko": "아이리시 세터",
+    "en": "Irish Setter"
+  },
+  {
+    "id": "53abc9ef-7e2a-4c60-b388-162ec5cff0dd",
+    "ko": "아이리시 울프하운드",
+    "en": "Irish Wolfhound"
+  },
+  {
+    "id": "47c648a1-f208-48ec-ba37-89ee55d12978",
+    "ko": "아이리시 테리어",
+    "en": "Irish Terrier"
+  },
+  {
+    "id": "1dcefd59-92ef-4dff-9b62-987bba6fc2bf",
+    "ko": "아자와흐",
+    "en": "Azawakh"
+  },
+  {
+    "id": "d047f4b6-c777-49ea-8b84-edcadb27c079",
+    "ko": "아크바쉬 도그",
+    "en": "Akbash Dog"
+  },
+  {
+    "id": "bae3c4f8-1da9-4b3b-94d4-54c942f372d9",
+    "ko": "아키타",
+    "en": "Akita"
+  },
+  {
+    "id": "1c4387b6-2a97-4524-a1ed-1697944302ca",
+    "ko": "아펜젤러 산악견",
+    "en": "Appenzeller Sennenhund"
+  },
+  {
+    "id": "1910b47a-ee97-4163-8b86-21bdbec01a88",
+    "ko": "아펜핀셔",
+    "en": "Affenpinscher"
+  },
+  {
+    "id": "623ff893-142c-46e3-b88e-c88fadcc87be",
+    "ko": "아프간 하운드",
+    "en": "Afghan Hound"
+  },
+  {
+    "id": "7d14ac29-70a8-4ff1-b34a-1db7b30e6be5",
+    "ko": "아프리카 사냥개",
+    "en": "African Hunting Dog"
+  },
+  {
+    "id": "b3dbc13c-8e19-42a6-9275-ab2bdbfe5905",
+    "ko": "알라파하 블루 블러드 불독",
+    "en": "Alapaha Blue Blood Bulldog"
+  },
+  {
+    "id": "9eeb8f75-fe91-4058-ac29-61e274046e2e",
+    "ko": "알래스카 허스키",
+    "en": "Alaskan Husky"
+  },
+  {
+    "id": "6fbdf1e6-3871-4777-b8ff-f1e667a3909e",
+    "ko": "알래스칸 말라뮤트",
+    "en": "Alaskan Malamute"
+  },
+  {
+    "id": "3bec2983-fb7a-4b2e-9d4d-6f084ab48edc",
+    "ko": "에어데일 테리어",
+    "en": "Airedale Terrier"
+  },
+  {
+    "id": "54cf6c9d-8e07-4378-ae5b-be75d2d091d1",
+    "ko": "오스트레일리안 셰퍼드",
+    "en": "Australian Shepherd"
+  },
+  {
+    "id": "7eae740b-904c-447b-a3c8-8c1d9012c3c9",
+    "ko": "오스트레일리안 캐틀독",
+    "en": "Australian Cattle Dog"
+  },
+  {
+    "id": "aee770c0-8470-4591-8b7b-62d40efa7ec5",
+    "ko": "오스트레일리안 테리어",
+    "en": "Australian Terrier"
+  },
+  {
+    "id": "83420e90-6f0f-41c4-960d-a176fd728a92",
+    "ko": "올드 잉글리시 불독",
+    "en": "Olde English Bulldogge"
+  },
+  {
+    "id": "bb7891ad-2fed-46a5-9f8d-cc9c70ad1c0d",
+    "ko": "올드 잉글리시 쉽독",
+    "en": "Old English Sheepdog"
+  },
+  {
+    "id": "b72e5238-1dc4-4bd7-802d-f65cb9fedc2d",
+    "ko": "와이어 폭스 테리어",
+    "en": "Wire Fox Terrier"
+  },
+  {
+    "id": "2e24404a-8c85-4682-8cb4-75e478160d22",
+    "ko": "와이어헤어드 비즐라",
+    "en": "Wirehaired Vizsla"
+  },
+  {
+    "id": "6cd53f64-8106-4378-a5a8-e4d2e0eaf071",
+    "ko": "와이어헤어드 포인팅 그리폰",
+    "en": "Wirehaired Pointing Griffon"
+  },
+  {
+    "id": "c2e23e04-7c30-4a3d-8924-1ccc2933545a",
+    "ko": "요크셔 테리어",
+    "en": "Yorkshire Terrier"
+  },
+  {
+    "id": "6a83e10d-461c-4a94-b522-31c50c0b8ff5",
+    "ko": "웨스트 하일랜드 화이트 테리어",
+    "en": "West Highland White Terrier"
+  },
+  {
+    "id": "59b6f639-72b5-4239-aa00-f718ac7331f8",
+    "ko": "웰시 스프링거 스패니얼",
+    "en": "Welsh Springer Spaniel"
+  },
+  {
+    "id": "bac23ff0-1e1c-452d-87c0-da9afdb08a52",
+    "ko": "웰시 코기",
+    "en": "Welsh Corgi"
+  },
+  {
+    "id": "d8ab4c28-840a-44cc-a349-26a7e47a4a9f",
+    "ko": "유라시아인",
+    "en": "Eurasier"
+  },
+  {
+    "id": "41a2287a-bd9e-4d1d-a222-ebfd3b7bd363",
+    "ko": "이탈리아 스피노네",
+    "en": "Spinone Italiano"
+  },
+  {
+    "id": "68a4cec1-9540-493b-b150-2607bae9af4d",
+    "ko": "이탈리안 그레이하운드",
+    "en": "Italian Greyhound"
+  },
+  {
+    "id": "8267c9cc-4094-4fb8-a635-c31c8bd1371c",
+    "ko": "이탈리안 포인터",
+    "en": "Bracco Italiano"
+  },
+  {
+    "id": "9e1ea2d6-8b89-4766-9c33-d4d5efa3ed63",
+    "ko": "일본 스피츠",
+    "en": "Japanese Spitz"
+  },
+  {
+    "id": "8b75081a-6e83-485c-af3a-fe389a9c7edf",
+    "ko": "일본 친",
+    "en": "Japanese Chin"
+  },
+  {
+    "id": "e2094401-a2ea-465e-95c6-566e93fa7d9a",
+    "ko": "잉글리시 불도그",
+    "en": "English Bulldog"
+  },
+  {
+    "id": "de38573c-b902-4241-8272-6a3cfc051ef2",
+    "ko": "잉글리시 세터",
+    "en": "English Setter"
+  },
+  {
+    "id": "5c02c926-f5be-4843-9ae3-559fe3f9f886",
+    "ko": "잉글리시 셰퍼드",
+    "en": "English Shepherd"
+  },
+  {
+    "id": "ab49c380-da93-46b6-a706-7aa58f934058",
+    "ko": "잉글리시 스프링거 스패니얼",
+    "en": "English Springer Spaniel"
+  },
+  {
+    "id": "6912e932-e3b0-4efc-9e2c-1422edbdc6bc",
+    "ko": "잉글리시 코커 스파니엘",
+    "en": "English Cocker Spaniel"
+  },
+  {
+    "id": "3b41a2ab-0067-49e4-854d-df16f21365dc",
+    "ko": "잉글리시 토이 스패니얼",
+    "en": "English Toy Spaniel"
+  },
+  {
+    "id": "56ffcc75-a326-4398-a78b-71935f2634c0",
+    "ko": "잉글리시 토이 테리어",
+    "en": "English Toy Terrier"
+  },
+  {
+    "id": "4db60f96-fad9-4bf6-9be0-bbc42ad4a7ed",
+    "ko": "자이언트 슈나우저",
+    "en": "Giant Schnauzer"
+  },
+  {
+    "id": "9fc2859b-3c39-4208-8033-c9239012064b",
+    "ko": "잭 러셀 테리어",
+    "en": "Jack Russell Terrier"
+  },
+  {
+    "id": "27c80509-f7f9-4244-988b-4c3ccb5eecc0",
+    "ko": "저먼 셰퍼드",
+    "en": "German Shepherd"
+  },
+  {
+    "id": "7c76918c-e7b1-4030-bdff-2018041e00c8",
+    "ko": "저먼 셰퍼드견",
+    "en": "German Shepherd Dog"
+  },
+  {
+    "id": "f1327d1a-7d7c-4ebb-822e-1c962ebeb6c7",
+    "ko": "제주개",
+    "en": "Jeju Dog"
+  },
+  {
+    "id": "651e3f5a-b51c-4383-8371-530d8b37faac",
+    "ko": "중국 샤페이",
+    "en": "Chinese Shar-Pei"
+  },
+  {
+    "id": "694b7fa8-be60-47bc-b9e7-6126f5d1d563",
+    "ko": "진돗개",
+    "en": "Jindo Dog"
+  },
+  {
+    "id": "e377ab50-7476-4e51-a7bb-891afb3de4b6",
+    "ko": "집요한 추적자",
+    "en": "Bloodhound"
+  },
+  {
+    "id": "6d5b0bd8-c4b1-4744-a72c-850f4ec4d729",
+    "ko": "차우차우",
+    "en": "Chow Chow"
+  },
+  {
+    "id": "0f05e6a4-f0d4-4290-85e0-38ef0a869299",
+    "ko": "차이니스 크레스티드",
+    "en": "Chinese Crested"
+  },
+  {
+    "id": "9444bb4c-a753-4a4b-972f-d668c410a834",
+    "ko": "체서피크 베이 리트리버",
+    "en": "Chesapeake Bay Retriever"
+  },
+  {
+    "id": "5f45143e-301d-4636-a1c5-36a0a93733cb",
+    "ko": "체코슬로바키안 울프독",
+    "en": "Czechoslovakian Vlcak"
+  },
+  {
+    "id": "7a6eda79-8f4b-48eb-8b16-27d0125a5907",
+    "ko": "치누크",
+    "en": "Chinook"
+  },
+  {
+    "id": "1e93e57a-5b02-4ac2-8c7a-a7f8f1a35ffb",
+    "ko": "치와와",
+    "en": "Chihuahua"
+  },
+  {
+    "id": "44576ec3-afee-44cc-9d0d-82b2b0d56b40",
+    "ko": "카디건 웰시 코기",
+    "en": "Cardigan Welsh Corgi"
+  },
+  {
+    "id": "57e886d6-29f4-4d87-a20e-10fcfe931509",
+    "ko": "카이 켄",
+    "en": "Kai Ken"
+  },
+  {
+    "id": "091bef7d-eec1-498d-aa6f-dc17c31fb16a",
+    "ko": "카타훌라 레오파드 독",
+    "en": "Catahoula Leopard Dog"
+  },
+  {
+    "id": "fc0ab3fe-7e84-4a0a-b0d9-67042a938019",
+    "ko": "캐벌리어 킹 찰스 스패니얼",
+    "en": "Cavalier King Charles Spaniel"
+  },
+  {
+    "id": "9e1667d9-5599-4bff-ba2b-1139c955ee66",
+    "ko": "케언 테리어",
+    "en": "Cairn Terrier"
+  },
+  {
+    "id": "c4fb47fd-fa1a-43ab-8498-b5bbe04f7843",
+    "ko": "케인 코르소",
+    "en": "Cane Corso"
+  },
+  {
+    "id": "450cb32e-aa03-4c0f-85e0-7554b533d7df",
+    "ko": "코몬도르",
+    "en": "Komondor"
+  },
+  {
+    "id": "df0914c6-df4d-4768-86a8-54e390edfaf4",
+    "ko": "코카서스 셰퍼드(오브차르카)",
+    "en": "Caucasian Shepherd (Ovcharka)"
+  },
+  {
+    "id": "e6494fcd-0e4f-492b-8c2f-789335deb6ed",
+    "ko": "코커 스패니얼",
+    "en": "Cocker Spaniel"
+  },
+  {
+    "id": "9d8ed0f8-0e77-484a-ad66-5d0f31081cd0",
+    "ko": "코커 스패니얼(아메리칸)",
+    "en": "Cocker Spaniel (American)"
+  },
+  {
+    "id": "4c3b820f-cd5c-46c6-afa8-fc10afc59b2e",
+    "ko": "쿠바스",
+    "en": "Kuvasz"
+  },
+  {
+    "id": "eade8bc4-b17d-4a31-9b89-228a9f1632b3",
+    "ko": "쿠이커혼제",
+    "en": "Kooikerhondje"
+  },
+  {
+    "id": "de58263d-03b8-4ff7-a70b-046e3699ea0e",
+    "ko": "클럼버 스패니얼",
+    "en": "Clumber Spaniel"
+  },
+  {
+    "id": "c695dfc5-be19-4f0a-bf26-b5c7c45b4529",
+    "ko": "키슈 켄",
+    "en": "Kishu Ken"
+  },
+  {
+    "id": "3b40d091-5535-46d3-86ab-9eb61ce71898",
+    "ko": "키스혼드",
+    "en": "Keeshond"
+  },
+  {
+    "id": "3c16e12f-2b50-4711-b490-f86ba3b88c73",
+    "ko": "타이 리지백",
+    "en": "Thai Ridgeback"
+  },
+  {
+    "id": "a55c4dd3-7f0f-4008-bf0e-e043d11a85e9",
+    "ko": "토이 폭스 테리어",
+    "en": "Toy Fox Terrier"
+  },
+  {
+    "id": "eb96047b-b8e8-4dbd-a775-10007d06b432",
+    "ko": "툴레어 코튼",
+    "en": "Coton de Tulear"
+  },
+  {
+    "id": "1c45d143-d7af-423f-94c6-841e9adbff7c",
+    "ko": "트리잉 워커 쿤하운드",
+    "en": "Treeing Walker Coonhound"
+  },
+  {
+    "id": "0e170077-b49a-4d94-a242-3b9010bd32c1",
+    "ko": "티베탄 마스티프",
+    "en": "Tibetan Mastiff"
+  },
+  {
+    "id": "a9bbd496-03c4-46d8-a333-b43430ea9bc0",
+    "ko": "티베탄 스패니얼",
+    "en": "Tibetan Spaniel"
+  },
+  {
+    "id": "1f4fb18e-9cbe-46bc-8c5c-7e0465ed3c8c",
+    "ko": "티베탄 테리어",
+    "en": "Tibetan Terrier"
+  },
+  {
+    "id": "4275c717-88ac-4376-b049-4008c54d2166",
+    "ko": "파라오 하운드",
+    "en": "Pharaoh Hound"
+  },
+  {
+    "id": "74e10db2-dd4b-4ed8-9af3-6d7459f667f3",
+    "ko": "파피용",
+    "en": "Papillon"
+  },
+  {
+    "id": "83dd6f41-e280-4109-9201-a16d3e52fc9d",
+    "ko": "퍼그",
+    "en": "Pug"
+  },
+  {
+    "id": "68c48fab-8369-407c-a636-e7f62f672d5b",
+    "ko": "페루비안 잉카 오키드",
+    "en": "Peruvian Inca Orchid"
+  },
+  {
+    "id": "3890e8ee-be0c-4207-9c72-caa64de3ddb3",
+    "ko": "페키니즈",
+    "en": "Pekingese"
+  },
+  {
+    "id": "b8cef8b1-7081-4095-afb4-2b27cdb6c84c",
+    "ko": "펨브로크 웰시 코기",
+    "en": "Pembroke Welsh Corgi"
+  },
+  {
+    "id": "077f6f02-9d12-470d-be6c-5e7a6887555b",
+    "ko": "포메라니안",
+    "en": "Pomeranian"
+  },
+  {
+    "id": "ea3efb57-1dc7-45f6-8f5b-81b5df9542ef",
+    "ko": "포인터",
+    "en": "Pointer"
+  },
+  {
+    "id": "0b26b778-573b-4afe-8935-fa965c59315d",
+    "ko": "푸들",
+    "en": "Poodle"
+  },
+  {
+    "id": "11f0901c-0e56-4545-b33a-d107eec280cd",
+    "ko": "푸미",
+    "en": "Pumi"
+  },
+  {
+    "id": "5133b66d-4448-47dd-8a5b-34bf7710a211",
+    "ko": "풀리",
+    "en": "Puli"
+  },
+  {
+    "id": "9c10e571-f200-44c2-b9c8-01b9f5f325a5",
+    "ko": "풍산개",
+    "en": "Pungsan Dog"
+  },
+  {
+    "id": "7438d16c-4f5f-4810-ae71-9e8000a0ca36",
+    "ko": "프레사 카나리오 도그",
+    "en": "Perro de Presa Canario"
+  },
+  {
+    "id": "2de819d0-2e05-4b84-bb6e-b6dbab200d9b",
+    "ko": "프렌치 불독",
+    "en": "French Bulldog"
+  },
+  {
+    "id": "e91dddfa-7982-4b28-b50f-76a1f368beb5",
+    "ko": "플롯 하운드",
+    "en": "Plott"
+  },
+  {
+    "id": "fa58e381-1a80-420e-9395-0cefc2c2a1d2",
+    "ko": "핀란드 라프훈트",
+    "en": "Finnish Lapphund"
+  },
+  {
+    "id": "beb3230a-f569-4240-92f1-8549954a978f",
+    "ko": "핀란드 스피츠",
+    "en": "Finnish Spitz"
+  },
+  {
+    "id": "fe8cc18e-a958-4e03-9b28-355630f7308c",
+    "ko": "필드 스패니얼",
+    "en": "Field Spaniel"
+  },
+  {
+    "id": "2623e284-5aa8-4652-88a0-b28a1cca9a10",
+    "ko": "하바니즈",
+    "en": "Havanese"
+  },
+  {
+    "id": "9aaf8d8d-d538-4147-9eca-7ac50326198f",
+    "ko": "해리어",
+    "en": "Harrier"
+  },
+  {
+    "id": "c4f97096-2f29-49ec-93a3-b62c8cf0d5be",
+    "ko": "허스키",
+    "en": "Husky"
+  },
+  {
+    "id": "54e383b0-52c2-4588-be42-2073382a7a06",
+    "ko": "호주 켈피",
+    "en": "Australian Kelpie"
+  },
+  {
+    "id": "8568c190-b9e5-44fe-8051-fd342a4b0ad6",
+    "ko": "화이트 셰퍼드",
+    "en": "White Shepherd"
+  },
+  {
+    "id": "44b7f97a-7c17-4471-ab71-40042bdcb946",
+    "ko": "휘핏",
+    "en": "Whippet"
+  },
+  {
+    "id": "fa4ae383-252f-4cb5-a524-57a583b79392",
+    "ko": "Basenji",
+    "en": "Basenji"
+  }
+]

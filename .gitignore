@@ -47,3 +47,6 @@ public/mTLS_*/
 # IDE
 .vscode/settings.json
 .idea/
+
+# MCP
+.mcp.json

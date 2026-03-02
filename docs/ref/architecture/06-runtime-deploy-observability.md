@@ -1,6 +1,6 @@
 Diagram-ID: arch-06
 Owner: ops
-Last-Verified: 2026-03-01
+Last-Verified: 2026-03-02
 Parity-IDs: APP-001, REG-001, MSG-001
 Source-of-Truth:
 - .claude/automations/code-doc-align.prompt.md

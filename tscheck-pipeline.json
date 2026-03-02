@@ -1,0 +1,22 @@
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "allowImportingTsExtensions": true,
+    "paths": {
+      "types/training": ["./src/types/training.ts"],
+      "types/dog": ["./src/types/dog.ts"],
+      "lib/data/mappings/behaviorToCurriculum": ["./src/lib/data/mappings/behaviorToCurriculum.ts"]
+    },
+    "baseUrl": "."
+  },
+  "files": [
+    "src/lib/data/curriculum.ts",
+    "src/lib/data/published/runtime.ts",
+    "src/lib/data/published/v2026-03-02-auto-080532/curriculum.ts"
+  ]
+}

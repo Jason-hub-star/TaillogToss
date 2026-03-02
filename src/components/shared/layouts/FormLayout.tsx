@@ -1,8 +1,8 @@
 /**
- * FormLayout (패턴C) — 입력폼형 레이아웃
- * 설문 7단계, 반려견 추가, 기록 상세 등에 사용. ProgressBar + KeyboardAvoid + BottomCTA
+ * FormLayout (패턴C) — 입력폼형 레이아웃 (개선 버전)
+ * children 변경 시 스크롤 상단 초기화 로직 포함
  */
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, ScrollView, SafeAreaView, TouchableOpacity } from 'react-native';
 import { colors, typography, spacing } from '../../../styles/tokens';
 
@@ -15,6 +15,13 @@ export interface FormLayoutProps {
 }
 
 export function FormLayout({ title, step, onBack, children, bottomCTA }: FormLayoutProps) {
+  const scrollRef = useRef<ScrollView>(null);
+
+  // 단계(step)가 바뀌거나 children이 바뀔 때 스크롤 상단으로 이동
+  useEffect(() => {
+    scrollRef.current?.scrollTo({ y: 0, animated: true });
+  }, [step?.current]);
+
   return (
     <SafeAreaView style={styles.safe}>
       <View style={styles.header}>
@@ -31,7 +38,13 @@ export function FormLayout({ title, step, onBack, children, bottomCTA }: FormLay
           <View style={[styles.progressFill, { width: `${(step.current / step.total) * 100}%` }]} />
         </View>
       )}
-      <ScrollView style={styles.body} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+      <ScrollView 
+        ref={scrollRef}
+        style={styles.body} 
+        contentContainerStyle={styles.content} 
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
         {children}
       </ScrollView>
       {bottomCTA && (
@@ -74,7 +87,7 @@ const styles = StyleSheet.create({
     borderRadius: 2,
   },
   body: { flex: 1 },
-  content: { paddingHorizontal: spacing.screenHorizontal, paddingTop: spacing.xxl, paddingBottom: 100 },
+  content: { paddingHorizontal: spacing.screenHorizontal, paddingTop: spacing.xxl, paddingBottom: 120 },
   bottomBar: {
     paddingHorizontal: spacing.screenHorizontal,
     paddingVertical: spacing.md,

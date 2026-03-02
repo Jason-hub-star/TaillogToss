@@ -19,12 +19,12 @@ export const colors = {
   grey900: '#202632',
   grey950: '#191F28',
 
-  // Blue (Primary)
-  blue50: '#E8F3FF',
-  blue100: '#C9E2FF',
-  blue500: '#0064FF',
-  blue600: '#0054D1',
-  blue900: '#194AA6',
+  // Blue (Primary - Lower Saturation)
+  blue50: '#F0F6FF',
+  blue100: '#D6E4FF',
+  blue500: '#4E8AFF',
+  blue600: '#3D73E6',
+  blue900: '#2E5BB0',
 
   // Red (Error / Danger)
   red50: '#FFEEEE',
@@ -58,8 +58,8 @@ export const colors = {
   divider: '#F4F4F5',
   surfaceSecondary: '#F8F9FA',
   surfaceTertiary: '#F2F4F6',
-  primaryBlue: '#0064FF',
-  primaryBlueLight: '#0064FF20',
+  primaryBlue: '#4E8AFF',
+  primaryBlueLight: '#4E8AFF20',
   placeholder: '#B0B8C1',
 
   // Badge semantic colors (행동 유형 뱃지 / 위험도 전용)

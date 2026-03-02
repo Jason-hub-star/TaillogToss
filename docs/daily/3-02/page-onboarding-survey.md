@@ -3,32 +3,27 @@
 ## Goal
 - **Parity ID:** UIUX-004 (Onboarding Survey Parity)
 - **Target:** `/onboarding/survey`
-- **Issue:** 현재 `SurveyData`의 방대한 입력값(환경, 문제행동 등)이 UI에만 머물고 DB(`dog_env`)에 저장되지 않아 유실됨. 사용자 입력 피로도 높음.
+- **Issue:** 초기 설문의 데이터 구조가 단순하고 UX가 불친절하여 AI 분석 품질 저하 및 사용자 이탈 위험이 있음.
 
-## Execution Plan
-
-### Phase 1: API & DB Pipeline Rescue (Critical)
-- **File:** `src/lib/api/dog.ts`
-- **Action:** `createDogFromSurvey` 함수 수정.
-- **Detail:** `dogs` 테이블에 기본 정보 insert 후 반환된 `dog_id`를 사용하여, 서베이의 나머지 데이터를 `dog_env` 테이블의 JSONB 컬럼 구조에 맞게 매핑하여 insert 하도록 파이프라인 완성.
-- **Dependency:** `Backend/app/shared/models.py` (arch-05 Data RLS Boundary)
-
-### Phase 2: Type Modeling & Mapper
-- **File:** `src/types/dog.ts`, `src/components/features/survey/survey-mapper.ts`
-- **Action:** 프론트엔드의 7단계 `SurveyData`를 Supabase `dog_env`의 JSONB 스키마(`household_info`, `activity_meta` 등) 규격에 맞게 변환하는 헬퍼 함수 작성 및 타입 정비.
-
-### Phase 3: UI/UX & AI Enrichment
-- **File:** `src/components/features/survey/*` (Step1Profile, etc.)
-- **Action:** 
-  1. `dog-wiki` 로직을 본딴 **스마트 견종 검색** 컴포넌트 도입 (오타 교정, 자동완성).
-  2. 주관식 '기타' 입력을 최소화하고 TDS 기반 **칩(Chip) / 바텀 시트** 선택형 UI로 개편.
-  3. 7단계를 3단계 핵심 플로우로 압축하여 이탈률 감소.
+## Execution Plan & Progress
+- [x] **Survey 2.0 개편 (4단계 확장):**
+    - Step 1 (프로필): 아이콘 기반 성별/생애주기 선택 UI 도입. 믹스견 등 자유 입력 허용.
+    - Step 2 (고민): '기타' 고민 주관식 설명 및 상황 직접 입력 기능 추가.
+    - Step 3 (기질/보상): 에너지/사회성 점수 및 간식/놀이/칭찬 선호도 수집 (AI 솔루션 핵심).
+    - Step 4 (건강/환경): 통증/알러지 체크 및 외부 소음/방문객 빈도 등 심층 환경 데이터 수집.
+- [x] **UX 최적화:**
+    - **중첩 스크롤 해결:** `SurveyContainer`와 `FormLayout` 간의 이중 스크롤 구조 통합.
+    - **스크롤 제어:** 단계 이동 시 자동으로 상단(`y: 0`)으로 이동하도록 초기화 로직 구현.
+    - **뒤로가기 대응:** 안드로이드 시스템 뒤로가기 시 설문 이전 단계로 이동하도록 하드웨어 버튼 핸들링.
+    - **입력 가이드:** 유효성 검사 실패 시 하단에 구체적인 미입력 필드 안내 문구 노출.
+- [x] **디자인 시스템(TDS) 보완:**
+    - **색상 채도 조정:** 앱 전체 파란색(`primaryBlue`) 채도를 낮춰 더 차분하고 전문적인 Muted Blue 적용.
+    - **시각 피드백:** 평점 버튼 선택 시 `undefined` 색상 참조로 인한 투명화 버그 수정 및 대비 강화.
 
 ## Status Check
-- [x] Phase 1: API 파이프라인 구현 (`src/lib/api/dog.ts`)
-- [x] Phase 2: 타입 및 매퍼 구성
-- [x] Phase 3: Survey UI (TDS 칩 기반, 견종 검색) 개편
-- [x] Verification: `dog_env` 테이블에 JSONB 데이터 정상 적재 확인
+- [x] 믹스견 입력 시 다음 단계 진행 가능 여부 확인.
+- [x] 안드로이드 뒤로가기 동작 및 단계별 스크롤 리셋 확인.
+- [x] 고도화된 4단계 데이터가 Supabase `dog_env`의 JSONB 필드에 정상 매핑됨을 확인.
 
 ---
-*Self-Review: 아키텍처 다이어그램과 일치하는 DB 적재 흐름 복구가 0순위. 이후 UI 컴포넌트 리팩토링으로 AI 분석 품질 향상 도모.*
+*Self-Review: DogCoach의 전문적인 설문 로직을 Toss 미니앱 환경에 맞게 이식 완료. 특히 보상 선호도와 환경 스트레스 데이터 추가로 차후 AI 코칭의 정확도가 비약적으로 상승할 것으로 기대됨.*

@@ -54,7 +54,7 @@ export interface ActivityMeta {
 }
 
 // ──────────────────────────────────────
-// 설문 7단계 (Survey)
+// 온보딩 설문 (Survey 2.0 - 4단계 확장)
 // ──────────────────────────────────────
 
 /** 설문 전체 데이터 */
@@ -65,7 +65,8 @@ export interface SurveyData {
   step4_triggers: SurveyStep4;
   step5_history: SurveyStep5;
   step6_goals: SurveyStep6;
-  step7_preferences: SurveyStep7;
+  step7_preferences: SurveyStep7; // Step 3 Deep Dive (기질/보상)
+  step8_health_context: SurveyStep8; // Step 4 (건강/환경 스트레스)
 }
 
 /** Step 1: 기본 정보 (이름, 품종, 나이, 성별, 사진) */
@@ -87,12 +88,14 @@ export interface SurveyStep2 {
 export interface SurveyStep3 {
   primary_behaviors: BehaviorType[];
   severity: Record<BehaviorType, 1 | 2 | 3 | 4 | 5>;
+  other_behavior_desc?: string; // 주관식 고민 설명
 }
 
 /** Step 4: 트리거/상황 */
 export interface SurveyStep4 {
   triggers: string[];
   worst_time: 'morning' | 'afternoon' | 'evening' | 'night' | 'random';
+  custom_trigger?: string; // 직접 입력한 상황
 }
 
 /** Step 5: 과거 시도 */
@@ -107,11 +110,32 @@ export interface SurveyStep6 {
   priority_behavior: BehaviorType;
 }
 
-/** Step 7: AI 코칭 선호도 */
+/** Step 7: AI Deep Dive (기질 및 보상 데이터) */
 export interface SurveyStep7 {
-  ai_tone: 'empathetic' | 'solution';
-  ai_perspective: 'coach' | 'dog';
+  energy_score: number; // 1-5
+  social_score: number; // 1-5
+  mastered_commands: string[]; // sit, stay 등
+  rewards: {
+    treats: number; // 간식 선호도 1-5
+    play: number; // 놀이 선호도 1-5
+    praise: number; // 칭찬 선호도 1-5
+  };
   notification_consent: boolean;
+}
+
+/** Step 8: 건강 및 세부 환경 스트레스 (신규) */
+export interface SurveyStep8 {
+  health: {
+    has_pain: boolean; // 관절 등 통증 여부
+    has_allergy: boolean; // 알러지 여부
+    is_overweight: boolean; // 과체중 여부
+    notes: string; // 기타 건강 특이사항
+  };
+  environment_stress: {
+    noise_sensitivity: number; // 소음 예민도 1-5
+    visitor_frequency: 'rare' | 'sometimes' | 'frequent'; // 방문객 빈도
+    walk_environment: 'quiet' | 'normal' | 'busy'; // 산책로 혼잡도
+  };
 }
 
 /** 행동 유형 분류 */

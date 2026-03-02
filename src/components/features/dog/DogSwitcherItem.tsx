@@ -7,6 +7,7 @@ import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import type { Dog } from 'types/dog';
 import { colors, typography } from 'styles/tokens';
+import { DogAvatar } from './DogAvatar';
 
 interface Props {
   dog: Dog;
@@ -21,9 +22,7 @@ export function DogSwitcherItem({ dog, isActive, onPress }: Props) {
       onPress={onPress}
       activeOpacity={0.7}
     >
-      <View style={styles.avatar}>
-        <Text style={styles.avatarEmoji}>{'\uD83D\uDC36'}</Text>
-      </View>
+      <DogAvatar uri={dog.profile_image_url} size={44} />
       <View style={styles.info}>
         <Text style={[styles.name, isActive && styles.nameActive]}>{dog.name}</Text>
         <Text style={styles.breed}>{dog.breed}</Text>

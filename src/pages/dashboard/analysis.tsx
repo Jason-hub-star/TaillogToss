@@ -14,6 +14,7 @@ import { ChartWebView } from 'lib/charts/ChartWebView';
 import { generateRadarHTML, generateHeatmapHTML, generateBarHTML } from 'lib/charts/generateChartHTML';
 import { logsToRadar, logsToHeatmap, logsToDailyBar } from 'lib/charts/transformers';
 import { RewardedAdButton } from 'components/shared/ads/RewardedAdButton';
+import { SkeletonLoader } from 'components/shared/SkeletonLoader';
 import { EmptyState } from 'components/tds-ext/EmptyState';
 import { ErrorState } from 'components/tds-ext/ErrorState';
 import type { ChartPeriod } from 'types/chart';
@@ -95,9 +96,7 @@ function AnalysisPage() {
   if (isLoading) {
     return (
       <SafeAreaView style={styles.safe}>
-        <View style={styles.center}>
-          <ActivityIndicator size="large" color={colors.primaryBlue} />
-        </View>
+        <SkeletonLoader message="행동 데이터를 분석 중이에요" />
       </SafeAreaView>
     );
   }
@@ -136,7 +135,7 @@ function AnalysisPage() {
         <EmptyState
           title="분석할 기록이 없어요"
           description="기록을 남기면 행동 패턴을 분석해드려요"
-          icon={'\uD83D\uDCCA'}
+          lottie="long-dog"
         />
       ) : (
         <ScrollView style={styles.scroll} showsVerticalScrollIndicator={false}>

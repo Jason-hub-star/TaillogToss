@@ -8,22 +8,44 @@ import type { SurveyData, DogEnv, HouseholdInfo, HealthMeta, ActivityMeta } from
  * 설문 데이터를 DogEnv insert를 위한 부분 데이터로 변환
  */
 export function mapSurveyToDogEnv(survey: SurveyData, dogId: string): Partial<DogEnv> {
+  // 상황(triggers) 합치기: 선택한 칩 + 직접 입력 상황
+  const combinedTriggers = [...survey.step4_triggers.triggers];
+  if (survey.step4_triggers.custom_trigger?.trim()) {
+    combinedTriggers.push(survey.step4_triggers.custom_trigger.trim());
+  }
+
   return {
     dog_id: dogId,
-    household_info: survey.step2_environment.household,
+    household_info: {
+      ...survey.step2_environment.household,
+      // 환경 스트레스 데이터 통합 (JSONB)
+      ...survey.step8_health_context.environment_stress,
+    },
     health_meta: {
       chronic_issues: survey.step3_behavior.primary_behaviors,
-      medications: [], // 설문 단계에서 추가 가능성 대비
-      vet_notes: null,
-    } as HealthMeta,
-    triggers: survey.step4_triggers.triggers,
+      medications: [],
+      vet_notes: survey.step8_health_context.health.notes || null,
+      // 상세 건강 데이터 (JSONB)
+      physical_stats: {
+        has_pain: survey.step8_health_context.health.has_pain,
+        has_allergy: survey.step8_health_context.health.has_allergy,
+        is_overweight: survey.step8_health_context.health.is_overweight,
+      }
+    } as any,
+    triggers: combinedTriggers,
     past_attempts: survey.step5_history.past_attempts,
-    temperament: null, // 추후 AI 분석 결과로 채울 수 있음
+    temperament: survey.step3_behavior.other_behavior_desc || null, // 주관식 고민 텍스트 저장
     activity_meta: {
-      daily_walk_minutes: 30, // 기본값, Step2에 추가 가능
-      exercise_level: 'medium',
+      daily_walk_minutes: 30,
+      exercise_level: survey.step7_preferences.energy_score > 3 ? 'high' : 'medium',
       favorite_activities: [],
-    } as ActivityMeta,
+      // AI 심화 데이터 (JSONB)
+      energy_score: survey.step7_preferences.energy_score,
+      social_score: survey.step7_preferences.social_score,
+      mastered_commands: survey.step7_preferences.mastered_commands,
+      // 보상 선호도 데이터 (JSONB)
+      rewards_meta: survey.step7_preferences.rewards,
+    } as any,
   };
 }
 

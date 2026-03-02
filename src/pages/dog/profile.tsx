@@ -19,9 +19,13 @@ import {
 } from 'react-native';
 import { Accordion } from 'components/tds-ext/Accordion';
 import { ErrorState } from 'components/tds-ext/ErrorState';
+import { DogAvatar } from 'components/features/dog/DogAvatar';
+import { DogPhotoPicker } from 'components/features/dog/DogPhotoPicker';
 import { usePageGuard } from 'lib/hooks/usePageGuard';
+import { useAuth } from 'stores/AuthContext';
 import { useActiveDog } from 'stores/ActiveDogContext';
 import { useDogDetail, useDogEnv, useUpdateDog, useDeleteDog } from 'lib/hooks/useDogs';
+import { uploadDogProfileImage } from 'lib/api/dog';
 import type { DogSex, HouseholdInfo } from 'types/dog';
 import { colors, typography } from 'styles/tokens';
 
@@ -51,6 +55,7 @@ const LIVING_TYPES: { value: HouseholdInfo['living_type']; label: string }[] = [
 function DogProfilePage() {
   const navigation = useNavigation();
   const { isReady } = usePageGuard({ currentPath: '/dog/profile' });
+  const { user } = useAuth();
   const { activeDog } = useActiveDog();
 
   const { data: dog, isLoading, isError, refetch } = useDogDetail(activeDog?.id);
@@ -63,6 +68,7 @@ function DogProfilePage() {
   const [breed, setBreed] = useState('');
   const [ageText, setAgeText] = useState('');
   const [isNeutered, setIsNeutered] = useState(false);
+  const [profileImageUrl, setProfileImageUrl] = useState<string | undefined>(undefined);
 
   // Environment
   const [livingType, setLivingType] = useState<HouseholdInfo['living_type']>('apartment');
@@ -79,6 +85,7 @@ function DogProfilePage() {
     if (dog) {
       setName(dog.name);
       setBreed(dog.breed);
+      setProfileImageUrl(dog.profile_image_url ?? undefined);
       if (dog.birth_date) {
         const birth = new Date(dog.birth_date);
         const now = new Date();
@@ -100,17 +107,36 @@ function DogProfilePage() {
     }
   }, [dogEnv]);
 
-  const handleSave = useCallback(() => {
-    if (!activeDog?.id || !name.trim()) return;
+  const handleSave = useCallback(async () => {
+    if (!activeDog?.id || !name.trim() || !user?.id) return;
+
+    let finalImageUrl = profileImageUrl;
+    
+    // 사진이 변경된 경우 (로컬 URI인 경우) 업로드
+    if (profileImageUrl && !profileImageUrl.startsWith('http')) {
+      try {
+        finalImageUrl = await uploadDogProfileImage(user.id, activeDog.id, profileImageUrl);
+      } catch (e) {
+        console.error('Image upload failed during profile save:', e);
+      }
+    }
 
     const baseSex = (dog?.sex?.replace('_NEUTERED', '') ?? 'MALE') as 'MALE' | 'FEMALE';
     const newSex: DogSex = isNeutered ? (`${baseSex}_NEUTERED` as DogSex) : baseSex;
 
     updateDog.mutate(
-      { dogId: activeDog.id, updates: { name: name.trim(), breed: breed.trim(), sex: newSex } },
+      { 
+        dogId: activeDog.id, 
+        updates: { 
+          name: name.trim(), 
+          breed: breed.trim(), 
+          sex: newSex,
+          profile_image_url: finalImageUrl || null
+        } 
+      },
       { onSuccess: () => navigation.goBack() }
     );
-  }, [activeDog?.id, name, breed, isNeutered, dog?.sex, updateDog, navigation]);
+  }, [activeDog?.id, user?.id, name, breed, isNeutered, dog?.sex, profileImageUrl, updateDog, navigation]);
 
   const handleDelete = useCallback(() => {
     if (!activeDog?.id) return;
@@ -159,12 +185,11 @@ function DogProfilePage() {
       <Navbar onBack={() => navigation.goBack()} />
 
       <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
-        {/* 프로필 아바타 */}
-        <View style={styles.avatarSection}>
-          <View style={styles.avatar}>
-            <Text style={styles.avatarEmoji}>{'\uD83D\uDC36'}</Text>
-          </View>
-        </View>
+        {/* 프로필 사진 편집 */}
+        <DogPhotoPicker 
+          uri={profileImageUrl} 
+          onSelect={setProfileImageUrl} 
+        />
 
         {/* 기본 정보 */}
         <LabeledInput label="이름" value={name} onChangeText={setName} placeholder="반려견 이름" />

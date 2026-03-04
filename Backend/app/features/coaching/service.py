@@ -62,6 +62,9 @@ async def generate_coaching(
     blocks: schemas.CoachingBlocks
     ai_tokens_used = 0
 
+    # 이전 코칭 요약 (연속성 제공)
+    prev_summary = await _build_previous_coaching_summary(db, dog_id)
+
     if budget_mode == "rule_only" or not settings.OPENAI_API_KEY:
         # 규칙 기반 폴백
         blocks = rule_engine.generate_rule_based_blocks(
@@ -79,6 +82,7 @@ async def generate_coaching(
             user_prompt = prompts.build_user_prompt(
                 dog.name, dog.breed or "믹스", age_months,
                 issues, triggers, logs_summary, request.report_type,
+                previous_coaching_summary=prev_summary,
             )
             result = await openai_client.generate(
                 prompts.SYSTEM_PROMPT_6BLOCK, user_prompt,
@@ -264,6 +268,30 @@ def _parse_ai_response(content: str) -> dict:
         lines = cleaned.split("\n")
         cleaned = "\n".join(lines[1:-1] if lines[-1].strip() == "```" else lines[1:])
     return json.loads(cleaned)
+
+
+async def _build_previous_coaching_summary(db: AsyncSession, dog_id: UUID) -> str | None:
+    """최근 2~3회 코칭의 trend, key_patterns를 요약 (AI 프롬프트 연속성)"""
+    q = (
+        select(AICoaching)
+        .where(AICoaching.dog_id == dog_id)
+        .order_by(desc(AICoaching.created_at))
+        .limit(3)
+    )
+    results = (await db.execute(q)).scalars().all()
+    if not results:
+        return None
+
+    lines = []
+    for c in results:
+        blocks = c.blocks or {}
+        insight = blocks.get("insight", {})
+        trend = insight.get("trend", "unknown")
+        patterns = insight.get("key_patterns", [])
+        dt = c.created_at.strftime("%Y-%m-%d") if c.created_at else "N/A"
+        lines.append(f"- [{dt}] Trend: {trend}, Patterns: {', '.join(patterns[:3])}")
+
+    return "\n".join(lines) if lines else None
 
 
 def _extract_list(data, key: str) -> list:

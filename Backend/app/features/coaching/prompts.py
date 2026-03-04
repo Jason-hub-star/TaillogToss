@@ -41,8 +41,18 @@ def build_user_prompt(
     triggers: list[str],
     recent_logs_summary: str,
     report_type: str = "DAILY",
+    previous_coaching_summary: str | None = None,
 ) -> str:
-    """사용자 프롬프트 생성"""
+    """사용자 프롬프트 생성 — 이전 코칭 요약 포함 시 연속성 있는 코칭 제공"""
+    prev_section = ""
+    if previous_coaching_summary:
+        prev_section = f"""
+Previous Coaching Summary (for continuity):
+{previous_coaching_summary}
+
+When generating, reference previous trends and note improvements or regressions.
+"""
+
     return f"""Dog Profile:
 - Name: {dog_name}
 - Breed: {breed}
@@ -54,7 +64,7 @@ Report Type: {report_type}
 
 Recent Behavior Logs:
 {recent_logs_summary}
-
+{prev_section}
 Generate the 6-block coaching report in Korean."""
 
 

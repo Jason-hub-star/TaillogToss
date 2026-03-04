@@ -228,6 +228,8 @@ function CoachingResultPage() {
         blocks={coaching.blocks}
         isPro={isPro ?? false}
         onToggleActionItem={handleToggleActionItem}
+        dogName={activeDog?.name}
+        dogImageUrl={activeDog?.profile_image_url}
       />
 
       {/* 분석 페이지 역방향 링크 */}

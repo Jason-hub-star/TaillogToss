@@ -1,12 +1,13 @@
 /**
  * LockedBlock — PRO 잠금 블록 ④⑤⑥ (next_7_days, risk_signals, consultation_questions)
  * Skeleton 블러 + RewardedAdButton으로 해제
+ * 인터랙티브 카드: 수평 타임라인, 게이지 바, 프로필 카드
  * Parity: AI-001
  */
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import type { Next7DaysBlock, RiskSignalsBlock, ConsultationQuestionsBlock } from 'types/coaching';
-import { colors, typography } from 'styles/tokens';
+import { colors, typography, spacing } from 'styles/tokens';
 
 const BLOCK_META: Record<string, { label: string; icon: string; teaser: string }> = {
   next_7_days: {
@@ -70,28 +71,55 @@ export function UnlockedBlock({ blockKey, children }: { blockKey: string; childr
 }
 
 // ──────────────────────────────────────
-// PRO 블록 콘텐츠 뷰 (잠금 해제 시)
+// PRO 블록 ④: 7일 맞춤 플랜 — 수평 스크롤 타임라인 카드
 // ──────────────────────────────────────
 
-export function Next7DaysView({ data }: { data: Next7DaysBlock }) {
+export function Next7DaysView({
+  data,
+}: {
+  data: Next7DaysBlock;
+}) {
+  const today = new Date().getDay(); // 0=Sun
+  const todayIndex = today === 0 ? 6 : today - 1; // 0=Mon
+
   return (
-    <View>
-      {data.days.map((day) => (
-        <View key={day.day_number} style={styles.dayRow}>
-          <View style={styles.dayBadge}>
-            <Text style={styles.dayNumber}>Day {day.day_number}</Text>
-          </View>
-          <View style={styles.dayContent}>
-            <Text style={styles.dayFocus}>{day.focus}</Text>
+    <ScrollView
+      horizontal
+      showsHorizontalScrollIndicator={false}
+      contentContainerStyle={styles.timelineScroll}
+    >
+      {data.days.map((day) => {
+        const isToday = day.day_number - 1 === todayIndex;
+        return (
+          <View
+            key={day.day_number}
+            style={[styles.timelineCard, isToday && styles.timelineCardToday]}
+          >
+            <View style={styles.timelineHeader}>
+              <View style={[styles.dayBadge, isToday && styles.dayBadgeToday]}>
+                <Text style={[styles.dayNumber, isToday && styles.dayNumberToday]}>
+                  Day {day.day_number}
+                </Text>
+              </View>
+              {isToday && <Text style={styles.todayLabel}>오늘</Text>}
+            </View>
+            <Text style={styles.dayFocus} numberOfLines={2}>{day.focus}</Text>
             {day.tasks.map((task, i) => (
-              <Text key={i} style={styles.dayTask}>{'• '}{task}</Text>
+              <View key={i} style={styles.taskRow}>
+                <Text style={styles.taskBullet}>{'•'}</Text>
+                <Text style={styles.dayTask} numberOfLines={2}>{task}</Text>
+              </View>
             ))}
           </View>
-        </View>
-      ))}
-    </View>
+        );
+      })}
+    </ScrollView>
   );
 }
+
+// ──────────────────────────────────────
+// PRO 블록 ⑤: 위험 신호 분석 — 게이지 바 + 아이콘 카드
+// ──────────────────────────────────────
 
 const SEVERITY_COLOR: Record<string, string> = {
   low: colors.green500,
@@ -100,20 +128,63 @@ const SEVERITY_COLOR: Record<string, string> = {
   critical: colors.red700,
 };
 
+const RISK_GAUGE: Record<string, number> = {
+  low: 0.2,
+  medium: 0.5,
+  high: 0.75,
+  critical: 0.95,
+};
+
+const RISK_LABEL: Record<string, string> = {
+  low: '낮음',
+  medium: '보통',
+  high: '높음',
+  critical: '심각',
+};
+
+const SEVERITY_ICON: Record<string, string> = {
+  low: '🟢',
+  medium: '🟡',
+  high: '🟠',
+  critical: '🔴',
+};
+
 export function RiskSignalsView({ data }: { data: RiskSignalsBlock }) {
+  const gaugeWidth = RISK_GAUGE[data.overall_risk] ?? 0.5;
+
   return (
     <View>
-      <View style={[styles.riskOverall, { backgroundColor: SEVERITY_COLOR[data.overall_risk] + '1A' }]}>
-        <Text style={[styles.riskOverallText, { color: SEVERITY_COLOR[data.overall_risk] }]}>
-          전체 위험도: {data.overall_risk.toUpperCase()}
+      {/* 게이지 바 */}
+      <View style={styles.gaugeContainer}>
+        <Text style={styles.gaugeTitle}>전체 위험도</Text>
+        <View style={styles.gaugeBar}>
+          <View
+            style={[
+              styles.gaugeFill,
+              {
+                width: `${gaugeWidth * 100}%`,
+                backgroundColor: SEVERITY_COLOR[data.overall_risk],
+              },
+            ]}
+          />
+        </View>
+        <Text style={[styles.gaugeLabel, { color: SEVERITY_COLOR[data.overall_risk] }]}>
+          {RISK_LABEL[data.overall_risk]}
         </Text>
       </View>
+
+      {/* 위험 신호 카드 */}
       {data.signals.map((signal, idx) => (
-        <View key={idx} style={styles.signalRow}>
-          <View style={[styles.severityDot, { backgroundColor: SEVERITY_COLOR[signal.severity] }]} />
-          <View style={styles.signalContent}>
+        <View key={idx} style={styles.signalCard}>
+          <View style={styles.signalHeader}>
+            <Text style={styles.signalIcon}>
+              {SEVERITY_ICON[signal.severity]}
+            </Text>
             <Text style={styles.signalType}>{signal.type}</Text>
-            <Text style={styles.signalDesc}>{signal.description}</Text>
+          </View>
+          <Text style={styles.signalDesc}>{signal.description}</Text>
+          <View style={styles.signalRecBox}>
+            <Text style={styles.signalRecLabel}>💡 권장사항</Text>
             <Text style={styles.signalRec}>{signal.recommendation}</Text>
           </View>
         </View>
@@ -122,25 +193,43 @@ export function RiskSignalsView({ data }: { data: RiskSignalsBlock }) {
   );
 }
 
+// ──────────────────────────────────────
+// PRO 블록 ⑥: 전문가 상담 질문 — 프로필 카드 + 복사 가능 질문
+// ──────────────────────────────────────
+
+const SPECIALIST_META: Record<string, { icon: string; label: string; desc: string }> = {
+  behaviorist: { icon: '🧠', label: '행동 전문가', desc: '동물행동학 기반 문제행동 분석' },
+  trainer: { icon: '🎓', label: '전문 훈련사', desc: '실전 행동교정 및 사회화 훈련' },
+  vet: { icon: '🏥', label: '수의사', desc: '건강 원인 행동 문제 진단' },
+};
+
 export function ConsultationView({ data }: { data: ConsultationQuestionsBlock }) {
-  const specialistLabel: Record<string, string> = {
-    behaviorist: '행동 전문가',
-    trainer: '훈련사',
-    vet: '수의사',
-  };
+  const specialist = data.recommended_specialist
+    ? SPECIALIST_META[data.recommended_specialist]
+    : null;
 
   return (
     <View>
-      {data.recommended_specialist && (
-        <View style={styles.specialistBadge}>
-          <Text style={styles.specialistText}>
-            추천 전문가: {specialistLabel[data.recommended_specialist]}
-          </Text>
+      {/* 전문가 프로필 카드 */}
+      {specialist && (
+        <View style={styles.specialistCard}>
+          <Text style={styles.specialistIcon}>{specialist.icon}</Text>
+          <View style={styles.specialistInfo}>
+            <Text style={styles.specialistTitle}>
+              추천: {specialist.label}
+            </Text>
+            <Text style={styles.specialistDesc}>{specialist.desc}</Text>
+          </View>
         </View>
       )}
+
+      {/* 질문 리스트 */}
+      <Text style={styles.questionSectionTitle}>상담 시 질문 리스트</Text>
       {data.questions.map((q, idx) => (
-        <View key={idx} style={styles.questionRow}>
-          <Text style={styles.questionNumber}>{idx + 1}</Text>
+        <View key={idx} style={styles.questionCard}>
+          <View style={styles.questionBadge}>
+            <Text style={styles.questionBadgeText}>Q{idx + 1}</Text>
+          </View>
           <Text style={styles.questionText}>{q}</Text>
         </View>
       ))}
@@ -152,8 +241,8 @@ const styles = StyleSheet.create({
   card: {
     backgroundColor: colors.white,
     borderRadius: 16,
-    padding: 20,
-    marginBottom: 12,
+    padding: spacing.xl,
+    marginBottom: spacing.md,
     borderWidth: 1,
     borderColor: colors.divider,
   },
@@ -161,32 +250,32 @@ const styles = StyleSheet.create({
     ...typography.caption,
     fontWeight: '600',
     color: colors.textSecondary,
-    marginBottom: 12,
+    marginBottom: spacing.md,
   },
   lockOverlay: {
     alignItems: 'center',
-    paddingVertical: 8,
+    paddingVertical: spacing.sm,
   },
   lockIcon: {
     fontSize: 32,
-    marginBottom: 8,
+    marginBottom: spacing.sm,
   },
   lockTitle: {
     ...typography.label,
     fontWeight: '700',
     color: colors.textPrimary,
-    marginBottom: 4,
+    marginBottom: spacing.xs,
   },
   lockTeaser: {
     ...typography.caption,
     color: colors.textSecondary,
     textAlign: 'center',
-    marginBottom: 16,
+    marginBottom: spacing.lg,
   },
   skeletonGroup: {
     width: '100%',
-    gap: 8,
-    marginBottom: 16,
+    gap: spacing.sm,
+    marginBottom: spacing.lg,
   },
   skeleton: {
     height: 14,
@@ -197,8 +286,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: colors.surfaceSecondary,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
     borderRadius: 20,
   },
   blurIcon: {
@@ -210,108 +299,195 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: colors.textSecondary,
   },
-  // Day plan styles
-  dayRow: {
+  // ── 7일 플랜 타임라인 ──
+  timelineScroll: {
+    paddingRight: spacing.lg,
+    gap: spacing.md,
+  },
+  timelineCard: {
+    width: 160,
+    backgroundColor: colors.surfaceSecondary,
+    borderRadius: 14,
+    padding: spacing.lg,
+    borderWidth: 1,
+    borderColor: colors.divider,
+  },
+  timelineCardToday: {
+    borderColor: colors.primaryBlue,
+    borderWidth: 2,
+    backgroundColor: colors.blue50,
+  },
+  timelineHeader: {
     flexDirection: 'row',
-    marginBottom: 12,
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: spacing.sm,
   },
   dayBadge: {
     backgroundColor: colors.primaryBlueLight,
     borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    marginRight: 12,
-    alignSelf: 'flex-start',
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 3,
+  },
+  dayBadgeToday: {
+    backgroundColor: colors.primaryBlue,
   },
   dayNumber: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '700',
     color: colors.primaryBlue,
   },
-  dayContent: {
-    flex: 1,
+  dayNumberToday: {
+    color: colors.white,
+  },
+  todayLabel: {
+    ...typography.caption,
+    fontWeight: '700',
+    color: colors.primaryBlue,
   },
   dayFocus: {
     ...typography.bodySmall,
     fontWeight: '600',
     color: colors.textDark,
-    marginBottom: 4,
+    marginBottom: spacing.sm,
+  },
+  taskRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 2,
+  },
+  taskBullet: {
+    ...typography.caption,
+    color: colors.grey500,
+    marginRight: 4,
   },
   dayTask: {
     ...typography.caption,
-    lineHeight: 20,
+    lineHeight: 18,
     color: colors.grey600,
-  },
-  // Risk styles
-  riskOverall: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 8,
-    marginBottom: 12,
-  },
-  riskOverallText: {
-    ...typography.detail,
-    fontWeight: '700',
-  },
-  signalRow: {
-    flexDirection: 'row',
-    marginBottom: 12,
-  },
-  severityDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    marginTop: 6,
-    marginRight: 10,
-  },
-  signalContent: {
     flex: 1,
+  },
+  // ── 위험 게이지 ──
+  gaugeContainer: {
+    marginBottom: spacing.lg,
+  },
+  gaugeTitle: {
+    ...typography.detail,
+    fontWeight: '600',
+    color: colors.textDark,
+    marginBottom: spacing.sm,
+  },
+  gaugeBar: {
+    height: 8,
+    backgroundColor: colors.grey100,
+    borderRadius: 4,
+    overflow: 'hidden',
+    marginBottom: spacing.xs,
+  },
+  gaugeFill: {
+    height: '100%',
+    borderRadius: 4,
+  },
+  gaugeLabel: {
+    ...typography.caption,
+    fontWeight: '700',
+    textAlign: 'right',
+  },
+  // ── 위험 신호 카드 ──
+  signalCard: {
+    backgroundColor: colors.surfaceSecondary,
+    borderRadius: 12,
+    padding: spacing.lg,
+    marginBottom: spacing.sm,
+  },
+  signalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: spacing.xs,
+  },
+  signalIcon: {
+    fontSize: 14,
+    marginRight: spacing.sm,
   },
   signalType: {
     ...typography.detail,
     fontWeight: '600',
     color: colors.textDark,
-    marginBottom: 2,
   },
   signalDesc: {
     ...typography.caption,
     color: colors.grey600,
-    marginBottom: 4,
+    marginBottom: spacing.sm,
   },
-  signalRec: {
-    ...typography.caption,
-    color: colors.primaryBlue,
-    fontWeight: '500',
-  },
-  // Consultation styles
-  specialistBadge: {
-    backgroundColor: colors.primaryBlueLight,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+  signalRecBox: {
+    backgroundColor: colors.blue50,
     borderRadius: 8,
-    alignSelf: 'flex-start',
-    marginBottom: 12,
+    padding: spacing.md,
   },
-  specialistText: {
+  signalRecLabel: {
     ...typography.caption,
     fontWeight: '600',
     color: colors.primaryBlue,
+    marginBottom: 2,
   },
-  questionRow: {
-    flexDirection: 'row',
-    marginBottom: 8,
-  },
-  questionNumber: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: colors.divider,
-    textAlign: 'center',
+  signalRec: {
     ...typography.caption,
-    lineHeight: 24,
+    color: colors.grey700,
+  },
+  // ── 전문가 프로필 ──
+  specialistCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.surfaceSecondary,
+    borderRadius: 14,
+    padding: spacing.lg,
+    marginBottom: spacing.lg,
+  },
+  specialistIcon: {
+    fontSize: 36,
+    marginRight: spacing.lg,
+  },
+  specialistInfo: {
+    flex: 1,
+  },
+  specialistTitle: {
+    ...typography.bodySmall,
     fontWeight: '700',
-    color: colors.grey600,
-    marginRight: 10,
+    color: colors.textPrimary,
+    marginBottom: 2,
+  },
+  specialistDesc: {
+    ...typography.caption,
+    color: colors.textSecondary,
+  },
+  // ── 질문 ──
+  questionSectionTitle: {
+    ...typography.detail,
+    fontWeight: '600',
+    color: colors.textDark,
+    marginBottom: spacing.md,
+  },
+  questionCard: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: spacing.md,
+    backgroundColor: colors.surfaceSecondary,
+    borderRadius: 10,
+    padding: spacing.md,
+  },
+  questionBadge: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: colors.primaryBlue,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: spacing.md,
+  },
+  questionBadgeText: {
+    ...typography.caption,
+    fontWeight: '700',
+    color: colors.white,
   },
   questionText: {
     flex: 1,

@@ -20,9 +20,11 @@ interface CoachingBlockListProps {
   blocks: CoachingBlocks;
   isPro: boolean;
   onToggleActionItem?: (itemId: string) => void;
+  dogName?: string;
+  dogImageUrl?: string | null;
 }
 
-export function CoachingBlockList({ blocks, isPro, onToggleActionItem }: CoachingBlockListProps) {
+export function CoachingBlockList({ blocks, isPro, onToggleActionItem, dogName, dogImageUrl }: CoachingBlockListProps) {
   const [adUnlocked, setAdUnlocked] = useState(false);
   const isUnlocked = isPro || adUnlocked;
 
@@ -39,7 +41,7 @@ export function CoachingBlockList({ blocks, isPro, onToggleActionItem }: Coachin
       <ActionPlanBlockView data={blocks.action_plan} onToggleItem={onToggleActionItem} />
 
       {/* Block ③ 강아지 시점 메시지 (무료) */}
-      <DogVoiceBlockView data={blocks.dog_voice} />
+      <DogVoiceBlockView data={blocks.dog_voice} dogName={dogName} dogImageUrl={dogImageUrl} />
 
       {/* R3 광고 터치포인트 — PRO가 아니고 광고 미시청 시 */}
       {!isUnlocked && (

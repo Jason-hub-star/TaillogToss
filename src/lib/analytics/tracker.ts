@@ -17,6 +17,7 @@ export interface EventPayloadMap {
   report_generated: { template_type: string };
   report_sent: { method: 'toss' | 'link' };
   parent_reaction: { type: string };
+  analysis_shared: { period: string; log_count: number };
 }
 
 export type EventName = keyof EventPayloadMap;
@@ -52,4 +53,6 @@ export const tracker = {
     track('report_generated', { template_type: templateType }),
   reportSent: (method: 'toss' | 'link') => track('report_sent', { method }),
   parentReaction: (type: string) => track('parent_reaction', { type }),
+  analysisShared: (period: string, logCount: number) =>
+    track('analysis_shared', { period, log_count: logCount }),
 };

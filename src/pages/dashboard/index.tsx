@@ -19,6 +19,7 @@ import { TabLayout } from 'components/shared/layouts/TabLayout';
 import { BottomNavBar } from 'components/shared/BottomNavBar';
 import { usePageGuard } from 'lib/hooks/usePageGuard';
 import { SkeletonDashboard } from 'components/features/dashboard/SkeletonDashboard';
+import { CoachingPreviewCard } from 'components/features/dashboard/CoachingPreviewCard';
 import type { BehaviorLog } from 'types/log';
 import { colors, typography, spacing } from 'styles/tokens';
 
@@ -67,15 +68,29 @@ function DashboardPage() {
     error: dashboardError,
     refetch: refetchDashboard,
   } = useDashboard(activeDog?.id);
+
   const recentLogs = dashboardData?.recentLogs ?? [];
   const totalLogs = dashboardData?.stats.total_logs ?? recentLogs.length;
   const displayDog = activeDog
-    ? { id: activeDog.id, name: activeDog.name, breed: activeDog.breed }
+    ? {
+        id: activeDog.id,
+        name: activeDog.name,
+        breed: activeDog.breed,
+        profile_image_url: activeDog.profile_image_url,
+        birth_date: activeDog.birth_date,
+        sex: activeDog.sex,
+      }
     : dashboardData?.dogProfile
       ? {
           id: dashboardData.dogProfile.id,
           name: dashboardData.dogProfile.name,
           breed: dashboardData.dogProfile.breed ?? '',
+          profile_image_url: dashboardData.dogProfile.profile_image_url,
+          birth_date: dashboardData.dogProfile.age_months
+            ? new Date(Date.now() - dashboardData.dogProfile.age_months * 30.44 * 24 * 60 * 60 * 1000)
+                .toISOString().slice(0, 10)
+            : null,
+          sex: 'MALE' as const,
         }
       : null;
 
@@ -160,6 +175,12 @@ function DashboardPage() {
           <Text style={styles.summaryEmpty}>아직 기록이 없어요. 기록을 시작해보세요!</Text>
         )}
       </View>
+
+      {/* 코칭 프리뷰 카드 */}
+      <CoachingPreviewCard
+        dogId={activeDog?.id}
+        onNavigateToCoaching={() => navigation.navigate('/coaching/result')}
+      />
 
       {/* 상세 분석 링크 */}
       <TouchableOpacity

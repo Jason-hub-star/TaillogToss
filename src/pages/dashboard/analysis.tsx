@@ -6,7 +6,7 @@
  */
 import { createRoute, useNavigation } from '@granite-js/react-native';
 import React, { useState, useMemo, useCallback } from 'react';
-import { View, Text, ScrollView, StyleSheet, SafeAreaView, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, SafeAreaView, TouchableOpacity } from 'react-native';
 import { useActiveDog } from 'stores/ActiveDogContext';
 import { useLogList } from 'lib/hooks/useLogs';
 import { usePageGuard } from 'lib/hooks/usePageGuard';
@@ -176,6 +176,20 @@ function AnalysisPage() {
             </View>
           )}
 
+          {/* AI 코칭 CTA */}
+          <TouchableOpacity
+            style={styles.coachingCTA}
+            onPress={() => navigation.navigate('/coaching/result')}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.coachingCTAIcon}>🤖</Text>
+            <View style={styles.coachingCTAContent}>
+              <Text style={styles.coachingCTATitle}>AI 맞춤 코칭 받기</Text>
+              <Text style={styles.coachingCTADesc}>분석 데이터를 기반으로 맞춤 코칭을 받아보세요</Text>
+            </View>
+            <Text style={styles.coachingCTAArrow}>›</Text>
+          </TouchableOpacity>
+
           <View style={styles.bottomSpacer} />
         </ScrollView>
       )}
@@ -292,6 +306,36 @@ const styles = StyleSheet.create({
   adSection: {
     paddingHorizontal: 20,
     paddingTop: 16,
+  },
+  coachingCTA: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.blue50,
+    borderRadius: 14,
+    padding: 16,
+    marginHorizontal: 20,
+    marginTop: 16,
+  },
+  coachingCTAIcon: {
+    fontSize: 28,
+    marginRight: 12,
+  },
+  coachingCTAContent: {
+    flex: 1,
+  },
+  coachingCTATitle: {
+    ...typography.bodySmall,
+    fontWeight: '700',
+    color: colors.textPrimary,
+    marginBottom: 2,
+  },
+  coachingCTADesc: {
+    ...typography.caption,
+    color: colors.textSecondary,
+  },
+  coachingCTAArrow: {
+    ...typography.body,
+    color: colors.grey400,
   },
   bottomSpacer: {
     height: 32,

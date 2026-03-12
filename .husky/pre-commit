@@ -1,0 +1,4 @@
+npx lint-staged
+
+# typecheck — warn only (44 pre-existing errors, enable strict block after cleanup)
+npx tsc --noEmit || echo "[pre-commit] typecheck failed (warning only, not blocking commit)"

@@ -9,6 +9,7 @@ import { resolvePeppersFromEnv, deriveWithLatestPepper, type PepperConfig } from
 import { safeLogPayload } from '../_shared/piiGuard.ts';
 import { loginRateLimiter, type InMemoryRateLimiter } from '../_shared/rateLimiter.ts';
 import { decryptTossPiiField, isTossEncryptedField } from '../_shared/tossPiiDecrypt.ts';
+import { readEnv, resolveMtlsMode } from '../_shared/mtlsMode.ts';
 
 type TossLoginReferrer = 'DEFAULT' | 'SANDBOX';
 
@@ -104,16 +105,6 @@ function getBlockRetrySeconds(clientKey: string, nowMs: number): number {
   return Math.ceil(remainingMs / 1000);
 }
 
-function readEnv(name: string): string | undefined {
-  const fromNode = (globalThis as { process?: { env?: Record<string, string | undefined> } })
-    .process?.env?.[name];
-  if (fromNode) return fromNode;
-
-  const fromDeno = (globalThis as { Deno?: { env?: { get: (key: string) => string | undefined } } })
-    .Deno?.env?.get(name);
-  return fromDeno;
-}
-
 function resolveTossPiiDecryptionKey(): string | null {
   return (
     readEnv('TOSS_PII_DECRYPTION_KEY_BASE64') ??
@@ -121,17 +112,6 @@ function resolveTossPiiDecryptionKey(): string | null {
     readEnv('TOSS_PROFILE_DECRYPTION_KEY') ??
     null
   );
-}
-
-function resolveMtlsMode(): 'real' | 'mock' {
-  const explicit = readEnv('TOSS_MTLS_MODE')?.trim().toLowerCase();
-  if (explicit === 'real') return 'real';
-  if (explicit === 'mock') return 'mock';
-
-  // 기본은 실연동 우선. 단, 인증서/키가 둘 다 없으면 로컬 개발을 위해 mock으로 폴백한다.
-  const cert = readEnv('TOSS_CLIENT_CERT_BASE64');
-  const key = readEnv('TOSS_CLIENT_KEY_BASE64');
-  return cert && key ? 'real' : 'mock';
 }
 
 function normalizeTossUserKey(raw: string | undefined): string {

@@ -18,6 +18,7 @@ import {
   createNotiHistoryRepository,
   type NotiHistoryRepository,
 } from '../_shared/notiHistoryRepository.ts';
+import { resolveMtlsMode } from '../_shared/mtlsMode.ts';
 
 type NotificationType =
   | 'log_reminder'
@@ -62,7 +63,7 @@ const historyStore: CooldownRecord[] = [];
 
 function defaultDeps(): SendSmartMessageDeps {
   return {
-    mTLSClient: createMTLSClient('mock'),
+    mTLSClient: createMTLSClient(resolveMtlsMode()),
     idempotency: edgeIdempotencyStore,
     getNow: () => new Date(),
     history: historyStore,

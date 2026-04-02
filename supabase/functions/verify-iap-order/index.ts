@@ -19,6 +19,7 @@ import {
   type BeginIdempotencyResult,
   type InMemoryIdempotencyStore,
 } from '../_shared/idempotency.ts';
+import { resolveMtlsMode } from '../_shared/mtlsMode.ts';
 
 export interface VerifyIapOrderRequest {
   orderId: string;
@@ -61,7 +62,7 @@ interface VerifyIapDeps {
 
 function defaultDeps(): VerifyIapDeps {
   return {
-    mTLSClient: createMTLSClient('mock'),
+    mTLSClient: createMTLSClient(resolveMtlsMode()),
     breaker: iapCircuitBreaker,
     idempotency: edgeIdempotencyStore,
     now: () => new Date(),

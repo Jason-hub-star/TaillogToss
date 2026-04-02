@@ -222,7 +222,7 @@ const styles = StyleSheet.create({
     paddingTop: 20,
   },
   errorBanner: {
-    backgroundColor: '#FEE2E2',
+    backgroundColor: colors.badgeRedBg,
     borderRadius: 8,
     paddingHorizontal: 16,
     paddingVertical: 12,
@@ -230,7 +230,7 @@ const styles = StyleSheet.create({
   },
   errorText: {
     ...typography.detail,
-    color: '#DC2626',
+    color: colors.badgeRed,
     textAlign: 'center',
   },
   tossButton: {

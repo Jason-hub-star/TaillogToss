@@ -18,6 +18,7 @@ import {
   retryOnServerError,
   type InMemoryCircuitBreaker,
 } from '../_shared/circuitBreaker.ts';
+import { resolveMtlsMode } from '../_shared/mtlsMode.ts';
 
 export interface GrantTossPointsRequest {
   userId: string;
@@ -43,7 +44,7 @@ const globalUsedGrantKeys = new Set<string>();
 
 function defaultDeps(): GrantPointsDeps {
   return {
-    mTLSClient: createMTLSClient('mock'),
+    mTLSClient: createMTLSClient(resolveMtlsMode()),
     idempotency: edgeIdempotencyStore,
     breaker: pointsCircuitBreaker,
     usedGrantKeys: globalUsedGrantKeys,

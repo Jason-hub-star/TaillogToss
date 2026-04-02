@@ -39,15 +39,16 @@ export function rewriteInitialUrlForDeepEntry(url: string, initialScheme: string
   if (!target) {
     const parsed = safeParseUrl(url, initialScheme);
     if (!parsed.pathname || parsed.pathname === '/' || parsed.pathname === '/_404') {
-      parsed.pathname = DEFAULT_ROUTE;
-      return parsed.toString();
+      const rewritten = new URL(parsed.toString());
+      return rewritten.toString().replace(parsed.pathname, DEFAULT_ROUTE);
     }
     return url;
   }
 
   const parsed = safeParseUrl(url, initialScheme);
-  parsed.pathname = target;
   parsed.searchParams.delete('entry');
-
-  return parsed.toString();
+  // URL.pathname is read-only in RN 0.84 — reconstruct with target path
+  const withoutPath = `${parsed.protocol}//${parsed.host}`;
+  const search = parsed.search || '';
+  return `${withoutPath}${target}${search}`;
 }

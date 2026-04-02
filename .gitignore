@@ -2,10 +2,11 @@
 node_modules/
 dist/
 
-# Granite
+# Granite / AIT
 .granite
 .swc
 public/
+*.ait
 
 # Debug
 npm-debug.log

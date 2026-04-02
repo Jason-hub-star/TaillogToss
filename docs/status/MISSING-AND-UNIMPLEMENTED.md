@@ -1,6 +1,6 @@
 # TaillogToss 누락 플랜 + 미구현 목록
 
-> 작성일: 2026-02-28 | 최종 업데이트: 2026-02-28 | 기준: commit `94a6b26` (Phase13 FE-BE rolling migration 반영 이후)
+> 작성일: 2026-02-28 | 최종 업데이트: 2026-04-02 | 기준: SDK 2.x 마이그레이션 완료 반영
 
 ## 1. PRD 미구현 기능 (Phase 2+ Deferred)
 
@@ -90,10 +90,13 @@
 
 ## 4. Mock/Placeholder 구현 목록
 
+> 공식 API 레퍼런스: `docs/ref/AIT-ADS-SDK-REFERENCE.md` (Ads), `docs/ref/AIT-IAP-MESSAGE-POINTS-REFERENCE.md` (IAP/MSG/Points)
+> SDK 마이그레이션: `docs/ref/AIT-SDK-2X-MIGRATION.md` | 퍼블리싱: `docs/ref/AIT-PUBLISHING-READINESS.md`
+
 | 항목 | 위치 | 현재 | 전환 필요 |
 |------|------|------|----------|
-| Ads SDK | `src/lib/ads/config.ts` | mock SDK | 실 Ad Group ID 교체 |
-| IAP | `src/lib/api/iap.ts` | 래퍼 구현 완료 | 실 SDK 교체 |
+| Ads SDK | `src/lib/ads/config.ts` | mock SDK (Promise 패턴) | `loadFullScreenAd`/`showFullScreenAd` 이벤트 콜백 패턴으로 전환 + 실 Ad Group ID 교체 |
+| IAP | `src/lib/api/iap.ts` | 래퍼 구현 완료 | 실 SDK 교체 + `completeProductGrant()` 복원 호출 추가 |
 | generate-report | `supabase/functions/generate-report/` | 배포 완료(v3), mock/real 스위치(`REPORT_AI_MODE`) + staff role guard | OpenAI 실키 검증 (BE-P7) |
 | verify-iap-order | `supabase/functions/verify-iap-order/` | mock mTLS | real mTLS 전환 |
 | send-smart-message | `supabase/functions/send-smart-message/` | mock mTLS | real mTLS 전환 |

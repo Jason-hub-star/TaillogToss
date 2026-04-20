@@ -19,6 +19,7 @@ interface AuthGuardInput {
 
 export function authGuard({ isAuthenticated, currentPath }: AuthGuardInput): GuardResult {
   if (isAuthenticated) return { allow: true };
-  if (currentPath === '/login') return { allow: true };
-  return { allow: false, redirectTo: '/login' };
+  // 미인증 접근 허용: welcome(로그인 통합 진입점) + login(세션 만료 fallback)
+  if (currentPath === '/onboarding/welcome' || currentPath === '/login') return { allow: true };
+  return { allow: false, redirectTo: '/onboarding/welcome' };
 }

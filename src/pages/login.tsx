@@ -128,7 +128,7 @@ function LoginPage() {
         return;
       }
 
-      navigation.navigate('/onboarding/welcome');
+      navigation.navigate('/onboarding/survey');
     } catch (cause) {
       const edgeMeta = await readEdgeFailureMeta(cause);
       console.error('[AUTH-001] toss login failed', cause, edgeMeta);

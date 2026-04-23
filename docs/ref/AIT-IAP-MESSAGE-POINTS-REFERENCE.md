@@ -59,7 +59,9 @@ IAP.createOneTimePurchaseOrder({
   // 30초 이내 반환 필수. 초과 시 환불 안내
   onEvent: (event: { type: string; result: PurchaseResult }) => void,
   onError: (error: IapError) => void,
-}): () => void  // cleanup 함수
+}): () => void  // cleanup 함수 — 반드시 호출 (메모리 누수 방지)
+// 사용 예: const cleanup = IAP.createOneTimePurchaseOrder(...); return () => cleanup();
+// ⚠ onEvent.result(PurchaseResult)는 PAYMENT_COMPLETED 이후 이벤트부터만 포함
 
 interface PurchaseResult {
   orderId: string;
@@ -249,9 +251,21 @@ grantPromotionRewardForGame({
 
 ---
 
-## 5. TaillogToss 구현 갭
+## 5. IAP 집행 전 필수 체크리스트
 
-> Last updated: 2026-04-21
+> 퍼블리싱 전 반드시 이행. 교차검증일: 2026-04-23 (Opus).
+
+- [ ] `createOneTimePurchaseOrder()` cleanup 함수 호출 여부 코드 확인 (`src/lib/api/iap.ts`)
+- [ ] Sandbox 3종 시나리오 테스트:
+  - 테스트1: 결제 성공 + 지급 완료 (happy path)
+  - 테스트2: 결제 성공 + 서버 지급 실패 → `getPendingOrders` 복원 + `completeProductGrant`
+  - 테스트3: 에러 처리 (네트워크 오류, 사용자 취소, 타임아웃)
+- [ ] 기기 변경 후 구매내역 보존 확인 (Toss Login 기반 주문 상태 영구 유지)
+- [ ] mTLS 실 인증서 전환 (`verify-iap-order` Edge Function)
+
+## 6. TaillogToss 구현 갭
+
+> Last updated: 2026-04-23
 
 | 항목 | 현재 구현 | 공식 API | 갭 | 상태 |
 |------|----------|---------|-----|------|

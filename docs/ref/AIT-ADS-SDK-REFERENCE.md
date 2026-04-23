@@ -19,9 +19,17 @@
 
 ## 3. 최소 요구사항
 
-- Fullscreen Ads: 토스앱 v5.244.1+
+- Fullscreen Ads: 토스앱 v5.247.0+ *(공식 2026-04-23 확인, 이전 로컬 기록 v5.244.1 → 갱신)*
 - Banner Ads: 토스앱 v5.241.0+
 - SDK: `@apps-in-toss/framework` v2.0.5+
+
+### 지원 환경 사전 검사
+
+```typescript
+import { isSupported } from '@apps-in-toss/framework';
+// v5.227.0 미만 → false. 광고 표시 전 차단 권장
+if (!isSupported()) return null;
+```
 
 ## 4. Fullscreen Ads API (Rewarded / Interstitial)
 
@@ -113,7 +121,8 @@ import { InlineAd } from '@apps-in-toss/framework';
 </View>
 ```
 
-노출 측정: `IOScrollView` 래핑 권장, 대안은 `impressFallbackOnMount={true}`
+노출 측정: `IOScrollView` 래핑 **필수** 또는 `impressFallbackOnMount={true}` 중 하나 반드시 선택.
+미구현 시 impression 손실 → 광고 수익 저하.
 
 ## 6. Ad Group ID 발급 (프로덕션)
 
@@ -123,14 +132,28 @@ import { InlineAd } from '@apps-in-toss/framework';
 4. 발급 후 AdMob 등록까지 최대 2시간
 5. 테스트 ID → 실제 ID 교체
 
-## 7. 현재 프로젝트 갭 분석
+## 7. 광고 집행 전 필수 체크리스트
+
+> 모든 기능 개발 완료 후, 광고 배치 확정 시 이 체크리스트를 순서대로 이행.
+
+- [ ] `isSupported()` 호출로 v5.227.0 미만 기기 차단 처리
+- [ ] AdGroup ID 콘솔 신청 (사업자 정보 + 정산 등록 → 심사 2-3 영업일)
+- [ ] 테스트 ID로 load→show→impression→clicked→dismissed 플로우 검증
+- [ ] 모든 `loadFullScreenAd`/`showFullScreenAd`에 `onError` 콜백 구현 확인
+- [ ] 배너: `IOScrollView` 또는 `impressFallbackOnMount={true}` 적용
+- [ ] noFill 폴백 동작 확인 (`unlock_on_no_fill=true` 또는 UI 조건 처리)
+- [ ] 테스트 ID → 실 AdGroup ID 교체
+
+## 8. 현재 프로젝트 갭 분석
 
 | 항목 | 현재 (`config.ts`) | 공식 API | 갭 |
 |------|-------------------|---------|-----|
 | SDK 함수 | mock `createMockAdsSdk()` | `loadFullScreenAd` / `showFullScreenAd` | 전체 교체 필요 |
 | 패턴 | Promise 기반 `.then()` | 이벤트 콜백 기반 `onEvent` | `useRewardedAd.ts` 리팩토링 필요 |
 | Ad Group ID | 하드코딩 테스트 ID | 콘솔 발급 실제 ID | 콘솔 심사 후 교체 |
-| 배너 | 미사용 | `InlineAd` 컴포넌트 | 필요시 추가 |
+| 배너 | 미사용 | `InlineAd` 컴포넌트 | 광고 배치 확정 시 추가 |
+| 환경 검사 | 없음 | `isSupported()` | 광고 표시 전 호출 필요 |
+| 배너 노출 측정 | 미구현 | `IOScrollView` or `impressFallbackOnMount` | 배너 도입 시 반드시 구현 |
 
 ## Sources
 

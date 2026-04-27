@@ -52,7 +52,7 @@ class Settings(BaseSettings):
     AI_TTL_7D_HOURS: int = 72
     AI_TTL_15D_HOURS: int = 168
     AI_TTL_30D_HOURS: int = 168
-    AI_LLM_TIMEOUT_SEC: int = 30
+    AI_LLM_TIMEOUT_SEC: int = 120
     AI_MAX_RETRIES: int = 1
     AI_TEMPERATURE: float = 0.2
     AI_TOP_P: float = 1.0

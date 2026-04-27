@@ -21,3 +21,25 @@ export const BEHAVIOR_TO_CURRICULUM: Readonly<Record<BehaviorType, CurriculumId>
 export function mapBehaviorToCurriculum(behavior: BehaviorType): CurriculumId {
   return BEHAVIOR_TO_CURRICULUM[behavior];
 }
+
+// quick_category 값(DB) → BehaviorType 정규화
+// 'pulling' → 'leash_pulling', 'biting' → 'aggression' 등 불일치 해소
+const QUICK_CATEGORY_TO_BEHAVIOR_TYPE: Partial<Record<string, BehaviorType>> = {
+  barking: 'barking',
+  anxiety: 'anxiety',
+  jumping: 'jumping',
+  aggression: 'aggression',
+  pulling: 'leash_pulling',
+  destructive: 'destructive',
+  biting: 'aggression',
+  separation: 'separation',
+  reactivity: 'reactivity',
+  resource_guarding: 'resource_guarding',
+  other: 'other',
+};
+
+export function normalizeTopBehaviors(topBehaviors: string[]): BehaviorType[] {
+  return topBehaviors
+    .map((b) => QUICK_CATEGORY_TO_BEHAVIOR_TYPE[b])
+    .filter((b): b is BehaviorType => b !== undefined);
+}

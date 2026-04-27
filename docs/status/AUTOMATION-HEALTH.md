@@ -29,7 +29,7 @@ Hooks: 1개 | Commands: 4개 | MCP: 2개
 
 | 서버 | 상태 | 메모 |
 |------|------|------|
-| supabase | ⚠️ PARTIAL | 토큰 갱신 완료(.mcp.json 업데이트), 로컬 MCP auth 오류 지속 → claude_ai_Supabase (Anthropic 내장 MCP) 우회 사용 중 |
+| supabase | ⚠️ PENDING_RESTART | `.mcp.json` project-ref `kvknerzsqgmmdmyxlorl`→`gxvtgrcqkbdibkyeqyil`(본선) + 2026-04-27 신규 토큰 교체 완료. Claude Code 재시작 후 HEALTHY 예상. |
 | code-review-graph | ✅ REGISTERED | 346 files, 1269 nodes, 6580 edges (04-02 빌드) |
 
 상태 아이콘: ✅ HEALTHY / 🔄 RUNNING / ⚠️ STALE / ❌ MISSING / 🔒 STUCK / ❓ FILE_MISSING

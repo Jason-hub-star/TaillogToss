@@ -24,16 +24,20 @@
 
 ---
 
-## [AI 코칭 Fine-tuning] 현황 요약 (마지막 업데이트: 2026-04-26, 측정 불가 누적 4일째)
+## [AI 코칭 Fine-tuning] 현황 요약 (마지막 업데이트: 2026-04-27, 본선 DB psql 직접 측정)
 
 | 항목 | 수치 |
 |------|------|
-| 전체 후보 (training_candidate) | 측정 불가 (MCP 프로젝트 SSOT 드리프트) |
-| 승인 완료 (training_approved) | 측정 불가 |
-| 합성 데이터 | 측정 불가 |
-| 실사용자 데이터 | 측정 불가 |
-| Fine-tuning 상태 | 준비 부족 추정 (< 50건) |
-| Blocker | (1) `generate-synthetic` 4일째 500 회귀 (2) MCP 연결이 본선 DB(`gxvtgrcqkbdibkyeqyil`)가 아닌 `TailLog`(`kvknerzsqgmmdmyxlorl`)를 가리킴 |
+| 전체 후보 (training_candidate) | 2건 (본선 `gxvtgrcqkbdibkyeqyil` 직접 psql) |
+| 승인 완료 (training_approved) | 0건 |
+| 합성 데이터 | 0건 (모든 일일 합성 생성이 INSERT 단계 실패로 롤백 — 누적 영향) |
+| 실사용자 데이터 | 2건 (평균 품질 80) |
+| 전체 ai_coaching 행 | 3건 (오늘 0건 추가, 어제 0건) |
+| `coaching_synthetic_log` | 0건 (테이블 비어 있음 — 단 한 번도 성공 INSERT 없음) |
+| Fine-tuning 상태 | 준비 부족 (< 50건, 측정 확정) |
+| 실제 Blocker (재진단) | ❌ ORM-DB 스키마 드리프트: `app/shared/models.py:830` `coaching_ids = Column(JSONB)` ↔ 본선 DB `coaching_ids UUID[]` (migration `20260420200000_coaching_training_flywheel.sql:57`) → asyncpg `DatatypeMismatchError` |
+| 이전 "Blocker 해소" 주장 검증 | ⚠️ `AI_LLM_TIMEOUT_SEC` 환경변수 부재(.env/process env 어디에도 없음) · MCP 프로젝트 정렬 미완(MCP는 여전히 TailLog+vibe만, `gxvtgrcqkbdibkyeqyil` 미연결) · uvicorn 단일화는 ✅ 확인(PID 27770, 1h49m) — 단일화 덕분에 traceback 가시화되어 진짜 원인 식별 |
+| 잔여 조건 | (1) ORM 모델 수정 `Column(ARRAY(UUID(as_uuid=True)))`로 정렬 또는 migration으로 컬럼 JSONB 변환 (2) 수정 후 재실행 시 일일 3건 정상 persistence (3) MCP 본선 정렬은 측정 편의를 위해 여전히 권장 |
 
 ---
 
@@ -164,4 +168,59 @@
 - 준비 부족 (< 50건). 측정 자체가 4일째 막혀 있어 변동 신호 없음.
 - 본선 DB 측정 경로 복구 전까지는 "Fine-tuning 배치 실행해줘" 알림 발화 조건 미정의 상태.
 
+### 2026-04-27 (Mon) — daily-coaching-synthetic-gen [STEP A FAILED · 진짜 원인 식별]
+
+| 항목 | 결과 |
+|------|------|
+| 요일 | 1 (Monday) → STEP A only, STEP B 미실행 |
+| 오늘 카테고리 | `aggression` (공격성, `date.toordinal() % 7 = 1`, ordinal=739733) |
+| FastAPI (`localhost:8000`) | ✅ reachable (`/health` 200, 8ms) |
+| 인증 | ✅ `x-admin-key` 확인 |
+| uvicorn 프로세스 | ✅ **단일 프로세스 확인** — PID 27770 (`0.0.0.0:8000`, 1h49m uptime). 04-23~26의 중복 기동(PID 44317+50052) 해소 |
+| 로그 가시성 | ✅ `/private/tmp/backend.log`에 traceback 정상 캡처 (단일화 덕분) |
+| A-1 generate-synthetic | ❌ **HTTP 500 Internal Server Error** (53.2s, body `Internal Server Error` 21B) — 04-25(52.6s/21B), 04-26(45.9s/21B)와 동일 결정적 패턴 |
+| A-2 tag-candidates | ✅ HTTP 200 `{"processed": 0, "threshold": 70}` (0.22s) — 미태깅 신규 0건 |
+| A-3 일일 섹션 기록 | ✅ 본 항목 |
+| A-4 Supabase 본선 직접 측정 (psql) | ✅ DATABASE_URL=postgresql+asyncpg 풀러 → `postgres.gxvtgrcqkbdibkyeqyil` 본선 직결 성공. MCP 미연결 우회 |
+| 본선 DB 누적 (psql) | ai_coaching=3건 / 후보=2 / 승인=0 / 합성=0 / 실사용자=2 / 평균품질=80. **`coaching_synthetic_log`=0건** (단 한 번도 성공 INSERT 없음) |
+| 오늘 생성 UUID 영속성 | 3개 UUID(`3be54458…0007`, `5290de47…2b9a`, `b981f639…2b9b`) — DB에 0건 존재 (commit 단계 롤백으로 OpenAI로 생성된 ai_coaching까지 함께 롤백됨) |
+| Fine-tuning 상태 | 준비 부족 (< 50건, 측정 확정 — 0/50) |
+
+**진짜 원인 (드디어 식별)**
+
+backend.log에 정상 캡처된 SQLAlchemy traceback:
+```
+sqlalchemy.exc.ProgrammingError: <asyncpg.exceptions.DatatypeMismatchError>:
+column "coaching_ids" is of type uuid[] but expression is of type jsonb
+HINT:  You will need to rewrite or cast the expression.
+[SQL: INSERT INTO coaching_synthetic_log (id, run_date, category, generated_count, coaching_ids)
+      VALUES ($1::UUID, $2::DATE, $3::VARCHAR, $4::INTEGER, $5::JSONB) RETURNING ...]
+[parameters: (UUID('c80cdd6d-…'), date(2026,4,27), 'aggression', 3,
+              '["3be54458-…","5290de47-…","b981f639-…"]')]
+```
+
+ORM ↔ DB 스키마 드리프트:
+- `Backend/app/shared/models.py:830` → `coaching_ids = Column(JSONB, nullable=True)` # UUID 목록
+- `supabase/migrations/20260420200000_coaching_training_flywheel.sql:57` → `coaching_ids UUID[]`
+- 본선 DB 실측(`information_schema.columns`) → `data_type=ARRAY`, `udt_name=_uuid`
+
+→ 마이그레이션과 DB는 정합, **모델만 JSONB로 잘못 선언**. SQLAlchemy가 list[str]을 JSONB로 직렬화해 바인딩 → asyncpg가 `uuid[]` 컬럼 거부 → 무캐치 예외 → FastAPI 21B "Internal Server Error".
+
+**부수 영향 (롤백 누적)**
+- `synthetic.py:181`에서 `db.flush()`로 ai_coaching 3건 단계까지 진행 → `synthetic_log` INSERT가 `db.commit()`(line 193)에서 실패 → 트랜잭션 전체 롤백으로 ai_coaching 3건도 같이 사라짐.
+- 04-25, 04-26, 04-27 모두 동일 — 매일 OpenAI 호출 3건 발생하나 영속화 0건. 추정 누적 LLM 호출 낭비 ~9건(코스트만 발생).
+
+**기존 "Blocker 해소" 주장 검증 결과**
+1. ✅ uvicorn 단일 프로세스화 — 사실이며, 이 단계가 traceback 가시화의 결정적 기여를 함
+2. ❌ `AI_LLM_TIMEOUT_SEC` 30→120 — `.env`에도 PID 27770 process env에도 부재. 코드 default가 변경됐을 수는 있으나 본 실패와 무관 (LLM은 정상 응답, 실패는 INSERT 단계)
+3. ❌ MCP project-ref 본선 정렬 — `list_projects` 결과 여전히 `kvknerzsqgmmdmyxlorl`(TailLog) + `hzxsropbcjfywmospobb`(vibe)만 노출, `gxvtgrcqkbdibkyeqyil` 미연결
+
+**다음 액션 (주인님 승인 필요 · 우선순위 명확화)**
+1. **ORM 모델 1줄 수정 (최소 침습 권장).** `Backend/app/shared/models.py:830`을
+   `coaching_ids = Column(JSONB, nullable=True)` →
+   `coaching_ids = Column(ARRAY(UUID(as_uuid=True)), nullable=True)` 로 변경. import에 `from sqlalchemy.dialects.postgresql import ARRAY` 추가 (UUID는 동일 모듈에서 이미 import 중).
+   - 대안 B: 마이그레이션으로 DB 컬럼을 JSONB로 컨버트. 단 migration 정본이 이미 `UUID[]`로 명시돼 있어 모델을 맞추는 쪽이 SSOT 정합성 측면에서 자연스러움.
+2. **수정 후 재실행 검증.** `--reload`로 인해 자동 재시작될 가능성 있음. 적용 후 `POST /admin/generate-synthetic` 재호출하여 `{"generated":3,"tagged":3,...}` 응답 확인 + 본선 DB에서 `coaching_synthetic_log` 1건 + `ai_coaching` 3건(is_synthetic=TRUE, training_candidate=TRUE) 확인.
+3. **(선택) MCP 본선 정렬.** 일일 STEP A-4 / 일요일 STEP B의 SQL 측정을 MCP로 일원화하려면 `gxvtgrcqkbdibkyeqyil` 프로젝트 추가 연결 필요. 현 상태에서도 본선 측정은 psql 직결 우회로 가능하나, 본 스케줄 태스크의 명세상 SQL은 MCP 경로를 가정.
+4. **04-25~04-27 손실 보정 (선택).** 동일 카테고리(`marking`/`barking`/`aggression`)에 대해 1번 fix 후 한 번씩 수동 트리거하면 누락된 9건을 회복 가능. 자동화에 강제하지 않고 권장 사항.
 

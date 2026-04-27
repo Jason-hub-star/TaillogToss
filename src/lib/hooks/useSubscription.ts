@@ -14,6 +14,7 @@ import {
   verifyAndGrant,
   recoverPendingOrders,
 } from 'lib/api/iap';
+import { getDevPlanOverride } from 'lib/devPlanOverride';
 
 export function useCurrentSubscription(userId: string | undefined) {
   return useQuery({
@@ -26,6 +27,10 @@ export function useCurrentSubscription(userId: string | undefined) {
 
 export function useIsPro(userId: string | undefined) {
   const { data } = useCurrentSubscription(userId);
+  if (__DEV__) {
+    const override = getDevPlanOverride();
+    if (override !== null) return override === 'PRO_MONTHLY';
+  }
   return data?.plan_type === 'PRO_MONTHLY' && data?.is_active;
 }
 

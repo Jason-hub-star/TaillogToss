@@ -17,6 +17,7 @@ import { useNavigation } from '@granite-js/react-native';
 import { useAuth } from 'stores/AuthContext';
 import { colors, typography } from 'styles/tokens';
 import { isDevGuardBypassed, setDevGuardBypass } from 'lib/devGuardBypass';
+import { getDevPlanOverride, setDevPlanOverride } from 'lib/devPlanOverride';
 
 const DEV_ROUTES = [
   { path: '/onboarding/welcome', label: 'Welcome', group: 'Onboarding' },
@@ -55,6 +56,9 @@ const GROUP_COLORS: Record<string, string> = {
 export function DevMenu() {
   const [visible, setVisible] = useState(false);
   const [guardBypassed, setGuardBypassed] = useState(isDevGuardBypassed());
+  const [planOverride, setPlanOverride] = useState<'FREE' | 'PRO_MONTHLY' | null>(
+    getDevPlanOverride(),
+  );
   const navigation = useNavigation();
   const { user } = useAuth();
 
@@ -63,6 +67,16 @@ export function DevMenu() {
     setDevGuardBypass(next);
     setGuardBypassed(next);
   }, [guardBypassed]);
+
+  const cyclePlanOverride = useCallback(() => {
+    const cycle: Record<string, 'FREE' | 'PRO_MONTHLY' | null> = {
+      FREE: 'PRO_MONTHLY',
+      PRO_MONTHLY: null,
+    };
+    const next = planOverride === null ? 'FREE' : cycle[planOverride] ?? null;
+    setDevPlanOverride(next);
+    setPlanOverride(next);
+  }, [planOverride]);
 
   const handleNavigate = useCallback(
     (path: string) => {
@@ -102,6 +116,19 @@ export function DevMenu() {
             >
               <Text style={styles.bypassToggleText}>
                 {guardBypassed ? '🔓 가드 우회 ON (B2B 접근 가능)' : '🔒 가드 우회 OFF'}
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.bypassToggle, planOverride !== null && styles.bypassToggleActive]}
+              onPress={cyclePlanOverride}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.bypassToggleText}>
+                {planOverride === 'PRO_MONTHLY'
+                  ? '💎 Pro 뷰 ON'
+                  : planOverride === 'FREE'
+                  ? '🆓 Free 뷰 ON'
+                  : '📱 실제 플랜'}
               </Text>
             </TouchableOpacity>
           </View>

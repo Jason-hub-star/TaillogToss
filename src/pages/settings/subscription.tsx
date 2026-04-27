@@ -10,11 +10,10 @@ import {
   Text,
   Image,
   StyleSheet,
-  ScrollView,
   TouchableOpacity,
   Alert,
 } from 'react-native';
-import { SafeAreaView } from '@granite-js/native/react-native-safe-area-context';
+import { DetailLayout } from 'components/shared/layouts/DetailLayout';
 import { useAuth } from 'stores/AuthContext';
 import { isB2BRole } from 'stores/OrgContext';
 import { usePageGuard } from 'lib/hooks/usePageGuard';
@@ -29,22 +28,20 @@ import { ICONS } from 'lib/data/iconSources';
 
 export const Route = createRoute('/settings/subscription', {
   component: SubscriptionPage,
+  screenOptions: { headerShown: false },
 });
 
 const PRO_FEATURES: Array<{ icon: string; iconSource?: string; label: string }> = [
   { icon: '🤖', label: 'AI 코칭 무제한' },
-  { icon: '🐕', iconSource: ICONS['ic-dog'], label: `멀티독 최대 ${DOG_LIMITS.PRO}마리` },
-  { icon: '📋', iconSource: ICONS['ic-report'], label: '전체 커리큘럼 7종 접근' },
-  { icon: '📊', iconSource: ICONS['ic-analysis'], label: '상세 분석 리포트' },
-  { icon: '📅', label: '7일 훈련 계획 + Plan B/C' },
+  { icon: '🐕', iconSource: ICONS['ic-dog'], label: `다견 기능 최대 ${DOG_LIMITS.PRO}마리` },
+  { icon: '📊', iconSource: ICONS['ic-analysis'], label: '심화 인사이트 리포트' },
+  { icon: '📅', label: '훈련 계획 무제한 (Plan A/B/C)' },
 ];
 
 const FREE_FEATURES = [
-  { label: 'AI 코칭', free: '광고 시청 시 1회', pro: '무제한' },
-  { label: '멀티독', free: `${DOG_LIMITS.FREE}마리`, pro: `${DOG_LIMITS.PRO}마리` },
-  { label: '커리큘럼', free: 'AI 추천 1개', pro: '7종 전체' },
-  { label: '코칭 블록', free: '3블록(기본)', pro: '6블록(전체)' },
-  { label: '훈련 계획', free: '기본 Plan A', pro: 'Plan A/B/C' },
+  { label: 'AI 코칭', free: '하루 3회', pro: '무제한' },
+  { label: '다견 기능', free: `${DOG_LIMITS.FREE}마리`, pro: `${DOG_LIMITS.PRO}마리` },
+  { label: '훈련 계획', free: 'Plan A', pro: '무제한 (A/B/C)' },
 ] as const;
 
 function SubscriptionPage() {
@@ -60,9 +57,15 @@ function SubscriptionPage() {
   const handlePurchase = useCallback((productId: string) => {
     setPurchasingId(productId);
     purchaseMutation.mutate(productId, {
-      onSuccess: () => {
+      onSuccess: (granted) => {
         setPurchasingId(null);
-        Alert.alert('구매 완료', '구매가 완료되었습니다.');
+        if (granted) {
+          Alert.alert('구독 완료', 'PRO 구독이 시작되었어요!', [
+            { text: '확인', onPress: () => navigation.goBack() },
+          ]);
+        } else {
+          Alert.alert('구매 실패', '결제 처리 중 문제가 발생했습니다. 다시 시도해주세요.');
+        }
       },
       onError: () => {
         setPurchasingId(null);
@@ -83,16 +86,9 @@ function SubscriptionPage() {
 
   if (isError) {
     return (
-      <SafeAreaView style={styles.safe}>
-        <View style={styles.navbar}>
-          <TouchableOpacity onPress={() => navigation.goBack()} activeOpacity={0.7}>
-            <Text style={styles.backButton}>←</Text>
-          </TouchableOpacity>
-          <Text style={styles.navTitle}>구독 관리</Text>
-          <View style={styles.navSpacer} />
-        </View>
+      <DetailLayout title="구독 관리" onBack={() => navigation.goBack()}>
         <ErrorState onRetry={() => void refetch()} />
-      </SafeAreaView>
+      </DetailLayout>
     );
   }
 
@@ -101,17 +97,7 @@ function SubscriptionPage() {
   const token30 = IAP_PRODUCTS.AI_TOKEN_30 as IAPProduct;
 
   return (
-    <SafeAreaView style={styles.safe}>
-      {/* Navbar */}
-      <View style={styles.navbar}>
-        <TouchableOpacity onPress={() => navigation.goBack()} activeOpacity={0.7}>
-          <Text style={styles.backButton}>←</Text>
-        </TouchableOpacity>
-        <Text style={styles.navTitle}>구독 관리</Text>
-        <View style={styles.navSpacer} />
-      </View>
-
-      <ScrollView style={styles.body} contentContainerStyle={styles.content}>
+    <DetailLayout title="구독 관리" onBack={() => navigation.goBack()}>
         {/* 현재 구독 상태 */}
         <View style={styles.statusCard}>
           <View style={styles.statusRow}>
@@ -174,6 +160,7 @@ function SubscriptionPage() {
         <Text style={styles.sectionTitle}>AI 토큰 충전</Text>
         <View style={styles.tokenRow}>
           <View style={styles.tokenCard}>
+            <View style={styles.badgePlaceholder} />
             <Text style={styles.tokenAmount}>10회</Text>
             <Text style={styles.tokenPrice}>₩{token10.price.toLocaleString()}</Text>
             <Text style={styles.tokenUnit}>회당 ₩190</Text>
@@ -255,26 +242,11 @@ function SubscriptionPage() {
         <TouchableOpacity style={styles.restoreButton} onPress={handleRestore} activeOpacity={0.7}>
           <Text style={styles.restoreText}>구매 내역 복원</Text>
         </TouchableOpacity>
-      </ScrollView>
-    </SafeAreaView>
+    </DetailLayout>
   );
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: colors.background },
-  navbar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.divider,
-  },
-  backButton: { ...typography.t3, color: colors.textPrimary, paddingRight: 8 },
-  navTitle: { flex: 1, ...typography.subtitle, fontWeight: '600', color: colors.textPrimary, textAlign: 'center' },
-  navSpacer: { width: 30 },
-  body: { flex: 1 },
-  content: { paddingHorizontal: 20, paddingTop: 20, paddingBottom: 40 },
 
   /* 현재 상태 카드 */
   statusCard: {
@@ -329,6 +301,10 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 16,
     alignItems: 'center',
+  },
+  badgePlaceholder: {
+    height: 20,
+    marginBottom: 8,
   },
   bestValueBadge: {
     backgroundColor: colors.orange700,

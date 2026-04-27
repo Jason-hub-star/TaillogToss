@@ -21,6 +21,7 @@ import { ErrorBoundary } from 'components/tds-ext/ErrorBoundary';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { getMyOrg } from 'lib/api/org';
 import { useOrg } from 'stores/OrgContext';
+import { DevMenu } from 'components/shared/DevMenu';
 
 
 /**
@@ -88,7 +89,7 @@ function AppContainer({ children }: PropsWithChildren<InitialProps>) {
               <OrgBootstrap />
               <SurveyProvider>
                 {children}
-                {/* __DEV__ && <DevMenu /> */}{/* 스크린샷용 임시 비활성화 */}
+                {__DEV__ && <DevMenu />}
               </SurveyProvider>
             </OrgProvider>
           </ActiveDogProvider>

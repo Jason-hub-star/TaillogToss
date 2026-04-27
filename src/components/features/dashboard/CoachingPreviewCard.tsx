@@ -23,12 +23,23 @@ const TREND_LABEL: Record<string, string> = {
 interface CoachingPreviewCardProps {
   dogId: string | undefined;
   onNavigateToCoaching: () => void;
+  dailyUsed?: number;
+  dailyLimit?: number;
 }
 
-export function CoachingPreviewCard({ dogId, onNavigateToCoaching }: CoachingPreviewCardProps) {
+export function CoachingPreviewCard({ dogId, onNavigateToCoaching, dailyUsed, dailyLimit }: CoachingPreviewCardProps) {
   const { data: coaching, isLoading } = useLatestCoaching(dogId);
 
   if (isLoading) return null;
+
+  const usageBadge =
+    dailyUsed !== undefined && dailyLimit !== undefined ? (
+      <View style={[styles.usageBadge, dailyUsed >= dailyLimit && styles.usageBadgeExhausted]}>
+        <Text style={styles.usageBadgeText}>
+          {dailyUsed}/{dailyLimit}회
+        </Text>
+      </View>
+    ) : null;
 
   if (!coaching) {
     return (
@@ -42,6 +53,7 @@ export function CoachingPreviewCard({ dogId, onNavigateToCoaching }: CoachingPre
           <Text style={styles.ctaTitle}>AI 맞춤 코칭 받기</Text>
           <Text style={styles.ctaDesc}>행동 기록을 분석해 맞춤 코칭을 제공해요</Text>
         </View>
+        {usageBadge}
         <Text style={styles.arrow}>›</Text>
       </TouchableOpacity>
     );
@@ -61,6 +73,7 @@ export function CoachingPreviewCard({ dogId, onNavigateToCoaching }: CoachingPre
         <Text style={styles.previewTitle} numberOfLines={1}>{title}</Text>
         <Text style={styles.previewTrend}>{TREND_LABEL[trend]} · 상세 보기</Text>
       </View>
+      {usageBadge}
       <Text style={styles.arrow}>›</Text>
     </TouchableOpacity>
   );
@@ -108,5 +121,20 @@ const styles = StyleSheet.create({
     ...typography.body,
     color: colors.grey400,
     marginLeft: spacing.sm,
+  },
+  usageBadge: {
+    backgroundColor: colors.primaryBlue,
+    borderRadius: 8,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    marginRight: spacing.xs,
+  },
+  usageBadgeExhausted: {
+    backgroundColor: colors.grey300,
+  },
+  usageBadgeText: {
+    ...typography.badge,
+    color: colors.white,
+    fontWeight: '600',
   },
 });

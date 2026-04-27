@@ -24,6 +24,12 @@ export interface Dog {
   updated_at: string;
 }
 
+/** 온보딩 설문 step3 행동 문제 목록 — dog_env.chronic_issues JSONB 구조 */
+export interface ChronicIssues {
+  top_issues: string[];
+  other_text?: string | null;
+}
+
 /** 반려견 환경/맥락 (DogEnv — JSONB 필드 분리) */
 export interface DogEnv {
   id: string;
@@ -34,6 +40,8 @@ export interface DogEnv {
   past_attempts: string[];
   temperament: string | null;
   activity_meta: ActivityMeta;
+  chronic_issues?: ChronicIssues | null; // 설문 step3 행동 문제 (DB 영구 저장)
+  rewards_meta?: Record<string, unknown> | null;
   created_at: string;
   updated_at: string;
 }

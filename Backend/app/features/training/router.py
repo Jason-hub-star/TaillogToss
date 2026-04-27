@@ -11,7 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
 from app.core.security import get_current_user_id
-from app.features.training import schemas, service
+from app.features.training import deps, schemas, service
 
 router = APIRouter()
 
@@ -32,7 +32,8 @@ async def update_training_status(
     user_id: str = Depends(get_current_user_id),
     db: AsyncSession = Depends(get_db),
 ):
-    """훈련 상태 upsert"""
+    """훈련 상태 upsert — Pro 커리큘럼 접근 검증 포함"""
+    await deps.require_pro_for_curriculum(data.curriculum_id, user_id, db)
     return await service.upsert_training_status(db, user_id, data)
 
 

@@ -27,6 +27,8 @@ import type { BehaviorLog } from 'types/log';
 import { colors, typography, spacing } from 'styles/tokens';
 import { useAuth } from 'stores/AuthContext';
 import { isB2BRole } from 'stores/OrgContext';
+import { useIsPro } from 'lib/hooks/useSubscription';
+import { useDailyUsage } from 'lib/hooks/useCoaching';
 
 export const Route = createRoute('/dashboard', {
   component: DashboardPage,
@@ -68,6 +70,9 @@ function DashboardPage() {
   const { user } = useAuth();
   const { isReady } = usePageGuard({ currentPath: '/dashboard' });
   const isB2B = isB2BRole(user?.role);
+  const isPro = useIsPro(user?.id);
+  const { data: dailyUsageData } = useDailyUsage(user?.id);
+  const dailyLimit = isPro ? 10 : 3;
 
   const today = useMemo(() => toLocalDateKey(new Date()), []);
   const {
@@ -208,6 +213,8 @@ function DashboardPage() {
       <CoachingPreviewCard
         dogId={activeDog?.id}
         onNavigateToCoaching={() => navigation.navigate('/coaching/result')}
+        dailyUsed={dailyUsageData?.used}
+        dailyLimit={dailyLimit}
       />
 
       {/* 상세 분석 링크 */}

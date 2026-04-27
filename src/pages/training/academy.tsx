@@ -12,6 +12,7 @@ import { AIPersonalizedHero } from 'components/features/training/AIPersonalizedH
 import { CurriculumJourneyMap } from 'components/features/training/CurriculumJourneyMap';
 import { InsightSummaryBar } from 'components/features/training/InsightSummaryBar';
 import { ProUpgradeBanner } from 'components/features/training/ProUpgradeBanner';
+import { useProUpgradeSheet } from 'lib/hooks/useProUpgradeSheet';
 import { RecommendedCurriculumCard } from 'components/features/training/RecommendedCurriculumCard';
 import { RelatedCurriculumCarousel } from 'components/features/training/RelatedCurriculumCarousel';
 import { EmptyState } from 'components/tds-ext/EmptyState';
@@ -25,7 +26,10 @@ import { usePageGuard } from 'lib/hooks/usePageGuard';
 import { useActiveDog } from 'stores/ActiveDogContext';
 import { useAuth } from 'stores/AuthContext';
 import { useSurvey } from 'stores/SurveyContext';
+import { useDogEnv } from 'lib/hooks/useDogs';
+import { BEHAVIOR_TO_CURRICULUM, normalizeTopBehaviors } from 'lib/data/mappings/behaviorToCurriculum';
 import type { Curriculum, CurriculumId, TrainingProgress } from 'types/training';
+import type { BehaviorType } from 'types/dog';
 import type { CurriculumRecommendationV2 } from 'lib/data/recommendation/engine';
 import { SkeletonAcademy } from 'components/features/training/SkeletonAcademy';
 import { BottomNavBar } from 'components/shared/BottomNavBar';
@@ -41,6 +45,7 @@ function TrainingAcademyPage() {
   const { activeDog } = useActiveDog();
   const isPro = useIsPro(user?.id);
   const { surveyData } = useSurvey();
+  const { data: dogEnv } = useDogEnv(activeDog?.id);
   const { data: progressList, isLoading, isError, refetch } = useTrainingProgress(activeDog?.id);
   const { data: feedbackList } = useStepFeedback(activeDog?.id);
   const { data: behaviorAnalytics } = useBehaviorAnalytics(activeDog?.id);
@@ -67,13 +72,26 @@ function TrainingAcademyPage() {
 
   // AI 맞춤 추천 (cold start fallback 포함)
   const recommendation = useMemo(() => {
-    const behaviors = surveyData?.step3_behavior.primary_behaviors ?? ['other'];
-    // Cold start: 로그 5개 미만 → 기존 설문 기반 엔진
+    // 행동 문제 소스 우선순위:
+    // 1) 설문 컨텍스트 (앱 실행 중 유지)
+    // 2) dog_env.chronic_issues.top_issues (DB 영구 저장, 앱 재시작 후 복원)
+    // 3) fallback ['other']
+    const coldStartBehaviors: BehaviorType[] =
+      surveyData?.step3_behavior.primary_behaviors ??
+      dogEnv?.chronic_issues?.top_issues?.filter(
+        (b): b is BehaviorType => b in BEHAVIOR_TO_CURRICULUM,
+      ) ??
+      ['other'];
+
     if (!behaviorAnalytics || behaviorAnalytics.total_logs < 5) {
-      return getRecommendations(behaviors, completedIds);
+      return getRecommendations(coldStartBehaviors, completedIds);
     }
+
+    // warm-start: 실제 로그 top_behaviors를 BehaviorType으로 정규화 후 우선 사용
+    const warmBehaviors = normalizeTopBehaviors(behaviorAnalytics.top_behaviors ?? []);
+    const behaviors = warmBehaviors.length > 0 ? warmBehaviors : coldStartBehaviors;
     return getRecommendationsV2(behaviors, completedIds, behaviorAnalytics);
-  }, [surveyData, completedIds, behaviorAnalytics]);
+  }, [surveyData, dogEnv, completedIds, behaviorAnalytics]);
 
   // 현재 진행 중인 커리큘럼
   const activeProgress = useMemo(() => {
@@ -81,28 +99,33 @@ function TrainingAcademyPage() {
     return progressList.find((p: TrainingProgress) => p.status === 'in_progress') ?? null;
   }, [progressList]);
 
-  // 강아지 행동 텍스트 (설문 기반)
+  // 강아지 행동 텍스트 (설문 → DB 순 복원)
   const behaviorText = useMemo(() => {
-    const behaviors = surveyData?.step3_behavior.primary_behaviors ?? [];
+    const behaviors: string[] =
+      surveyData?.step3_behavior.primary_behaviors ??
+      dogEnv?.chronic_issues?.top_issues ??
+      [];
     if (behaviors.length === 0) return '문제';
     const BEHAVIOR_LABEL: Record<string, string> = {
       barking: '짖음', biting: '무는', jumping: '점프',
       pulling: '당김', anxiety: '불안', aggression: '공격',
       fear: '두려움', destruction: '파괴', toilet: '배변',
-      other: '기타',
+      leash_pulling: '산책 당김', reactivity: '반응성', separation: '분리불안',
+      resource_guarding: '자원 보호', destructive: '파괴', other: '기타',
     };
     return behaviors.slice(0, 2).map((b: string) => BEHAVIOR_LABEL[b] ?? b).join('·');
-  }, [surveyData]);
+  }, [surveyData, dogEnv]);
 
   const navigation = useNavigation();
+  const { show: showProUpgrade, SheetNode: ProUpgradeSheetNode } = useProUpgradeSheet();
 
   const handleCardPress = useCallback((curriculum: Curriculum) => {
     navigation.navigate('/training/detail', { curriculum_id: curriculum.id });
   }, [navigation]);
 
   const handleProCTA = useCallback(() => {
-    navigation.navigate('/settings/subscription');
-  }, [navigation]);
+    showProUpgrade();
+  }, [showProUpgrade]);
 
   if (!isReady) return null;
 
@@ -192,6 +215,7 @@ function TrainingAcademyPage() {
           {!isPro && <ProUpgradeBanner />}
         </>
       )}
+      {ProUpgradeSheetNode}
     </ListLayout>
   );
 }

@@ -19,7 +19,7 @@ import { DayProgressIndicator } from 'components/features/training/DayProgressIn
 import { DayTabBar } from 'components/features/training/DayTabBar';
 import { CelebrationModal } from 'components/features/training/CelebrationModal';
 import { AttemptHistorySheet } from 'components/features/training/AttemptHistorySheet';
-import { ProUpgradeSheet } from 'components/features/training/ProUpgradeSheet';
+import { useProUpgradeSheet } from 'lib/hooks/useProUpgradeSheet';
 import { EmptyState } from 'components/tds-ext/EmptyState';
 import { ErrorState } from 'components/tds-ext/ErrorState';
 import { Toast } from 'components/tds-ext/Toast';
@@ -71,7 +71,8 @@ function TrainingDetailPage() {
     if (hasSyncedProgress) return;
     if (progress) {
       setSelectedDay(progress.current_day);
-      setVariant(progress.current_variant);
+      const syncedVariant = progress.current_variant;
+      setVariant(!isPro && syncedVariant !== 'A' ? 'A' : syncedVariant);
       setHasSyncedProgress(true);
       return;
     }
@@ -87,17 +88,17 @@ function TrainingDetailPage() {
         noiseSensitivity: env?.household_info?.noise_sensitivity,
         behaviors: env?.health_meta?.chronic_issues,
       });
-      setVariant(recommended);
+      setVariant(!isPro && recommended !== 'A' ? 'A' : recommended);
       setHasSyncedProgress(true);
     }
-  }, [progress, hasSyncedProgress, isLoading, activeDog, dogEnv]);
+  }, [progress, hasSyncedProgress, isLoading, activeDog, dogEnv, isPro]);
 
   const [feedbackStepId, setFeedbackStepId] = useState<string | null>(null);
   const [showDaySummary, setShowDaySummary] = useState(false);
   const [dayReactions, setDayReactions] = useState<DogReaction[]>([]);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [showAttemptHistory, setShowAttemptHistory] = useState(false);
-  const [showProUpgrade, setShowProUpgrade] = useState(false);
+  const { show: showProUpgrade, SheetNode: ProUpgradeSheetNode } = useProUpgradeSheet();
 
   const startTraining = useStartTraining();
   const completeStep = useCompleteStep();
@@ -326,6 +327,7 @@ function TrainingDetailPage() {
             onChange={setVariant}
             isPro={isPro ?? false}
             planMeta={curriculum?.planMeta}
+            onProCTA={showProUpgrade}
           />
 
           <MissionChecklist
@@ -351,7 +353,7 @@ function TrainingDetailPage() {
             style={styles.historyLink}
             onPress={() => {
               if (!isPro) {
-                setShowProUpgrade(true);
+                showProUpgrade();
                 return;
               }
               setAttemptStepId(feedbackStepId ?? undefined);
@@ -400,10 +402,7 @@ function TrainingDetailPage() {
         onClose={() => setShowAttemptHistory(false)}
       />
 
-      <ProUpgradeSheet
-        visible={showProUpgrade}
-        onClose={() => setShowProUpgrade(false)}
-      />
+      {ProUpgradeSheetNode}
 
       <CelebrationModal
         visible={showCelebration}

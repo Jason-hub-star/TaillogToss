@@ -12,12 +12,13 @@ interface VariantSelectorProps {
   onChange: (variant: PlanVariant) => void;
   isPro: boolean;
   planMeta?: Record<PlanVariant, PlanMeta>;
+  onProCTA?: () => void;
 }
 
 const VARIANTS: { key: PlanVariant; label: string; proOnly: boolean; emoji: string }[] = [
   { key: 'A', label: 'Plan A', proOnly: false, emoji: '🎯' },
-  { key: 'B', label: 'Plan B', proOnly: false, emoji: '🎮' },
-  { key: 'C', label: 'Plan C', proOnly: false, emoji: '🔄' },
+  { key: 'B', label: 'Plan B', proOnly: true, emoji: '🎮' },
+  { key: 'C', label: 'Plan C', proOnly: true, emoji: '🔄' },
 ];
 
 const PHILOSOPHY_LABEL: Record<string, string> = {
@@ -26,7 +27,7 @@ const PHILOSOPHY_LABEL: Record<string, string> = {
   Adaptive: '맞춤형',
 };
 
-export function VariantSelector({ current, onChange, isPro, planMeta }: VariantSelectorProps) {
+export function VariantSelector({ current, onChange, isPro, planMeta, onProCTA }: VariantSelectorProps) {
   const activeMeta = planMeta?.[current];
 
   return (
@@ -45,9 +46,8 @@ export function VariantSelector({ current, onChange, isPro, planMeta }: VariantS
                 isActive && styles.segmentActive,
                 isDisabled && styles.segmentDisabled,
               ]}
-              onPress={() => !isDisabled && onChange(key)}
-              activeOpacity={isDisabled ? 1 : 0.7}
-              disabled={isDisabled}
+              onPress={() => isDisabled ? onProCTA?.() : onChange(key)}
+              activeOpacity={0.7}
             >
               <Text style={styles.segmentEmoji}>{emoji}</Text>
               <Text

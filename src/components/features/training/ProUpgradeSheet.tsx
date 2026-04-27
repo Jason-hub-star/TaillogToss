@@ -1,11 +1,13 @@
 /**
  * ProUpgradeSheet — Pro 전용 기능 접근 시 인터셉트 바텀시트
- * Parity: UI-001
+ * 시트 안에서 IAP 구매까지 완결 처리
+ * Parity: UI-001, IAP-001
  */
-import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Modal } from 'react-native';
-import { useNavigation } from '@granite-js/react-native';
+import React, { useState } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, Modal, Alert } from 'react-native';
 import { ModalLayout } from 'components/shared/layouts/ModalLayout';
+import { usePurchaseIAP } from 'lib/hooks/useSubscription';
+import { IAP_PRODUCTS } from 'types/subscription';
 import { colors, typography, spacing } from 'styles/tokens';
 
 interface Props {
@@ -18,14 +20,33 @@ const BENEFITS = [
   { emoji: '🔇', text: '광고 없이 이용' },
   { emoji: '📋', text: '시도 이력 상세 조회' },
   { emoji: '💬', text: '하루 코칭 10회 (무료 3회)' },
+  { emoji: '🎮', text: '훈련 Plan B/C 전체 접근' },
 ];
 
+const proProduct = IAP_PRODUCTS.PRO_MONTHLY!;
+
 export function ProUpgradeSheet({ visible, onClose }: Props) {
-  const navigation = useNavigation();
+  const purchaseMutation = usePurchaseIAP();
+  const [isPurchasing, setIsPurchasing] = useState(false);
 
   const handleUpgrade = () => {
-    onClose();
-    navigation.navigate('/settings/subscription');
+    if (isPurchasing) return;
+    setIsPurchasing(true);
+    purchaseMutation.mutate(proProduct.product_id, {
+      onSuccess: (granted) => {
+        setIsPurchasing(false);
+        if (granted) {
+          onClose();
+          Alert.alert('구독 완료', 'PRO 구독이 시작되었어요!');
+        } else {
+          Alert.alert('결제 실패', '결제 처리 중 문제가 발생했습니다. 다시 시도해주세요.');
+        }
+      },
+      onError: () => {
+        setIsPurchasing(false);
+        Alert.alert('결제 실패', '결제 처리 중 문제가 발생했습니다. 다시 시도해주세요.');
+      },
+    });
   };
 
   return (
@@ -34,7 +55,11 @@ export function ProUpgradeSheet({ visible, onClose }: Props) {
         <View style={styles.content}>
           <Text style={styles.icon}>{'✨'}</Text>
           <Text style={styles.title}>PRO 구독으로 더 깊이 분석하세요</Text>
-          <Text style={styles.subtitle}>시도 이력 조회는 Pro 전용 기능이에요</Text>
+
+          <View style={styles.priceRow}>
+            <Text style={styles.price}>₩{proProduct.price.toLocaleString()}</Text>
+            <Text style={styles.period}>/월</Text>
+          </View>
 
           <View style={styles.benefitList}>
             {BENEFITS.map((b) => (
@@ -45,8 +70,15 @@ export function ProUpgradeSheet({ visible, onClose }: Props) {
             ))}
           </View>
 
-          <TouchableOpacity style={styles.ctaButton} onPress={handleUpgrade} activeOpacity={0.8}>
-            <Text style={styles.ctaText}>PRO 시작하기</Text>
+          <TouchableOpacity
+            style={[styles.ctaButton, isPurchasing && styles.ctaButtonDisabled]}
+            onPress={handleUpgrade}
+            activeOpacity={0.8}
+            disabled={isPurchasing}
+          >
+            <Text style={styles.ctaText}>
+              {isPurchasing ? '처리 중...' : 'PRO 시작하기'}
+            </Text>
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.dismissButton} onPress={onClose} activeOpacity={0.7}>
@@ -74,11 +106,21 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: spacing.sm,
   },
-  subtitle: {
-    ...typography.bodySmall,
-    color: colors.textSecondary,
-    textAlign: 'center',
+  priceRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
     marginBottom: spacing.xl,
+  },
+  price: {
+    ...typography.heroTitle,
+    fontWeight: '800',
+    color: colors.primaryBlue,
+  },
+  period: {
+    ...typography.body,
+    color: colors.textSecondary,
+    marginBottom: 3,
+    marginLeft: 2,
   },
   benefitList: {
     width: '100%',
@@ -104,6 +146,9 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.lg,
     alignItems: 'center',
     marginBottom: spacing.sm,
+  },
+  ctaButtonDisabled: {
+    opacity: 0.5,
   },
   ctaText: {
     ...typography.label,

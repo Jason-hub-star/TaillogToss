@@ -15,6 +15,7 @@ training/academy.tsx, training/detail.tsx 페이지에서 사용.
 | `CurriculumJourneyMap.tsx` | 세로 타임라인 + 좌우 교대 쇼케이스 카드 |
 | `AIPersonalizedHero.tsx` | AI 맞춤 분석 히어로 (fade-in 연출) |
 | `ProUpgradeBanner.tsx` | PRO 구독 유도 배너 |
+| `ProUpgradeSheet.tsx` | Pro 기능 접근 인터셉트 바텀시트 (시도 이력 등) |
 | `InsightSummaryBar.tsx` | 반응 피드백 요약 바 |
 | `StepCompletionSheet.tsx` | 스텝 완료 후 반응 피드백 바텀시트 |
 | `DaySummarySheet.tsx` | Day 완료 축하 + 반응 요약 시트 |

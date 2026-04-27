@@ -288,10 +288,19 @@ class RealMTLSClient implements MTLSClient {
     templateCode: string;
     variables: Record<string, string>;
   }): Promise<SmartMessageResult> {
+    // Toss API: body는 templateSetCode + context, userId는 x-toss-user-key 헤더
     return this.request<SmartMessageResult>(
       'POST',
       `${TOSS_APP_PATH}/messenger/send-message`,
-      { body: request },
+      {
+        body: {
+          templateSetCode: request.templateCode,
+          context: request.variables,
+        },
+        headers: {
+          'x-toss-user-key': request.userId,
+        },
+      },
     );
   }
 

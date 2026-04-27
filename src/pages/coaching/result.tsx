@@ -234,15 +234,6 @@ function CoachingResultPage() {
           <Text style={styles.usageText}>
             오늘 {dailyUsed}/{dailyLimit}회 사용
           </Text>
-          {!isPro && remaining === 0 && (
-            <TouchableOpacity
-              style={styles.proUpgradeLink}
-              onPress={handleNavigateToSubscription}
-              activeOpacity={0.7}
-            >
-              <Text style={styles.proUpgradeLinkText}>광고 제거 + 하루 10회 — PRO 업그레이드</Text>
-            </TouchableOpacity>
-          )}
         </View>
       </DetailLayout>
     );
@@ -350,16 +341,6 @@ const styles = StyleSheet.create({
     ...typography.caption,
     color: colors.textSecondary,
     marginTop: spacing.sm,
-    textAlign: 'center',
-  },
-  proUpgradeLink: {
-    marginTop: spacing.md,
-    paddingVertical: spacing.sm,
-  },
-  proUpgradeLinkText: {
-    ...typography.caption,
-    color: colors.primaryBlue,
-    fontWeight: '500',
     textAlign: 'center',
   },
   errorContainer: {

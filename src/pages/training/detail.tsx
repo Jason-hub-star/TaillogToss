@@ -19,6 +19,7 @@ import { DayProgressIndicator } from 'components/features/training/DayProgressIn
 import { DayTabBar } from 'components/features/training/DayTabBar';
 import { CelebrationModal } from 'components/features/training/CelebrationModal';
 import { AttemptHistorySheet } from 'components/features/training/AttemptHistorySheet';
+import { ProUpgradeSheet } from 'components/features/training/ProUpgradeSheet';
 import { EmptyState } from 'components/tds-ext/EmptyState';
 import { ErrorState } from 'components/tds-ext/ErrorState';
 import { Toast } from 'components/tds-ext/Toast';
@@ -96,6 +97,7 @@ function TrainingDetailPage() {
   const [dayReactions, setDayReactions] = useState<DogReaction[]>([]);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [showAttemptHistory, setShowAttemptHistory] = useState(false);
+  const [showProUpgrade, setShowProUpgrade] = useState(false);
 
   const startTraining = useStartTraining();
   const completeStep = useCompleteStep();
@@ -348,6 +350,10 @@ function TrainingDetailPage() {
           <TouchableOpacity
             style={styles.historyLink}
             onPress={() => {
+              if (!isPro) {
+                setShowProUpgrade(true);
+                return;
+              }
               setAttemptStepId(feedbackStepId ?? undefined);
               setShowAttemptHistory(true);
             }}
@@ -392,6 +398,11 @@ function TrainingDetailPage() {
         visible={showAttemptHistory}
         attempts={stepAttempts ?? []}
         onClose={() => setShowAttemptHistory(false)}
+      />
+
+      <ProUpgradeSheet
+        visible={showProUpgrade}
+        onClose={() => setShowProUpgrade(false)}
       />
 
       <CelebrationModal

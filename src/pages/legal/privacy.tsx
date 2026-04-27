@@ -80,7 +80,7 @@ function LegalPrivacyPage() {
 
         <Text style={styles.h2}>6. 개인정보 처리 위탁</Text>
         <Text style={styles.p}>
-          - 클라우드 호스팅: Supabase (미국, AWS){'\n'}- AI 코칭 생성: OpenAI API (데이터 학습 미사용 설정)
+          - 클라우드 호스팅 및 서버 인증/결제 처리: Supabase (미국, AWS, Edge Function 포함){'\n'}- AI 코칭 생성: OpenAI API (데이터 학습 미사용 설정)
         </Text>
 
         <Text style={styles.h2}>7. 이용자의 권리</Text>

@@ -35,7 +35,7 @@ export function ProUpgradeBanner() {
 
 const styles = StyleSheet.create({
   container: {
-    borderRadius: 16,
+    borderRadius: spacing.lg,
     overflow: 'hidden',
     marginTop: spacing.sectionGap,
     marginBottom: spacing.lg,
@@ -64,8 +64,8 @@ const styles = StyleSheet.create({
   },
   ctaButton: {
     backgroundColor: colors.white,
-    borderRadius: 12,
-    paddingVertical: 14,
+    borderRadius: spacing.md,
+    paddingVertical: spacing.lg,
     alignItems: 'center',
   },
   ctaText: {

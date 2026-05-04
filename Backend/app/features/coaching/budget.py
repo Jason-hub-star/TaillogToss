@@ -10,7 +10,9 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
-from app.shared.models import AICostUsageDaily, AICostUsageMonthly, AIRecommendationSnapshot
+from uuid import UUID
+
+from app.shared.models import AICoaching, AICostUsageDaily, AICostUsageMonthly, Dog
 
 
 def compute_dedupe_key(dog_id: str, window_days: int, issue: str, summary_hash: str) -> str:
@@ -54,10 +56,11 @@ async def check_user_burst_limit(db: AsyncSession, user_id: str) -> bool:
     window_start = datetime.now(timezone.utc) - timedelta(minutes=settings.AI_USER_BURST_WINDOW_MIN)
     burst_q = (
         select(func.count())
-        .select_from(AIRecommendationSnapshot)
+        .select_from(AICoaching)
+        .join(Dog, Dog.id == AICoaching.dog_id)
         .where(
-            AIRecommendationSnapshot.user_id == user_id,
-            AIRecommendationSnapshot.created_at >= window_start,
+            Dog.user_id == UUID(user_id),
+            AICoaching.created_at >= window_start,
         )
     )
     result = await db.execute(burst_q)
@@ -75,13 +78,14 @@ async def check_user_daily_limit(db: AsyncSession, user_id: str) -> tuple[bool, 
 
     today_start = datetime.combine(date.today(), datetime.min.time()).replace(tzinfo=timezone.utc)
 
-    # 사용량 조회
+    # ai_coaching → dogs JOIN으로 user별 오늘 생성 수 카운팅
     daily_q = (
         select(func.count())
-        .select_from(AIRecommendationSnapshot)
+        .select_from(AICoaching)
+        .join(Dog, Dog.id == AICoaching.dog_id)
         .where(
-            AIRecommendationSnapshot.user_id == user_id,
-            AIRecommendationSnapshot.created_at >= today_start,
+            Dog.user_id == UUID(user_id),
+            AICoaching.created_at >= today_start,
         )
     )
     result = await db.execute(daily_q)

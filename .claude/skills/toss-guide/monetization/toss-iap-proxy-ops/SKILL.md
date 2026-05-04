@@ -1,6 +1,6 @@
 ---
 name: toss-iap-proxy-ops
-description: Toss IAP 검증 스킬 — Edge Function 404 우회, Service Role 감지, mTLS mock 설정, 토큰 헬퍼 분리를 체계적으로 수행.
+description: Toss IAP 검증 스킬 — Edge Function 404 우회, Service Role 감지, mTLS mock 설정, 토큰 헬퍼 분리, subscriptions 활성화 E2E.
 ---
 
 # Toss IAP Proxy Ops
@@ -14,6 +14,8 @@ FastAPI proxy로 우회하는 패턴, Service Role Key 감지 방식, mTLS mock 
 - "Edge Function에서 Supabase Service Role을 감지하려고 하는데?"
 - "mTLS 검증을 개발 단계에서 스킵하고 싶은데?"
 - "iap.ts 토큰 헬퍼가 너무 많으니 분리해줄래?"
+- "결제는 됐는데 subscriptions 테이블에 is_active가 안 세팅돼요"
+- "toss_orders에만 granted되고 구독 활성화가 안 돼요"
 
 ## 공식 문서 (항상 최신 기준 재확인)
 - IAP 공식 문서: `https://developers-apps-in-toss.toss.im/in-app-purchase/intro.html`
@@ -440,6 +442,153 @@ export async function verifyAndGrant(receipt: string, userId: string) {
 - [ ] `src/lib/api/iap.ts`에서 import 추가
 - [ ] 타입스크립트 컴파일 성공 확인
 - [ ] 기존 IAP 기능 동작 확인
+
+---
+
+---
+
+## 패턴 5: subscriptions 활성화 E2E (검증 완료 2026-05-04)
+
+### 문제 현상
+- `verify-iap-order` Edge Function이 `toss_orders.grant_status='granted'`만 기록
+- `subscriptions` 테이블 업데이트 없음 → `is_active=false` 그대로
+- `useIsPro()` → `false` → PRO 기능 잠금 해제 안 됨
+
+### 근본 원인
+`verify-iap-order/main.ts`에 `toss_orders` upsert 이후 `subscriptions` 업데이트 로직 누락.  
+`subscriptions.user_id`에 UNIQUE 제약도 없어서 upsert 자체가 불가능했음.
+
+### 해결 순서
+
+#### 5-1. UNIQUE 제약 마이그레이션
+```sql
+-- supabase/migrations/20260504000001_subscriptions_user_id_unique.sql
+ALTER TABLE public.subscriptions
+  ADD CONSTRAINT subscriptions_user_id_key UNIQUE (user_id);
+```
+```bash
+# DB에 직접 적용 (migration drift 시)
+supabase db query "DO \$\$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname='subscriptions_user_id_key') THEN ALTER TABLE public.subscriptions ADD CONSTRAINT subscriptions_user_id_key UNIQUE (user_id); END IF; END\$\$;" --linked
+```
+
+#### 5-2. Edge Function PRODUCT_GRANTS 매핑 추가
+**File**: `supabase/functions/verify-iap-order/main.ts`
+
+```typescript
+const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+
+// productId → 지급 유형 매핑 (src/types/subscription.ts IAP_PRODUCTS와 동기화)
+const PRODUCT_GRANTS: Record<string, { planType?: string; aiTokens?: number; durationDays?: number }> = {
+  'ait.0000020829.09e69bf9.90a91624b0.7443236299': { planType: 'PRO_MONTHLY', durationDays: 30 },
+  'ait.0000020829.b0b00d71.17c5290dc1.7444362301': { aiTokens: 10 },
+  'ait.0000020829.32dc32cf.49e67a4cfa.7443541064': { aiTokens: 30 },
+};
+```
+
+#### 5-3. activateSubscription 함수 추가
+```typescript
+async function activateSubscription(userId: string, productId: string): Promise<void> {
+  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) return;
+
+  const grant = PRODUCT_GRANTS[productId];
+  if (!grant) return;
+
+  const now = new Date();
+  const svcHeaders = {
+    apikey: SUPABASE_SERVICE_ROLE_KEY,
+    Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+    'Content-Type': 'application/json',
+  };
+
+  if (grant.planType) {
+    // PRO_MONTHLY: subscriptions upsert (on_conflict=user_id)
+    const nextBilling = new Date(now);
+    nextBilling.setDate(nextBilling.getDate() + (grant.durationDays ?? 30));
+
+    await fetch(`${SUPABASE_URL}/rest/v1/subscriptions?on_conflict=user_id`, {
+      method: 'POST',
+      headers: { ...svcHeaders, Prefer: 'resolution=merge-duplicates,return=minimal' },
+      body: JSON.stringify([{
+        user_id: userId,
+        plan_type: grant.planType,
+        is_active: true,
+        next_billing_date: nextBilling.toISOString().split('T')[0],
+        updated_at: now.toISOString(),
+      }]),
+    });
+  } else if (grant.aiTokens) {
+    // 토큰 상품: 기존 row PATCH or 신규 INSERT
+    const getResp = await fetch(
+      `${SUPABASE_URL}/rest/v1/subscriptions?user_id=eq.${userId}&select=id,ai_tokens_remaining,ai_tokens_total`,
+      { headers: svcHeaders },
+    );
+    const rows = await getResp.json().catch(() => []) as Array<{
+      id: string; ai_tokens_remaining: number | null; ai_tokens_total: number | null;
+    }>;
+
+    if (rows.length > 0) {
+      await fetch(`${SUPABASE_URL}/rest/v1/subscriptions?user_id=eq.${userId}`, {
+        method: 'PATCH',
+        headers: { ...svcHeaders, Prefer: 'return=minimal' },
+        body: JSON.stringify({
+          ai_tokens_remaining: (rows[0].ai_tokens_remaining ?? 0) + grant.aiTokens,
+          ai_tokens_total: (rows[0].ai_tokens_total ?? 0) + grant.aiTokens,
+          updated_at: now.toISOString(),
+        }),
+      });
+    } else {
+      await fetch(`${SUPABASE_URL}/rest/v1/subscriptions?on_conflict=user_id`, {
+        method: 'POST',
+        headers: { ...svcHeaders, Prefer: 'resolution=merge-duplicates,return=minimal' },
+        body: JSON.stringify([{
+          user_id: userId, plan_type: 'FREE', is_active: false,
+          ai_tokens_remaining: grant.aiTokens, ai_tokens_total: grant.aiTokens,
+        }]),
+      });
+    }
+  }
+}
+```
+
+#### 5-4. handleRequest에서 호출
+```typescript
+// upsertTossOrder 성공 직후, response 반환 전에 삽입
+if (grantStatus === 'granted') {
+  try {
+    await activateSubscription(resolvedUserId!, body.productId);
+  } catch (err) {
+    console.error('[verify-iap-order] subscription activation failed (non-fatal):', err);
+    // non-fatal: toss_orders grant는 이미 기록됨
+  }
+}
+```
+
+#### 5-5. 배포
+```bash
+supabase functions deploy verify-iap-order --no-verify-jwt
+```
+
+### E2E 검증 방법
+
+```bash
+# 1. 앱에서 [DEV] IAP 바이패스 버튼 누름
+# 2. DB 확인
+supabase db query "SELECT user_id, plan_type, is_active, next_billing_date, updated_at FROM subscriptions WHERE user_id = '<userId>';" --linked
+
+# 기대값:
+# is_active: true
+# plan_type: PRO_MONTHLY
+# next_billing_date: <오늘+30일>
+```
+
+### Failure Modes
+
+| 증상 | 원인 | 해결 |
+|------|------|------|
+| `toss_orders` granted, `subscriptions` 없음 | activateSubscription 미호출 또는 SUPABASE_SERVICE_ROLE_KEY 없음 | Edge Function 재배포 + secrets 확인 |
+| upsert 400 에러 | `subscriptions.user_id` UNIQUE 제약 없음 | 5-1 마이그레이션 재실행 |
+| `plan_type` enum 에러 | DB enum: `FREE`, `PRO_MONTHLY`, `PRO_YEARLY` 외 값 사용 | PRODUCT_GRANTS planType 값 확인 |
+| 토큰 상품 증분 안 됨 | PATCH 경로에서 user row 없을 때 INSERT 미처리 | else 분기 확인 |
 
 ---
 

@@ -19,19 +19,11 @@ export function useNotificationHistory(userId: string | undefined) {
 /** Smart Message 발송 mutation (승인 후 사용) */
 export function useSendSmartMessage() {
   return useMutation({
-    mutationFn: ({
-      userId,
-      type,
-      variables = {},
-    }: {
-      userId: string;
-      type: NotificationType;
-      variables?: Record<string, string>;
-    }) =>
+    mutationFn: ({ userId, type }: { userId: string; type: NotificationType }) =>
       notiApi.sendSmartMessage({
         user_id: userId,
         notification_type: type,
-        template: buildTemplate(type, variables),
+        template: buildTemplate(type),
       }),
   });
 }

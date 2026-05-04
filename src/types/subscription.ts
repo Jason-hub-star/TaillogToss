@@ -22,28 +22,32 @@ export interface IAPProduct {
   description: string;
 }
 
-/** IAP 상품 카탈로그 (가격 기준일: 2026-02-26) */
+/**
+ * IAP 상품 카탈로그
+ * 가격 기준일: 2026-04-29 (콘솔 등록 확정)
+ * 판매가 = 공급가 × 1.1 (VAT 10%)
+ */
 export const IAP_PRODUCTS: Record<string, IAPProduct> = {
   PRO_MONTHLY: {
-    product_id: 'pro_monthly',
-    name: 'PRO 월간',
-    price: 4900,
+    product_id: 'ait.0000020829.09e69bf9.90a91624b0.7443236299',
+    name: '테일로그 PRO',
+    price: 4895,          // 공급가 4,450 × 1.1
     type: 'non_consumable',
     description: 'AI 코칭 무제한 + 멀티독 5마리 + 전체 커리큘럼',
   },
   AI_TOKEN_10: {
-    product_id: 'ai_token_10',
-    name: 'AI 토큰 10회',
-    price: 1900,
+    product_id: 'ait.0000020829.b0b00d71.17c5290dc1.7444362301',
+    name: 'AI 코칭 토큰 10회',
+    price: 1892,          // 공급가 1,720 × 1.1
     type: 'consumable',
-    description: 'AI 코칭 분석 10회 충전',
+    description: 'AI 행동 분석 코칭 10회 이용권',
   },
   AI_TOKEN_30: {
-    product_id: 'ai_token_30',
-    name: 'AI 토큰 30회',
-    price: 4900,
+    product_id: 'ait.0000020829.32dc32cf.49e67a4cfa.7443541064',
+    name: 'AI 코칭 토큰 30회',
+    price: 3498,          // 공급가 3,180 × 1.1
     type: 'consumable',
-    description: 'AI 코칭 분석 30회 충전',
+    description: 'AI 행동 분석 코칭 30회 이용권 (회당 117원)',
   },
 } as const;
 

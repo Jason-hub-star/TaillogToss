@@ -224,3 +224,107 @@ ORM ↔ DB 스키마 드리프트:
 3. **(선택) MCP 본선 정렬.** 일일 STEP A-4 / 일요일 STEP B의 SQL 측정을 MCP로 일원화하려면 `gxvtgrcqkbdibkyeqyil` 프로젝트 추가 연결 필요. 현 상태에서도 본선 측정은 psql 직결 우회로 가능하나, 본 스케줄 태스크의 명세상 SQL은 MCP 경로를 가정.
 4. **04-25~04-27 손실 보정 (선택).** 동일 카테고리(`marking`/`barking`/`aggression`)에 대해 1번 fix 후 한 번씩 수동 트리거하면 누락된 9건을 회복 가능. 자동화에 강제하지 않고 권장 사항.
 
+---
+
+## 2026-04-28 합성 생성 결과 (4일째 동일 실패 — 미수정 누적)
+
+| 항목 | 측정값 |
+|------|------|
+| 카테고리 (Tue, day=2) | `separation_anxiety` |
+| 생성 (영속화 기준) | **0건** (목표 3건) |
+| 후보 태깅 | 0건 (영속화 0건이므로 자동 태깅 대상 없음) |
+| 누적 후보 총계 (본선 psql) | **2건** (전일 동일, 변동 없음) |
+| 누적 합성/실사용자 | 0 / 3 (실사용자 +1: 04-27 → 04-28 사이 신규 1건 발생) |
+| 평균 품질 점수 | 80 |
+
+**STEP A 실측**
+
+| 단계 | 결과 |
+|------|------|
+| FastAPI (`localhost:8000`) | ✅ reachable, 단일 uvicorn 프로세스 (PID 42255, 20h+ uptime) |
+| 인증 | ✅ `x-admin-key` 정상 |
+| A-1 generate-synthetic | ❌ **HTTP 500** (58.1s, body 21B `Internal Server Error`) — 04-25/26/27과 동일 결정적 패턴 4일 연속 |
+| A-2 tag-candidates | ✅ HTTP 200 `{"processed":0,"threshold":70}` (0.22s) |
+| A-3 일일 섹션 기록 | ✅ 본 항목 |
+| A-4 본선 SQL (psql 직결) | ✅ MCP는 여전히 `gxvtgrcqkbdibkyeqyil` 미연결 → psql 우회 사용 |
+| 본선 DB 상태 | `coaching_synthetic_log`=0건 (4일째 단 한 건도 영속화 실패), `ai_coaching` 총 3건(전일 동일 패턴) |
+| 오늘 손실 UUID | `8d21f9a1…2888`, `56d5514c…8429`, `0b604da7…2b33ad` (백엔드 로그에서 확인, DB 0건) |
+| 오늘 시도 횟수 | A-1 valid call 3회 (+ 403 1회) → OpenAI 호출 ≈9건 추가 낭비 |
+| Fine-tuning 상태 | 준비 부족 (0/50 승인, 4일 무진전) |
+
+**원인 (전일 식별 — 변동 없음)**
+
+`coaching_synthetic_log.coaching_ids` ORM↔DB 타입 드리프트 (모델 JSONB ↔ DB UUID[]) → asyncpg `DatatypeMismatchError` → 트랜잭션 전체 롤백.
+backend.log에서 오늘도 동일 traceback 재확인:
+```
+column "coaching_ids" is of type uuid[] but expression is of type jsonb
+[parameters: (UUID('630021fe-…'), date(2026,4,28), 'separation_anxiety', 3,
+              '["8d21f9a1-…","56d5514c-…","0b604da7-…"]')]
+```
+
+**누적 손실 추정 (04-25 ~ 04-28, 4일)**
+- OpenAI 호출 낭비: ≈12건 이상 (일 3건 × 4일, 오늘 추가 시도 포함 시 ≥15건)
+- 영속화 합성 데이터: 0건
+- 미생성 카테고리: marking(04-25), barking(04-26), aggression(04-27), **separation_anxiety(04-28)** 4종
+
+**다음 액션 — 전일 권고 그대로 (주인님 승인 대기 중, 4일째)**
+
+전일(04-27) 기록한 1번 권고 — `Backend/app/shared/models.py:830` 1줄 수정 — 이 미적용 상태로 또 하루 동일 실패 반복.
+중복 기재 대신 [위 04-27 섹션의 "다음 액션 1번"](#다음-액션-주인님-승인-필요--우선순위-명확화) 참조.
+오늘 시점에서 우선순위만 한 번 더 강조: **fix 적용 1건이 4일치 자동화를 일거에 정상화** + 익일부터 일일 +3건 정상 누적 시작.
+
+**STEP B (주간 검수)**
+- 오늘 요일: Tue (`date +%u`=2) → 명세에 따라 STEP B 전체 건너뜀.
+
+---
+
+## 2026-04-29 합성 생성 결과 (Wed, day 3 → `destructive`)
+
+| 단계 | 결과 |
+|------|------|
+| FastAPI (`localhost:8000`) | ✅ reachable, uvicorn PID 30220 (이전과 동일 인스턴스) |
+| 인증 | ✅ `x-admin-key` 정상 (초기 1회 누락 → 403, 재시도 성공) |
+| A-1 generate-synthetic | ❌ **HTTP 500** (body `Internal Server Error`) — **동일 결정적 실패 5일 연속** (04-25/26/27/28/29) |
+| A-2 tag-candidates | ✅ HTTP 200 `{"processed":0,"threshold":70}` |
+| A-3 일일 섹션 기록 | ✅ 본 항목 |
+| A-4 본선 SQL (psql 직결) | ✅ MCP 등록 프로젝트(`kvkner…`,`hzxsr…`) 와 백엔드 사용 프로젝트(`gxvtgrcq…`) 불일치 → psql 우회 사용 |
+| 본선 DB 상태 | `coaching_synthetic_log` 0건 (5일째 단 한 행도 영속화 실패), `ai_coaching is_synthetic=TRUE` 0건 |
+| 오늘 손실 UUID | `dcfcfbdd-7c49-4662-b9a0-fb4320378803`, `18d96c7b-3213-4c66-9487-497e0200bf20`, `c3d878b9-f9b1-4421-a18d-7418d2f59ba2` (백엔드 traceback에서 확인, DB rollback) |
+| Fine-tuning 상태 | 준비 부족 (0/50 승인, 5일 무진전); `training_candidate=TRUE` 8건은 모두 비-합성 실사용자 코칭 |
+
+**원인 (전일과 변동 없음 — 5일째 동일 traceback)**
+
+`coaching_synthetic_log.coaching_ids` ORM↔DB 타입 드리프트 (모델 JSONB ↔ DB UUID[]) → `asyncpg.exceptions.DatatypeMismatchError` → 트랜잭션 전체 롤백 (ai_coaching 3건 + log 1건 모두 사라짐).
+
+오늘 traceback 마지막 줄:
+```
+sqlalchemy.exc.ProgrammingError: (asyncpg.ProgrammingError)
+column "coaching_ids" is of type uuid[] but expression is of type jsonb
+[SQL: INSERT INTO coaching_synthetic_log (id, run_date, category, generated_count, coaching_ids)
+      VALUES ($1::UUID, $2::DATE, $3::VARCHAR, $4::INTEGER, $5::JSONB)
+      RETURNING coaching_synthetic_log.created_at]
+[parameters: (UUID('066bde6c-bddb-4684-8fd6-a8f3db4d4061'), date(2026,4,29),
+              'destructive', 3,
+              '["dcfcfbdd-…","18d96c7b-…","c3d878b9-…"]')]
+```
+
+DB 컬럼 메타 (psql `information_schema.columns`):
+```
+data_type=ARRAY  udt_name=_uuid    -- 즉 uuid[]
+```
+
+**누적 손실 갱신 (04-25 ~ 04-29, 5일)**
+- OpenAI 호출 낭비: ≈15건 이상 (일 3건 × 5일)
+- 영속화 합성 데이터: 0건 (총 fine-tune 후보 8건은 모두 실사용자 데이터)
+- 미생성 카테고리: marking(04-25), barking(04-26), aggression(04-27), separation_anxiety(04-28), **destructive(04-29)** 5종
+
+**다음 액션 — 5일째 동일 권고 (주인님 승인 대기 중)**
+
+[04-27 섹션의 "다음 액션 1번"](#다음-액션-주인님-승인-필요--우선순위-명확화) 참조.
+- 본선 1줄 수정: `Backend/app/shared/models.py:830` 의 `coaching_ids` 컬럼 정의 (JSONB → ARRAY(UUID))
+- 미적용 상태로 다음 카테고리(`fear`, day 4)도 04-30 동일 실패 예정.
+- **본 자동화는 fix 적용 전까지 매일 OpenAI 비용 누수만 누적**. 임시로 일일 자동화를 일시 중지하거나 fix 1줄을 적용해야 함.
+
+**STEP B (주간 검수)**
+- 오늘 요일: Wed (`date +%u`=3) → 명세에 따라 STEP B 전체 건너뜀. 일요일(2026-05-03) 실행 예정.
+

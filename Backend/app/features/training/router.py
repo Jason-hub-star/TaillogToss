@@ -3,10 +3,10 @@
 FE api/training.ts 매핑
 Parity: UI-001
 """
-from typing import List
+from typing import List, Optional
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
@@ -51,3 +51,25 @@ async def delete_training_status(
     """훈련 상태 삭제"""
     await service.delete_training_status(db, user_id, curriculum_id, stage_id, step_number)
     return None
+
+
+@router.post("/feedback", status_code=status.HTTP_204_NO_CONTENT)
+async def save_step_feedback(
+    data: schemas.StepFeedbackUpdate,
+    user_id: str = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db),
+):
+    """스텝 반응(reaction) 저장 — user_training_status.reaction UPDATE"""
+    await service.upsert_step_feedback(db, user_id, data)
+    return None
+
+
+@router.get("/feedback/{dog_id}", response_model=List[schemas.TrainingStatusResponse])
+async def get_step_feedback(
+    dog_id: UUID,
+    curriculum_id: Optional[str] = Query(default=None),
+    user_id: str = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db),
+):
+    """스텝 피드백 목록 — reaction IS NOT NULL 행"""
+    return await service.get_step_feedback(db, user_id, dog_id, curriculum_id)

@@ -53,6 +53,10 @@ export const queryKeys = {
     all: ['notification'] as const,
     history: (userId: string) => [...queryKeys.notification.all, 'history', userId] as const,
   },
+  survey: {
+    all: ['survey'] as const,
+    status: (dogId: string) => [...queryKeys.survey.all, 'status', dogId] as const,
+  },
   // B2B 네임스페이스
   org: {
     all: ['org'] as const,

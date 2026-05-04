@@ -135,6 +135,25 @@ class DailyUsageResponse(BaseModel):
     limit: int = 3
 
 
+# AI 코치 1:1 질문 (Pro 전용)
+
+class CoachingQuestionRequest(BaseModel):
+    question: str = Field(..., min_length=5, max_length=1000)
+    context: Optional[str] = Field(None, max_length=2000)
+
+
+class CoachingQuestionResponse(BaseModel):
+    id: UUID
+    dog_id: UUID
+    question: str
+    answer: str
+    billing_period: str
+    ai_tokens_used: int
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
 # 비용 상태
 
 class CostStatusResponse(BaseModel):

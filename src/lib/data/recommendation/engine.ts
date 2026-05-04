@@ -20,6 +20,7 @@ export interface BehaviorAnalytics {
   total_logs: number;
   top_behaviors?: string[];
   weekly_trend?: Partial<Record<string, string>>;
+  memo_keywords?: Partial<Record<string, string[]>>;
 }
 
 /** 커리큘럼 추천 점수 분해 */
@@ -35,6 +36,7 @@ export interface CurriculumRecommendationV2 extends CurriculumRecommendation {
   scoreBand?: ScoreBand;
   logBased: boolean;
   coldStart: boolean;
+  contextTags?: string[];  // 메모 키워드 기반 상황 태그 (UI 배지용)
 }
 
 // ──────────────────────────────────────
@@ -50,6 +52,11 @@ export interface DogPlanSignals {
   playReward?: number;        // 1–5, DogEnv.activity_meta.rewards_meta.play
   noiseSensitivity?: number;  // 1–5, DogEnv.household_info.noise_sensitivity
   behaviors?: BehaviorType[];
+  envReaction?: string;       // explore|adapt|anxious|indifferent
+  personReaction?: string;    // rush|observe|hide|indifferent
+  dogReaction?: string;       // approach|sniff|bark|indifferent
+  focusLevel?: string;        // treat_only|good|distracted|uninterested
+  attachLevel?: string;       // velcro|moderate|independent
 }
 
 /**
@@ -59,7 +66,10 @@ export interface DogPlanSignals {
  * - A (Focus):      위 조건 미해당 (기본)
  */
 export function recommendPlan(signals: DogPlanSignals): PlanVariant {
-  const { birthDate, weightKg, hasPain, energyScore, playReward, noiseSensitivity, behaviors } = signals;
+  const {
+    birthDate, weightKg, hasPain, energyScore, playReward, noiseSensitivity, behaviors,
+    envReaction, personReaction, dogReaction, focusLevel, attachLevel,
+  } = signals;
 
   // C (Adaptive): 노령·대형·통증
   if (hasPain) return 'C';
@@ -69,10 +79,18 @@ export function recommendPlan(signals: DogPlanSignals): PlanVariant {
     if (ageMonths >= 84) return 'C'; // 7살+
   }
 
-  // B (PlayBased): 불안/반응성, 낮은 에너지, 놀이 선호, 소음 예민
+  // B (PlayBased): 불안/반응성, 낮은 에너지, 놀이 선호, 소음 예민, 기질 기반 신호
   const hasAnxietyBehavior = behaviors?.some((b) => b === 'anxiety' || b === 'reactivity') ?? false;
+  const hasAnxietyTemperament =
+    envReaction === 'anxious' ||        // 환경 불안
+    personReaction === 'hide' ||        // 사회적 회피
+    dogReaction === 'bark' ||           // 반응성 공격
+    attachLevel === 'velcro' ||         // 분리불안 신호
+    focusLevel === 'uninterested';      // 동기 저하
+
   if (
     hasAnxietyBehavior ||
+    hasAnxietyTemperament ||
     (energyScore ?? 3) <= 2 ||
     (playReward ?? 3) >= 4 ||
     (noiseSensitivity ?? 3) >= 4
@@ -112,6 +130,19 @@ export function getRecommendations(
   const reasoning = primaryBehavior ? REASON_TEMPLATES[primaryBehavior] : '우리 아이 맞춤 훈련 추천';
 
   return { primary, secondary, reasoning };
+}
+
+function _enrichReasoning(
+  base: string,
+  memoKeywords: string[] | undefined,
+  intensity: number | undefined,
+): string {
+  if (!memoKeywords || memoKeywords.length === 0) return base;
+  const top = memoKeywords.slice(0, 2).join(', ');
+  if (intensity !== undefined && intensity >= 7) {
+    return `${base} · '${top}' 상황에서 특히 강해요`;
+  }
+  return `${base} · '${top}' 상황 집중`;
 }
 
 /** 동기 함수 — API 결과를 파라미터로 받음 (로그 5개 이상일 때 호출) */
@@ -209,6 +240,13 @@ export function getRecommendationsV2(
     }
   }
 
+  // 메모 키워드로 reasoning 보강 + contextTags 생성
+  const memoKeywords = primaryBehavior
+    ? logAnalytics.memo_keywords?.[primaryBehavior]
+    : undefined;
+  reasoning = _enrichReasoning(reasoning, memoKeywords, topBehaviorIntensity);
+  const contextTags = memoKeywords?.slice(0, 3);
+
   return {
     primary,
     secondary,
@@ -216,5 +254,6 @@ export function getRecommendationsV2(
     scoreBand: topBand,
     logBased: true,
     coldStart: false,
+    contextTags: contextTags && contextTags.length > 0 ? contextTags : undefined,
   };
 }

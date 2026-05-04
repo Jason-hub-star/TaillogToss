@@ -92,7 +92,7 @@ async def check_user_daily_limit(db: AsyncSession, user_id: str) -> tuple[bool, 
     sub_result = await db.execute(sub_q)
     sub = sub_result.scalar_one_or_none()
 
-    is_pro = sub and sub.plan_type.value == "PRO_MONTHLY" and sub.is_active
+    is_pro = sub and sub.plan_type.value in ("PRO_MONTHLY", "PRO_YEARLY") and sub.is_active
     has_tokens = sub and (sub.ai_tokens_remaining or 0) > 0
 
     if is_pro:

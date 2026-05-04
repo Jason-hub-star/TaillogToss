@@ -3,7 +3,12 @@
  * Parity: APP-001
  */
 import { supabase } from './supabase';
-import type { Dog, DogEnv, SurveyData } from 'types/dog';
+import { requestBackend } from './backend';
+import type {
+  Dog, DogEnv, SurveyData,
+  SurveyStage1Request, SurveyStage2Request, SurveyStage3Request,
+  SurveyStatus, DogCreateResponse,
+} from 'types/dog';
 import { mapSurveyToDogEnv } from 'components/features/survey/survey-mapper';
 
 /** 반려견 목록 조회 */
@@ -107,4 +112,47 @@ export async function updateDog(dogId: string, updates: Partial<Dog>): Promise<D
 export async function deleteDog(dogId: string): Promise<void> {
   const { error } = await supabase.from('dogs').delete().eq('id', dogId);
   if (error) throw error;
+}
+
+// ── Progressive Profiling Stage API ────────────────────────────────────────
+
+/** Stage 1 제출 — Dog 신규 생성 */
+export async function submitSurveyStage1(data: SurveyStage1Request): Promise<DogCreateResponse> {
+  return requestBackend<DogCreateResponse, SurveyStage1Request>(
+    '/api/v1/onboarding/survey/stage1',
+    { method: 'POST', body: data },
+  );
+}
+
+/** Stage 2 제출 — 행동/환경 저장, AI 코칭 활성화 */
+export async function submitSurveyStage2(dogId: string, data: SurveyStage2Request): Promise<SurveyStatus> {
+  return requestBackend<SurveyStatus, SurveyStage2Request>(
+    `/api/v1/onboarding/survey/stage2/${dogId}`,
+    { method: 'POST', body: data },
+  );
+}
+
+/** Stage 3 제출 — 기질/건강, Pro 풀 개인화 */
+export async function submitSurveyStage3(dogId: string, data: SurveyStage3Request): Promise<SurveyStatus> {
+  return requestBackend<SurveyStatus, SurveyStage3Request>(
+    `/api/v1/onboarding/survey/stage3/${dogId}`,
+    { method: 'POST', body: data },
+  );
+}
+
+/** 설문 완성도 조회 */
+export async function getSurveyStatus(dogId: string): Promise<SurveyStatus> {
+  return requestBackend<SurveyStatus>(`/api/v1/onboarding/survey/status/${dogId}`);
+}
+
+/** 기존 Stage 응답 수정 */
+export async function patchSurveyStage(
+  dogId: string,
+  stage: 1 | 2 | 3,
+  data: Record<string, unknown>,
+): Promise<SurveyStatus> {
+  return requestBackend<SurveyStatus, Record<string, unknown>>(
+    `/api/v1/onboarding/survey/${dogId}/${stage}`,
+    { method: 'PATCH', body: data },
+  );
 }

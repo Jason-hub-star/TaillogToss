@@ -9,6 +9,9 @@ import React, { useState, useMemo, useCallback, useRef } from 'react';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Share, Image } from 'react-native';
 import { SafeAreaView } from '@granite-js/native/react-native-safe-area-context';
 import { useActiveDog } from 'stores/ActiveDogContext';
+import { useAuth } from 'stores/AuthContext';
+import { useIsPro } from 'lib/hooks/useSubscription';
+import { useDailyUsage } from 'lib/hooks/useCoaching';
 import { useLogList } from 'lib/hooks/useLogs';
 import { useTrainingProgress } from 'lib/hooks/useTraining';
 import { useDogEnv } from 'lib/hooks/useDogs';
@@ -25,6 +28,7 @@ import { EmptyState } from 'components/tds-ext/EmptyState';
 import { ErrorState } from 'components/tds-ext/ErrorState';
 import { tracker } from 'lib/analytics/tracker';
 import { getBehaviorIcon, BACK_ICON } from 'lib/data/behaviorIcons';
+import { RewardedAdButton } from 'components/shared/ads';
 import type { ChartPeriod } from 'types/chart';
 import { colors, typography, spacing } from 'styles/tokens';
 
@@ -65,6 +69,10 @@ function AnalysisPage() {
   const [period, setPeriod] = useState<ChartPeriod>('weekly');
   const chartImages = useRef<{ bar?: string; radar?: string }>({});
   const { activeDog } = useActiveDog();
+  const { user } = useAuth();
+  const isPro = useIsPro(user?.id);
+  const dailyLimit = isPro ? 10 : 3;
+  const { data: dailyUsageData } = useDailyUsage(user?.id);
   const navigation = useNavigation();
   const { isReady } = usePageGuard({ currentPath: '/dashboard/analysis' });
 
@@ -245,12 +253,24 @@ function AnalysisPage() {
             hasTrainingData={!!trainingProgress && trainingProgress.length > 0}
           />
 
+          {/* R2: 보상형 광고 — 무료 사용자 분석 화면 (CoachingPreviewCard 위) */}
+          {!isPro && (
+            <RewardedAdButton
+              placement="R2"
+              onRewarded={() => { /* 보상 지급 없음, 노출만 */ }}
+            />
+          )}
+
           {/* AI 코칭 CTA — 데이터 기반 */}
           <View style={styles.coachingSection}>
-            <Text style={styles.coachingContext}>기록 {filteredLogs.length}건 기반 분석 가능</Text>
+            <Text style={styles.coachingContext}>
+              {filteredLogs.length}건 기록 기반 · AI 코칭 받기
+            </Text>
             <CoachingPreviewCard
               dogId={activeDog?.id}
               onNavigateToCoaching={() => navigation.navigate('/coaching/result')}
+              dailyUsed={dailyUsageData?.used}
+              dailyLimit={dailyLimit}
             />
           </View>
 

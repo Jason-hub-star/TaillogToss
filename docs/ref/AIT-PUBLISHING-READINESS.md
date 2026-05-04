@@ -185,6 +185,15 @@ NFT/디지털 자산 거래, 도박, 대출/보험/증권, 투자 조언, 현금
 - [ ] 탭 바 토스 플로팅 컴포넌트 사용 확인
 - [ ] 실 환경 CORS 도메인 확인 (`apps.tossmini.com`)
 
+### 배포 전 필수 복구 항목 ⚠️
+
+- [ ] **`TOSS_MTLS_MODE=real` 복구** — 현재 테스트용 `mock`으로 설정됨. 프로덕션 배포 전 반드시 복구:
+  ```bash
+  supabase secrets set TOSS_MTLS_MODE=real --project-ref gxvtgrcqkbdibkyeqyil
+  supabase functions deploy login-with-toss --no-verify-jwt
+  ```
+  > mock 상태로 배포 시 전체 유저가 `mock_stable_user_001` 계정 공유 → 치명적 보안 취약점
+
 ### IAP 테스트
 
 - [ ] IAP 샌드박스 테스트 3종 완료 (구매 성공 / 서버 실패 / 에러 처리)

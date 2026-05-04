@@ -171,3 +171,68 @@ export interface SurveyResult {
   summary: string;
   recommended_curriculum_id: string | null;
 }
+
+// ──────────────────────────────────────
+// Progressive Profiling (Stage 1/2/3)
+// ──────────────────────────────────────
+
+/** Stage 1 — 최초 진입 필수 */
+export interface SurveyStage1Request {
+  name: string;
+  breed?: string;
+  birth_date?: string | null; // ISO date 'YYYY-MM-DD'
+  sex?: DogSex | null;
+  weight_kg?: number | null;
+  profile_image_url?: string | null;
+}
+
+/** Stage 2 — 행동/환경 */
+export interface SurveyStage2Request {
+  household_info: {
+    members_count?: number;
+    has_children: boolean;
+    has_other_pets: boolean;
+    living_type?: 'apartment' | 'house' | 'villa' | 'other';
+  };
+  chronic_issues: { top_issues: string[]; other_text?: string };
+  triggers: { ids: string[]; other_text?: string };
+  antecedents: { ids: string[] };
+  past_attempts: { ids: string[]; other_text?: string };
+  activity_meta?: { walk_frequency?: string; walk_duration_minutes?: number };
+  rewards_meta?: { ids: string[] };
+}
+
+/** Stage 3 — 기질/건강 */
+export interface SurveyStage3Request {
+  temperament: {
+    sensitivity_score?: number;
+    energy_level?: number;
+    env_reaction?: string;
+    person_reaction?: string;
+    dog_reaction?: string;
+    focus_level?: string;
+    attach_level?: string;
+  };
+  health_meta: { chronic_issues: string[]; medications: string[]; vet_notes?: string };
+  activity_meta: { daily_walk_minutes: number; exercise_level?: string };
+  rewards_meta: { ids: string[] };
+}
+
+/** 설문 완성도 응답 */
+export interface SurveyStatus {
+  dog_id: string;
+  completion_stage: 1 | 2 | 3;
+  completion_percentage: 25 | 60 | 100;
+  locked_features: string[];
+  stage1_completed_at: string | null;
+  stage2_completed_at: string | null;
+  stage3_completed_at: string | null;
+}
+
+/** Dog 생성 응답 (Stage 1 반환) */
+export interface DogCreateResponse {
+  id: string;
+  name: string;
+  breed: string | null;
+  created_at: string;
+}

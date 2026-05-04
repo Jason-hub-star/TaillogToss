@@ -62,6 +62,7 @@ class PlanType(str, PyEnum):
     """FE subscription.ts PlanType — B2C"""
     FREE = "FREE"
     PRO_MONTHLY = "PRO_MONTHLY"
+    PRO_YEARLY = "PRO_YEARLY"
 
 
 class AssetType(str, PyEnum):
@@ -205,8 +206,8 @@ class User(Base):
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid4)
     toss_user_key = Column(String(255), unique=True, index=True)  # kakao_sync_id 대체
-    role = Column(Enum(UserRole, name="user_role"), default=UserRole.USER)
-    status = Column(Enum(UserStatus, name="user_status"), default=UserStatus.ACTIVE)
+    role = Column(Enum(UserRole, name="user_role", values_callable=lambda x: [e.value for e in x]), default=UserRole.USER)
+    status = Column(Enum(UserStatus, name="user_status", values_callable=lambda x: [e.value for e in x]), default=UserStatus.ACTIVE)
     pepper_version = Column(Integer, default=1)  # PBKDF2 pepper 버전
     timezone = Column(String(50), default="Asia/Seoul")
     last_login_at = Column(DateTime(timezone=True))
@@ -226,7 +227,7 @@ class Subscription(Base):
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid4)
     user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), index=True)
-    plan_type = Column(Enum(PlanType, name="plan_type"), default=PlanType.FREE)
+    plan_type = Column(Enum(PlanType, name="plan_type", values_callable=lambda x: [e.value for e in x]), default=PlanType.FREE)
     is_active = Column(Boolean, default=False)
     ai_tokens_remaining = Column(Integer, default=0)
     ai_tokens_total = Column(Integer, default=0)
@@ -246,7 +247,7 @@ class Dog(Base):
     name = Column(String(255), nullable=False)
     breed = Column(String(255))
     birth_date = Column(Date)
-    sex = Column(Enum(DogSex, name="dog_sex"))
+    sex = Column(Enum(DogSex, name="dog_sex", values_callable=lambda x: [e.value for e in x]))
     weight_kg = Column(Numeric(5, 2))
     profile_image_url = Column(Text)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
@@ -274,6 +275,9 @@ class DogEnv(Base):
     past_attempts = Column(JSONB)
     temperament = Column(JSONB)
     activity_meta = Column(JSONB)
+    # Progressive Profiling: Stage별 완성도 추적 + 응답 보존
+    # {"completion_stage":1|2|3, "stage1_completed_at":..., "stage1_response":{...}, ...}
+    onboarding_survey = Column(JSONB, nullable=False, server_default='{"completion_stage":1}')
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
@@ -431,6 +435,7 @@ class UserTrainingStatus(Base):
     status = Column(Enum(TrainingStatus, name="training_status"), nullable=False)
     current_variant = Column(String(1), default="A")  # PlanVariant
     memo = Column(Text)
+    reaction = Column(String(20))  # enjoyed | neutral | sensitive
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     user = relationship("User")
@@ -842,3 +847,22 @@ class EdgeFunctionRequest(Base):
     result = Column(JSONB)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+
+class CoachingQuestion(Base):
+    """AI 코치 1:1 질문 — Pro 전용, 횟수 정책 TBD"""
+    __tablename__ = "coaching_questions"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid4)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    dog_id = Column(UUID(as_uuid=True), ForeignKey("dogs.id", ondelete="CASCADE"), nullable=False)
+    question = Column(Text, nullable=False)
+    context = Column(Text)
+    answer = Column(Text, nullable=False)
+    billing_period = Column(String(7))  # 'YYYY-MM', 횟수 제한 정책 확정 시 활용
+    ai_tokens_used = Column(Integer, default=0)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    __table_args__ = (
+        Index("idx_cq_user_dog", "user_id", "dog_id", "created_at"),
+    )

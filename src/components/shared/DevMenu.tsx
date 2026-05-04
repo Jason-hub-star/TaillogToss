@@ -18,6 +18,10 @@ import { useAuth } from 'stores/AuthContext';
 import { colors, typography } from 'styles/tokens';
 import { isDevGuardBypassed, setDevGuardBypass } from 'lib/devGuardBypass';
 import { getDevPlanOverride, setDevPlanOverride } from 'lib/devPlanOverride';
+import { supabase } from 'lib/api/supabase';
+
+const MOCK_USER_EMAIL = 'toss_mockstableuser001@taillog.local';
+const MOCK_USER_PASS = 'TestPass1234!';
 
 const DEV_ROUTES = [
   { path: '/onboarding/welcome', label: 'Welcome', group: 'Onboarding' },
@@ -60,7 +64,7 @@ export function DevMenu() {
     getDevPlanOverride(),
   );
   const navigation = useNavigation();
-  const { user } = useAuth();
+  const { user, login } = useAuth();
 
   const toggleGuardBypass = useCallback(() => {
     const next = !guardBypassed;
@@ -77,6 +81,32 @@ export function DevMenu() {
     setDevPlanOverride(next);
     setPlanOverride(next);
   }, [planOverride]);
+
+  const handleMockLogin = useCallback(async () => {
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email: MOCK_USER_EMAIL,
+      password: MOCK_USER_PASS,
+    });
+    if (error || !data.user) {
+      console.error('[DevMenu] mock login failed:', error?.message);
+      return;
+    }
+    const u = data.user;
+    const meta = u.user_metadata ?? {};
+    login({
+      id: u.id,
+      toss_user_key: String(meta.toss_user_key ?? u.id),
+      role: (meta.role as 'user') ?? 'user',
+      status: (meta.status as 'active') ?? 'active',
+      pepper_version: Number(meta.pepper_version ?? 1),
+      timezone: String(meta.timezone ?? 'Asia/Seoul'),
+      last_login_at: u.last_sign_in_at ?? new Date().toISOString(),
+      created_at: u.created_at ?? new Date().toISOString(),
+      updated_at: u.updated_at ?? new Date().toISOString(),
+    });
+    setVisible(false);
+    navigation.navigate('/dashboard' as never);
+  }, [login, navigation]);
 
   const handleNavigate = useCallback(
     (path: string) => {
@@ -109,6 +139,17 @@ export function DevMenu() {
             <Text style={styles.infoText}>
               User: {user?.id?.slice(0, 8) ?? 'none'} | Role: {user?.role ?? '-'}
             </Text>
+            {!user && (
+              <TouchableOpacity
+                style={[styles.bypassToggle, { backgroundColor: '#1D4ED8', marginTop: 6 }]}
+                onPress={() => { void handleMockLogin(); }}
+                activeOpacity={0.7}
+              >
+                <Text style={[styles.bypassToggleText, { color: '#fff' }]}>
+                  🔐 Mock Login (mock_stable_user_001)
+                </Text>
+              </TouchableOpacity>
+            )}
             <TouchableOpacity
               style={[styles.bypassToggle, guardBypassed && styles.bypassToggleActive]}
               onPress={toggleGuardBypass}

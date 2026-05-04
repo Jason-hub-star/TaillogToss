@@ -5,7 +5,7 @@
  * Parity: UI-001
  */
 import { createRoute, useNavigation } from '@granite-js/react-native';
-import React, { useMemo, useCallback } from 'react';
+import React, { useMemo, useCallback, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { ListLayout } from 'components/shared/layouts/ListLayout';
 import { AIPersonalizedHero } from 'components/features/training/AIPersonalizedHero';
@@ -23,6 +23,7 @@ import { getRecommendations, getRecommendationsV2 } from 'lib/data/recommendatio
 import { useTrainingProgress, useStepFeedback, useBehaviorAnalytics } from 'lib/hooks/useTraining';
 import { useIsPro } from 'lib/hooks/useSubscription';
 import { usePageGuard } from 'lib/hooks/usePageGuard';
+import { useInterstitialAd } from 'lib/hooks/useInterstitialAd';
 import { useActiveDog } from 'stores/ActiveDogContext';
 import { useAuth } from 'stores/AuthContext';
 import { useSurvey } from 'stores/SurveyContext';
@@ -119,9 +120,25 @@ function TrainingAcademyPage() {
   const navigation = useNavigation();
   const { show: showProUpgrade, SheetNode: ProUpgradeSheetNode } = useProUpgradeSheet();
 
-  const handleCardPress = useCallback((curriculum: Curriculum) => {
-    navigation.navigate('/training/detail', { curriculum_id: curriculum.id });
+  // I1: 무료 사용자 커리큘럼 진입 시 전면 광고
+  const pendingCurriculumRef = useRef<CurriculumId | null>(null);
+  const handleInterstitialDismissed = useCallback(() => {
+    const id = pendingCurriculumRef.current;
+    if (id) {
+      navigation.navigate('/training/detail', { curriculum_id: id });
+      pendingCurriculumRef.current = null;
+    }
   }, [navigation]);
+  const { showAd: showInterstitialAd } = useInterstitialAd('I1', handleInterstitialDismissed);
+
+  const handleCardPress = useCallback((curriculum: Curriculum) => {
+    if (isPro) {
+      navigation.navigate('/training/detail', { curriculum_id: curriculum.id });
+      return;
+    }
+    pendingCurriculumRef.current = curriculum.id;
+    showInterstitialAd();
+  }, [isPro, navigation, showInterstitialAd]);
 
   const handleProCTA = useCallback(() => {
     showProUpgrade();
@@ -180,6 +197,7 @@ function TrainingAcademyPage() {
             curriculumId={recommendation.primary}
             reasoning={recommendation.reasoning}
             scoreBand={'scoreBand' in recommendation ? (recommendation as CurriculumRecommendationV2).scoreBand : undefined}
+            contextTags={'contextTags' in recommendation ? (recommendation as CurriculumRecommendationV2).contextTags : undefined}
             logCount={behaviorAnalytics?.total_logs ?? 0}
             isPro={isPro ?? false}
             onPress={() => {

@@ -12,6 +12,7 @@ import React, {
 } from 'react';
 import * as authApi from 'lib/api/auth';
 import * as dogApi from 'lib/api/dog';
+import { supabase } from 'lib/api/supabase';
 import { clearPostLoginRedirect } from 'stores/postLoginRedirect';
 import type { AuthState, User } from 'types/auth';
 
@@ -126,8 +127,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
 
     void bootstrap();
+
+    // IAP 등 앱 재진입 시 Supabase 세션 변경 이벤트 감지
+    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+      if (!mounted) return;
+      if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
+        if (session?.user) {
+          const user = buildUserFromSession(session.user as SessionUserLike);
+          getHasCompletedOnboarding(user.id).then((hasCompletedOnboarding) => {
+            if (!mounted) return;
+            setState({ user, isAuthenticated: true, isLoading: false, hasCompletedOnboarding });
+          });
+        }
+      } else if (event === 'SIGNED_OUT') {
+        if (mounted) {
+          setState({ user: null, isAuthenticated: false, isLoading: false, hasCompletedOnboarding: false });
+        }
+      }
+    });
+
     return () => {
       mounted = false;
+      authListener?.subscription.unsubscribe();
     };
   }, []);
 

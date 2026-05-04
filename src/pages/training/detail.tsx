@@ -31,6 +31,7 @@ import { ReactionTrendBar } from 'components/features/training/ReactionTrendBar'
 import { StreakBadge } from 'components/features/training/StreakBadge';
 import { useIsPro } from 'lib/hooks/useSubscription';
 import { usePageGuard } from 'lib/hooks/usePageGuard';
+import { BannerAd } from 'components/shared/ads';
 import { tracker } from 'lib/analytics/tracker';
 import { useActiveDog } from 'stores/ActiveDogContext';
 import { useAuth } from 'stores/AuthContext';
@@ -86,7 +87,12 @@ function TrainingDetailPage() {
         energyScore: env?.activity_meta?.energy_score,
         playReward: env?.activity_meta?.rewards_meta?.play,
         noiseSensitivity: env?.household_info?.noise_sensitivity,
-        behaviors: env?.health_meta?.chronic_issues,
+        behaviors: env?.chronic_issues?.top_issues,
+        envReaction: env?.temperament?.env_reaction,
+        personReaction: env?.temperament?.person_reaction,
+        dogReaction: env?.temperament?.dog_reaction,
+        focusLevel: env?.temperament?.focus_level,
+        attachLevel: env?.temperament?.attach_level,
       });
       setVariant(!isPro && recommended !== 'A' ? 'A' : recommended);
       setHasSyncedProgress(true);
@@ -316,6 +322,9 @@ function TrainingDetailPage() {
         selectedDay={selectedDay}
         onSelect={setSelectedDay}
       />
+
+      {/* B3: 배너 광고 — 무료 사용자 훈련상세 */}
+      {!isPro && <BannerAd placement="B3" />}
 
       {currentDay && (
         <>

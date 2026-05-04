@@ -1,46 +1,74 @@
 /**
- * 광고(토스 Ads SDK) 도메인 타입 — Rewarded 터치포인트 3종
+ * 광고(토스 Ads SDK 2.0) 도메인 타입
+ * Rewarded R1/R2/R3 · Banner B1/B2/B3 · Interstitial I1
  * Parity: UI-001
  */
 
-/** 광고 배치 위치 (3개 터치포인트) */
-export type AdPlacement = 'R1' | 'R2' | 'R3';
+// ─── Rewarded (보상형) ────────────────────────────────────────────────────────
 
-/** 광고 배치 상세 */
-export const AD_PLACEMENT_CONFIG: Record<AdPlacement, AdPlacementConfig> = {
-  R1: { screen: 'survey-result', description: '설문 결과 전체 해제' },
-  R2: { screen: 'dashboard', description: '대시보드 분석 차트 해제' },
-  R3: { screen: 'coaching-result', description: 'AI 코칭 PRO 블록 미리보기' },
-};
+export type AdPlacement = 'R1' | 'R2' | 'R3';
 
 export interface AdPlacementConfig {
   screen: string;
   description: string;
 }
 
-/** 보상형 광고 상태 */
-export type RewardedAdState =
-  | 'idle'
-  | 'loading'
-  | 'ready'
-  | 'showing'
-  | 'rewarded'
-  | 'error'
-  | 'no_fill'; // 광고 없음
+export const AD_PLACEMENT_CONFIG: Record<AdPlacement, AdPlacementConfig> = {
+  R1: { screen: 'survey-result',   description: '설문 결과 상세 리포트 해제' },
+  R2: { screen: 'dashboard',       description: '대시보드 분석 인사이트 해제' },
+  R3: { screen: 'coaching-result', description: 'AI 코칭 6블록 전체 열람' },
+};
 
-/** 광고 폴백 정책 — 토스 SDK 미응답 시 무광고 폴백 */
+export type RewardedAdState =
+  | 'idle' | 'loading' | 'ready' | 'showing' | 'rewarded' | 'error' | 'no_fill';
+
+// ─── Banner (배너) ────────────────────────────────────────────────────────────
+
+export type BannerPlacement = 'B1' | 'B2' | 'B3';
+
+export interface BannerPlacementConfig {
+  screen: string;
+  /** expanded = List형 96px / card = Feed형 410px */
+  variant: 'expanded' | 'card';
+  dailyLimit: number;
+  description: string;
+}
+
+export const BANNER_PLACEMENT_CONFIG: Record<BannerPlacement, BannerPlacementConfig> = {
+  B1: { screen: 'dashboard',       variant: 'expanded', dailyLimit: 2, description: '대시보드 로그 목록 상단' },
+  B2: { screen: 'quick-log',       variant: 'card',     dailyLimit: 2, description: '빠른 기록 완료 후 피드' },
+  B3: { screen: 'training-detail', variant: 'expanded', dailyLimit: 2, description: '훈련 미션 체크리스트 상단' },
+};
+
+export type BannerAdState = 'idle' | 'rendered' | 'failed' | 'no_fill';
+
+// ─── Interstitial (전면형) ────────────────────────────────────────────────────
+
+export type InterstitialPlacement = 'I1';
+
+export interface InterstitialPlacementConfig {
+  screen: string;
+  dailyLimit: number;
+  description: string;
+}
+
+export const INTERSTITIAL_PLACEMENT_CONFIG: Record<InterstitialPlacement, InterstitialPlacementConfig> = {
+  I1: { screen: 'training-academy', dailyLimit: 2, description: '훈련 커리큘럼 시작 직전' },
+};
+
+export type InterstitialAdState =
+  | 'idle' | 'loading' | 'showing' | 'dismissed' | 'error' | 'no_fill';
+
+// ─── 공통 정책 ────────────────────────────────────────────────────────────────
+
 export interface AdFallbackPolicy {
-  /** 폴백 시 콘텐츠 해제 여부 */
   unlock_on_no_fill: boolean;
-  /** 최대 로딩 대기 시간 (ms) */
   timeout_ms: number;
-  /** 하루 최대 광고 노출 수 */
   daily_limit: number;
 }
 
-/** 기본 폴백 정책 */
 export const DEFAULT_AD_FALLBACK: AdFallbackPolicy = {
-  unlock_on_no_fill: true, // 광고 없으면 무료 해제
+  unlock_on_no_fill: true,
   timeout_ms: 5000,
   daily_limit: 10,
 };

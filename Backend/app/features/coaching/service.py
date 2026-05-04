@@ -56,22 +56,29 @@ async def generate_coaching(
         if total_logs > 0 else 5.0
     )
 
-    # 3. 예산 모드 확인
+    # 3. 예산 모드 + 설문 게이트 확인
     budget_mode = await budget.get_budget_mode(db)
+    coaching_gate = _check_coaching_gate(env)
 
     # 4. 블록 생성
     blocks: schemas.CoachingBlocks
     ai_tokens_used = 0
 
-    # 이전 코칭 요약 (연속성 제공)
+    # 이전 코칭 요약 (연속성 — 최근 5회)
     prev_summary = await _build_previous_coaching_summary(db, dog_id)
 
-    if budget_mode == "rule_only" or not settings.OPENAI_API_KEY:
-        # 규칙 기반 폴백
+    # onboarding_context 추출 (Stage별 프롬프트 품질 차등)
+    onboarding_ctx = _build_onboarding_context(env)
+
+    if budget_mode == "rule_only" or not settings.OPENAI_API_KEY or not coaching_gate:
+        # 규칙 기반 폴백 (예산 초과 or API 키 없음 or Stage 1)
         blocks = rule_engine.generate_rule_based_blocks(
             dog.name, issues, triggers, total_logs, avg_intensity,
         )
-        await budget.record_cost(db, 0, 0, 0, is_rule=True)
+        try:
+            await budget.record_cost(db, 0, 0, 0, is_rule=True)
+        except Exception as e:
+            logger.warning("budget.record_cost (rule fallback) failed: %s", e)
         analytics_metadata = {"log_count": total_logs, "analysis_days": 30, "top_behavior": None}
     else:
         # AI 생성 시도
@@ -85,6 +92,7 @@ async def generate_coaching(
                 dog.name, dog.breed or "믹스", age_months,
                 issues, triggers, behavior_analytics_text, request.report_type,
                 previous_coaching_summary=prev_summary,
+                onboarding_context=onboarding_ctx,
             )
             result = await openai_client.generate(
                 prompts.SYSTEM_PROMPT_6BLOCK, user_prompt,
@@ -104,7 +112,10 @@ async def generate_coaching(
             blocks = rule_engine.generate_rule_based_blocks(
                 dog.name, issues, triggers, total_logs, avg_intensity,
             )
-            await budget.record_cost(db, 0, 0, 0, is_rule=True)
+            try:
+                await budget.record_cost(db, 0, 0, 0, is_rule=True)
+            except Exception as e:
+                logger.warning("budget.record_cost (AI fallback) failed: %s", e)
             analytics_metadata = {"log_count": total_logs, "analysis_days": 30, "top_behavior": None}
 
     # 5. DB 저장
@@ -289,12 +300,12 @@ def _parse_ai_response(content: str) -> dict:
 
 
 async def _build_previous_coaching_summary(db: AsyncSession, dog_id: UUID) -> str | None:
-    """최근 2~3회 코칭의 trend, key_patterns를 요약 (AI 프롬프트 연속성)"""
+    """최근 5회 코칭의 trend, key_patterns를 요약 (AI 프롬프트 연속성)"""
     q = (
         select(AICoaching)
         .where(AICoaching.dog_id == dog_id)
         .order_by(desc(AICoaching.created_at))
-        .limit(3)
+        .limit(5)
     )
     results = (await db.execute(q)).scalars().all()
     if not results:
@@ -310,6 +321,52 @@ async def _build_previous_coaching_summary(db: AsyncSession, dog_id: UUID) -> st
         lines.append(f"- [{dt}] Trend: {trend}, Patterns: {', '.join(patterns[:3])}")
 
     return "\n".join(lines) if lines else None
+
+
+def _check_coaching_gate(env: Optional[DogEnv]) -> bool:
+    """Stage 2 이상이어야 AI 코칭 활성화. Stage 1은 규칙 기반 폴백."""
+    if not env or not env.onboarding_survey:
+        return False
+    stage = int(env.onboarding_survey.get("completion_stage", 1))
+    return stage >= 2
+
+
+def _build_onboarding_context(env: Optional[DogEnv]) -> dict | None:
+    """DogEnv.onboarding_survey → prompts.build_user_prompt용 context dict"""
+    if not env or not env.onboarding_survey:
+        return None
+    survey = env.onboarding_survey
+    stage = int(survey.get("completion_stage", 1))
+    if stage < 2:
+        return None
+
+    ctx: dict = {"stage": stage}
+
+    # Stage 2 응답 우선, 없으면 기존 DogEnv 필드 fallback
+    s2 = survey.get("stage2_response")
+    if s2:
+        ctx["stage2"] = s2
+    else:
+        ctx["stage2"] = {
+            "household_info": env.household_info,
+            "chronic_issues": env.chronic_issues,
+            "triggers": env.triggers,
+            "past_attempts": env.past_attempts,
+        }
+
+    if stage >= 3:
+        s3 = survey.get("stage3_response")
+        if s3:
+            ctx["stage3"] = s3
+        else:
+            ctx["stage3"] = {
+                "temperament": env.temperament,
+                "health_meta": env.health_meta,
+                "activity_meta": env.activity_meta,
+                "rewards_meta": env.rewards_meta,
+            }
+
+    return ctx
 
 
 def _extract_list(data, key: str) -> list:
@@ -529,6 +586,23 @@ async def _build_behavior_analytics_text(
         peak_h = max(hour_counts, key=lambda h: hour_counts[h])
         lines.append(f"[피크 시간대] {peak_h:02d}시")
 
+    # 메모 컨텍스트 섹션 — 로그 10개 이상 + 메모 있는 로그 3개 이상일 때만 포함 (토큰 절감)
+    memo_logs_count = sum(1 for log in logs[:50] if log.memo and isinstance(log.memo, str) and log.memo.strip())
+    if total >= 10 and memo_logs_count >= 3:
+        memo_contexts: dict[str, list[str]] = {}
+        for log in logs[:50]:
+            if log.memo and isinstance(log.memo, str) and log.memo.strip():
+                key = log.quick_category or log.behavior or "other"
+                if key not in memo_contexts:
+                    memo_contexts[key] = []
+                trimmed = log.memo.strip()[:80]
+                if trimmed not in memo_contexts[key] and len(memo_contexts[key]) < 3:
+                    memo_contexts[key].append(trimmed)
+        if memo_contexts:
+            lines.append("\n[행동 발생 상황 메모]")
+            for behavior, contexts in list(memo_contexts.items())[:3]:
+                lines.append(f"- {behavior}: {', '.join(contexts)}")
+
     analytics_text = "\n".join(lines)
     metadata = {
         "log_count": total,
@@ -536,3 +610,151 @@ async def _build_behavior_analytics_text(
         "top_behavior": top_behavior,
     }
     return analytics_text, metadata
+
+
+# ── Phase 3: AI 코치 1:1 질문 (Pro 전용) ────────────────────────────────────
+
+async def ask_coach(
+    db: AsyncSession,
+    user_id: str,
+    dog_id: UUID,
+    request: schemas.CoachingQuestionRequest,
+) -> schemas.CoachingQuestionResponse:
+    """Pro 전용 AI 코치 1:1 질문 — Dog+DogEnv+로그 100건 풀 컨텍스트"""
+    from app.shared.models import CoachingQuestion, Subscription
+
+    # 1. Pro 구독 확인
+    sub_q = select(Subscription).where(Subscription.user_id == UUID(user_id))
+    sub = (await db.execute(sub_q)).scalar_one_or_none()
+    is_pro = (
+        sub is not None
+        and sub.plan_type.value in ("PRO_MONTHLY", "PRO_YEARLY")
+        and sub.is_active
+    )
+    if not is_pro:
+        from app.core.exceptions import ForbiddenException
+        raise ForbiddenException("AI 코치 질문은 Pro 구독 전용 기능이에요")
+
+    # 2. Dog + DogEnv 조회 (소유권 포함)
+    dog = (await db.execute(select(Dog).where(Dog.id == dog_id))).scalar_one_or_none()
+    if not dog or str(dog.user_id) != user_id:
+        raise NotFoundException("Dog not found")
+
+    env = (await db.execute(select(DogEnv).where(DogEnv.dog_id == dog_id))).scalar_one_or_none()
+
+    # 3. 최근 로그 100건 수집
+    logs_q = (
+        select(BehaviorLog)
+        .where(BehaviorLog.dog_id == dog_id)
+        .order_by(desc(BehaviorLog.occurred_at))
+        .limit(100)
+    )
+    logs = (await db.execute(logs_q)).scalars().all()
+
+    # 4. 최근 코칭 1건 (컨텍스트 보강)
+    latest_coaching = await get_latest_coaching(db, dog_id)
+
+    # 5. 프롬프트 구성
+    issues = _extract_list(env.chronic_issues if env else None, "top_issues")
+    triggers = _extract_list(env.triggers if env else None, "ids")
+    age_months = 0
+    if dog.birth_date:
+        age_months = int((date.today() - dog.birth_date).days / 30)
+
+    behavior_text = _build_logs_summary(list(logs))
+    onboarding_ctx = _build_onboarding_context(env)
+
+    coaching_summary = None
+    if latest_coaching:
+        insight = latest_coaching.blocks.insight
+        coaching_summary = (
+            f"최근 코칭 트렌드: {insight.trend}, "
+            f"주요 패턴: {', '.join(insight.key_patterns[:3])}"
+        )
+
+    base_context = prompts.build_user_prompt(
+        dog.name, dog.breed or "믹스", age_months,
+        issues, triggers, behavior_text, "INSIGHT",
+        previous_coaching_summary=coaching_summary,
+        onboarding_context=onboarding_ctx,
+    )
+
+    user_question_prompt = (
+        f"{base_context}\n\n"
+        f"보호자 질문:\n{request.question}"
+    )
+    if request.context:
+        user_question_prompt += f"\n\n추가 상황 설명:\n{request.context}"
+    user_question_prompt += "\n\n위 질문에 대해 전문적이고 따뜻하게 답변해 주세요. JSON 형식 없이 자연스러운 한국어(존댓말, 요체) 텍스트로 답변하세요."
+
+    # 6. AI 호출
+    try:
+        result = await openai_client.generate(
+            prompts.SYSTEM_PROMPT_6BLOCK, user_question_prompt,
+            model=settings.AI_COACHING_MODEL,
+        )
+        answer = result["content"].strip()
+        ai_tokens_used = result["input_tokens"] + result["output_tokens"]
+        await budget.record_cost(db, result["input_tokens"], result["output_tokens"], result["cost_usd"])
+    except OpenAIError as e:
+        logger.error("ask_coach AI call failed: %s", e)
+        raise BadRequestException("AI 답변 생성에 실패했어요. 잠시 후 다시 시도해 주세요.")
+
+    # 7. 저장
+    from datetime import date as _date
+    billing_period = _date.today().strftime("%Y-%m")
+    question_record = CoachingQuestion(
+        user_id=UUID(user_id),
+        dog_id=dog_id,
+        question=request.question,
+        context=request.context,
+        answer=answer,
+        billing_period=billing_period,
+        ai_tokens_used=ai_tokens_used,
+    )
+    db.add(question_record)
+    await db.commit()
+    await db.refresh(question_record)
+
+    return schemas.CoachingQuestionResponse(
+        id=question_record.id,
+        dog_id=question_record.dog_id,
+        question=question_record.question,
+        answer=question_record.answer,
+        billing_period=question_record.billing_period,
+        ai_tokens_used=question_record.ai_tokens_used,
+        created_at=question_record.created_at,
+    )
+
+
+async def get_question_history(
+    db: AsyncSession,
+    user_id: str,
+    dog_id: UUID,
+    limit: int = 20,
+) -> list[schemas.CoachingQuestionResponse]:
+    """이 강아지의 질문 이력 조회 (최신순)"""
+    from app.shared.models import CoachingQuestion
+
+    q = (
+        select(CoachingQuestion)
+        .where(
+            CoachingQuestion.user_id == UUID(user_id),
+            CoachingQuestion.dog_id == dog_id,
+        )
+        .order_by(desc(CoachingQuestion.created_at))
+        .limit(limit)
+    )
+    records = (await db.execute(q)).scalars().all()
+    return [
+        schemas.CoachingQuestionResponse(
+            id=r.id,
+            dog_id=r.dog_id,
+            question=r.question,
+            answer=r.answer,
+            billing_period=r.billing_period or "",
+            ai_tokens_used=r.ai_tokens_used or 0,
+            created_at=r.created_at,
+        )
+        for r in records
+    ]

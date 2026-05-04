@@ -254,7 +254,6 @@ function OpsDogAddPage() {
                 maxLength={60}
                 returnKeyType="done"
               />
-              <Text style={styles.fieldHint}>DB 연동 준비 중 — 현재 로컬 보관</Text>
             </View>
           )}
 
@@ -292,7 +291,6 @@ function OpsDogAddPage() {
                 maxLength={15}
                 returnKeyType="done"
               />
-              <Text style={styles.fieldHint}>DB 연동 준비 중 — 현재 로컬 보관</Text>
             </View>
           )}
 

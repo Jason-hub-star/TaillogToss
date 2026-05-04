@@ -31,9 +31,20 @@ class TrainingStatusResponse(BaseModel):
     status: str
     current_variant: str = "A"
     memo: Optional[str] = None
+    reaction: Optional[str] = None
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class StepFeedbackUpdate(BaseModel):
+    """스텝 반응 저장 요청"""
+    dog_id: str
+    curriculum_id: str
+    stage_id: str
+    step_number: int
+    reaction: str  # enjoyed | neutral | sensitive
+    memo: Optional[str] = None
 
 
 class TrainingProgressSummary(BaseModel):

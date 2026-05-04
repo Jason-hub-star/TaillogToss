@@ -144,16 +144,35 @@ import { InlineAd } from '@apps-in-toss/framework';
 - [ ] noFill 폴백 동작 확인 (`unlock_on_no_fill=true` 또는 UI 조건 처리)
 - [ ] 테스트 ID → 실 AdGroup ID 교체
 
-## 8. 현재 프로젝트 갭 분석
+## 8. 현재 프로젝트 구현 현황 (2026-04-29)
 
-| 항목 | 현재 (`config.ts`) | 공식 API | 갭 |
-|------|-------------------|---------|-----|
-| SDK 함수 | mock `createMockAdsSdk()` | `loadFullScreenAd` / `showFullScreenAd` | 전체 교체 필요 |
-| 패턴 | Promise 기반 `.then()` | 이벤트 콜백 기반 `onEvent` | `useRewardedAd.ts` 리팩토링 필요 |
-| Ad Group ID | 하드코딩 테스트 ID | 콘솔 발급 실제 ID | 콘솔 심사 후 교체 |
-| 배너 | 미사용 | `InlineAd` 컴포넌트 | 광고 배치 확정 시 추가 |
-| 환경 검사 | 없음 | `isSupported()` | 광고 표시 전 호출 필요 |
-| 배너 노출 측정 | 미구현 | `IOScrollView` or `impressFallbackOnMount` | 배너 도입 시 반드시 구현 |
+### 컴포넌트 레이어 (완료)
+
+```
+import { RewardedAdButton, BannerAd, InterstitialAd } from 'components/shared/ads';
+```
+
+| 슬롯 | 타입 | 컴포넌트/훅 | 페이지 연결 |
+|---|---|---|---|
+| R1 | Rewarded | `RewardedAdButton` + `useRewardedAd` | ✅ `survey-result.tsx:156` |
+| R2 | Rewarded | `RewardedAdButton` + `useRewardedAd` | ⬜ `analysis.tsx` 미연결 |
+| R3 | Rewarded | `RewardedAdButton` + `useRewardedAd` | ✅ `CoachingDetailContent.tsx:98` |
+| B1 | Banner 96px | `BannerAd` + `useBannerAd` | ⬜ `dashboard/index.tsx` 미연결 |
+| B2 | Banner 410px | `BannerAd` + `useBannerAd` | ⬜ `quick-log.tsx` 미연결 |
+| B3 | Banner 96px | `BannerAd` + `useBannerAd` | ⬜ `training/detail.tsx` 미연결 |
+| I1 | Interstitial | `InterstitialAd` + `useInterstitialAd` | ⬜ `training/academy.tsx` 미연결 |
+
+### SDK 연결 상태
+
+| 항목 | 현재 | 비고 |
+|---|---|---|
+| Fullscreen SDK | Mock (`createMockAdsSdk`) | 콘솔 발급 후 실 SDK로 교체 |
+| Banner SDK | `InlineAd` 직접 import (prod) / 목업 placeholder (mock) | `isMockMode()` 자동 분기 |
+| 환경변수 | 미설정 시 테스트 ID 자동 fallback | `AIT_AD_R1~R3`, `AIT_AD_B1~B3`, `AIT_AD_I1` |
+| 일일 한도 | 인메모리 (앱 재시작 시 리셋) | Rewarded 1회, Banner 2회, Interstitial 2회 |
+| Tracker 이벤트 | `ad_requested/loaded/rewarded/impression/dismissed/error/no_fill` | 7종 완비 |
+
+→ 콘솔 등록 전 과정: `docs/ref/AIT-ADS-CONSOLE-GUIDE.md`
 
 ## Sources
 

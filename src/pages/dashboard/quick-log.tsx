@@ -14,6 +14,9 @@ import { useActiveDog } from 'stores/ActiveDogContext';
 import { useCreateQuickLog, useCreateDetailedLog } from 'lib/hooks/useLogs';
 import { usePageGuard } from 'lib/hooks/usePageGuard';
 import { tracker } from 'lib/analytics/tracker';
+import { useAuth } from 'stores/AuthContext';
+import { useIsPro } from 'lib/hooks/useSubscription';
+import { BannerAd } from 'components/shared/ads';
 import { QuickLogForm } from 'components/features/log/QuickLogForm';
 import { ABCForm } from 'components/features/log/ABCForm';
 import { EmptyState } from 'components/tds-ext/EmptyState';
@@ -32,17 +35,26 @@ function QuickLogPage() {
   const [showToast, setShowToast] = useState(false);
   const { activeDog } = useActiveDog();
   const navigation = useNavigation();
+  const { user } = useAuth();
+  const isPro = useIsPro(user?.id);
   const { isReady } = usePageGuard({ currentPath: '/dashboard/quick-log' });
 
   const quickLogMutation = useCreateQuickLog();
   const detailedLogMutation = useCreateDetailedLog();
 
-  const handleQuickSubmit = useCallback((input: QuickLogInput) => {
-    quickLogMutation.mutate(input, {
-      onSuccess: () => {
-        tracker.behaviorLogCreated('quick');
-        setShowToast(true);
-      },
+  const handleQuickSubmit = useCallback((inputs: QuickLogInput[]) => {
+    const total = inputs.length;
+    let completed = 0;
+    inputs.forEach((input) => {
+      quickLogMutation.mutate(input, {
+        onSettled: () => {
+          completed++;
+          if (completed === total) {
+            tracker.behaviorLogCreated('quick');
+            setShowToast(true);
+          }
+        },
+      });
     });
   }, [quickLogMutation]);
 
@@ -123,6 +135,10 @@ function QuickLogPage() {
           />
         )}
       </View>
+
+      {/* B2: 배너 광고 — 무료 사용자 빠른기록 */}
+      {!isPro && <BannerAd placement="B2" />}
+
       <Toast
         message="기록이 저장되었어요"
         visible={showToast}

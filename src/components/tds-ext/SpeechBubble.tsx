@@ -23,8 +23,10 @@ export function SpeechBubble({ message, emotion = 'happy' }: SpeechBubbleProps) 
   return (
     <View style={styles.container}>
       <View style={styles.bubble}>
-        <Text style={styles.emoji}>{EMOTION_EMOJI[emotion]}</Text>
-        <Text style={styles.message}>{message}</Text>
+        <View style={styles.row}>
+          <Text style={styles.emoji}>{EMOTION_EMOJI[emotion]}</Text>
+          <Text style={styles.message}>{message}</Text>
+        </View>
       </View>
       <View style={styles.tail} />
     </View>
@@ -41,20 +43,26 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     borderTopLeftRadius: 4,
     padding: spacing.lg,
-    maxWidth: '85%',
+    maxWidth: '88%',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.08,
     shadowRadius: 4,
     elevation: 2,
   },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.sm,
+  },
   emoji: {
-    fontSize: 24,
-    marginBottom: spacing.sm,
+    fontSize: 20,
+    lineHeight: 24,
   },
   message: {
     ...typography.bodySmall,
     color: colors.textDark,
+    flex: 1,
   },
   tail: {
     width: 12,

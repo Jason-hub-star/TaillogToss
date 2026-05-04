@@ -6,9 +6,9 @@ Toss domain skill root.
 - `core/`: toss_apps, toss_journey, toss_wireframes
 - `data/`: toss_db_migration
 - `security/`: toss-edge-hardening, toss-iap-edge-recovery
-- `auth/`: toss-login-token-ops
+- `auth/`: toss-login-token-ops, toss-mock-auth-ops
 - `monetization/`: toss-growth-ops, toss-monetization-ops
-- `ops/`: toss-phase13-gate, toss-sandbox-metro, toss-supabase-mcp
+- `ops/`: toss-phase13-gate, toss-sandbox-metro, toss-supabase-mcp, toss-dev-server, toss-ait-build-ops
 
 ## Rules
 - Keep skill names unchanged and organize only by path.

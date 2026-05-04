@@ -34,44 +34,50 @@ const ACTIVITY_CHIPS: { key: DailyActivityCategory; label: string; icon: string 
 export interface QuickLogChipsProps {
   onSelectBehavior: (category: QuickLogCategory) => void;
   onSelectActivity: (category: DailyActivityCategory) => void;
-  selectedKey?: string;
+  selectedKeys?: string[];
 }
 
-export function QuickLogChips({ onSelectBehavior, onSelectActivity, selectedKey }: QuickLogChipsProps) {
+export function QuickLogChips({ onSelectBehavior, onSelectActivity, selectedKeys = [] }: QuickLogChipsProps) {
   return (
     <View style={styles.container}>
-      <Text style={styles.sectionLabel}>행동 문제</Text>
+      <Text style={styles.sectionLabel}>행동 문제 (복수 선택 가능)</Text>
       <View style={styles.chipRow}>
-        {BEHAVIOR_CHIPS.map((chip) => (
-          <TouchableOpacity
-            key={chip.key}
-            style={[styles.iconChip, selectedKey === chip.key && styles.iconChipSelected]}
-            onPress={() => onSelectBehavior(chip.key)}
-            activeOpacity={0.7}
-          >
-            <Image source={{ uri: chip.icon }} style={styles.chipIcon} />
-            <Text style={[styles.chipText, selectedKey === chip.key && styles.chipTextSelected]}>
-              {chip.label}
-            </Text>
-          </TouchableOpacity>
-        ))}
+        {BEHAVIOR_CHIPS.map((chip) => {
+          const isSelected = selectedKeys.includes(chip.key);
+          return (
+            <TouchableOpacity
+              key={chip.key}
+              style={[styles.iconChip, isSelected && styles.iconChipSelected]}
+              onPress={() => onSelectBehavior(chip.key)}
+              activeOpacity={0.7}
+            >
+              <Image source={{ uri: chip.icon }} style={styles.chipIcon} />
+              <Text style={[styles.chipText, isSelected && styles.chipTextSelected]}>
+                {chip.label}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
       </View>
 
       <Text style={styles.sectionLabel}>일상 활동</Text>
       <View style={styles.chipRow}>
-        {ACTIVITY_CHIPS.map((chip) => (
-          <TouchableOpacity
-            key={chip.key}
-            style={[styles.iconChip, selectedKey === chip.key && styles.iconChipSelected]}
-            onPress={() => onSelectActivity(chip.key)}
-            activeOpacity={0.7}
-          >
-            <Image source={{ uri: chip.icon }} style={styles.chipIcon} />
-            <Text style={[styles.chipText, selectedKey === chip.key && styles.chipTextSelected]}>
-              {chip.label}
-            </Text>
-          </TouchableOpacity>
-        ))}
+        {ACTIVITY_CHIPS.map((chip) => {
+          const isSelected = selectedKeys.includes(chip.key);
+          return (
+            <TouchableOpacity
+              key={chip.key}
+              style={[styles.iconChip, isSelected && styles.iconChipSelected]}
+              onPress={() => onSelectActivity(chip.key)}
+              activeOpacity={0.7}
+            >
+              <Image source={{ uri: chip.icon }} style={styles.chipIcon} />
+              <Text style={[styles.chipText, isSelected && styles.chipTextSelected]}>
+                {chip.label}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
       </View>
     </View>
   );

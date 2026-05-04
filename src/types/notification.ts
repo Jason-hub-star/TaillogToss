@@ -15,10 +15,9 @@ export type NotificationType =
   | 'surge_alert'
   | 'promo';
 
-/** Smart Message 템플릿 */
+/** Smart Message 템플릿 — 푸시 본문은 정적 텍스트 전용 (변수 치환 미지원) */
 export interface SmartMessageTemplate {
   template_set_code: string;
-  variables: Record<string, string>;
 }
 
 /** Smart Message 발송 요청 */

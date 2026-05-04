@@ -4,6 +4,7 @@
  * Parity: AI-001, UIUX-005
  */
 import { createRoute, useNavigation } from '@granite-js/react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Share } from 'react-native';
 import { colors, typography, spacing } from 'styles/tokens';
@@ -29,6 +30,8 @@ import { usePageGuard } from 'lib/hooks/usePageGuard';
 import { tracker } from 'lib/analytics/tracker';
 import { useActiveDog } from 'stores/ActiveDogContext';
 import { useAuth } from 'stores/AuthContext';
+import { Stage2InterceptModal } from 'components/features/survey/Stage2InterceptModal';
+import { useSurveyStatus } from 'lib/hooks/useSurvey';
 import type { CoachingResult } from 'types/coaching';
 
 export const Route = createRoute('/coaching/result', {
@@ -50,6 +53,9 @@ function CoachingResultPage() {
   const toggleAction = useToggleActionItem();
   const { data: usage } = useDailyUsage(user?.id);
 
+  const { data: surveyStatus } = useSurveyStatus(activeDog?.id);
+  const [interceptVisible, setInterceptVisible] = useState(false);
+
   const [activeTab, setActiveTab] = useState<TabKey>('latest');
   const [selectedHistoryCoaching, setSelectedHistoryCoaching] = useState<CoachingResult | null>(null);
   const [selectedScore, setSelectedScore] = useState<number>(0);
@@ -66,6 +72,17 @@ function CoachingResultPage() {
     setSelectedScore(0);
     setFeedbackSubmitted(false);
   }, [displayCoaching?.id]);
+
+  useEffect(() => {
+    if (!isReady || !surveyStatus || surveyStatus.completion_stage >= 2) return;
+    const key = `stage2_intercept_shown_${activeDog?.id}`;
+    void AsyncStorage.getItem(key).then((val) => {
+      if (!val) {
+        setInterceptVisible(true);
+        void AsyncStorage.setItem(key, '1');
+      }
+    });
+  }, [isReady, surveyStatus, activeDog?.id]);
 
   useEffect(() => {
     if (isReady && !trackedRequestRef.current) {
@@ -120,10 +137,6 @@ function CoachingResultPage() {
     navigation.navigate('/training/academy');
   }, [navigation]);
 
-  const handleNavigateToAnalysis = useCallback(() => {
-    navigation.navigate('/dashboard/analysis');
-  }, [navigation]);
-
   const handleNavigateToSubscription = useCallback(() => {
     navigation.navigate('/settings/subscription');
   }, [navigation]);
@@ -162,6 +175,21 @@ function CoachingResultPage() {
   }, [displayCoaching, activeDog?.name]);
 
   if (!isReady) return null;
+
+  const interceptModal = (
+    <Stage2InterceptModal
+      visible={interceptVisible}
+      dogName={activeDog?.name ?? '우리 강아지'}
+      onConfirm={() => {
+        setInterceptVisible(false);
+        navigation.navigate('/onboarding/stage2-form', {
+          dogId: activeDog?.id ?? '',
+          dogName: activeDog?.name ?? '우리 강아지',
+        });
+      }}
+      onDismiss={() => setInterceptVisible(false)}
+    />
+  );
 
   if (isLoading) {
     return (
@@ -216,30 +244,34 @@ function CoachingResultPage() {
     const remaining = Math.max(0, dailyLimit - dailyUsed);
 
     return (
-      <DetailLayout title="AI 행동 진단" onBack={handleBack}>
-        <View style={styles.emptyContainer}>
-          <EmptyState
-            title="아직 코칭 결과가 없어요"
-            description="행동 기록을 기반으로 AI가 맞춤 코칭을 제공합니다"
-            icon="🐾"
-          />
-          <TouchableOpacity
-            style={[styles.generateButton, remaining === 0 && styles.generateButtonDisabled]}
-            onPress={handleGenerate}
-            activeOpacity={0.7}
-            disabled={remaining === 0}
-          >
-            <Text style={styles.generateButtonText}>AI 코칭 받기</Text>
-          </TouchableOpacity>
-          <Text style={styles.usageText}>
-            오늘 {dailyUsed}/{dailyLimit}회 사용
-          </Text>
-        </View>
-      </DetailLayout>
+      <>
+        {interceptModal}
+        <DetailLayout title="AI 행동 진단" onBack={handleBack}>
+          <View style={styles.emptyContainer}>
+            <EmptyState
+              title="아직 코칭 결과가 없어요"
+              description="행동 기록을 기반으로 AI가 맞춤 코칭을 제공합니다"
+              icon="🐾"
+            />
+            <TouchableOpacity
+              style={[styles.generateButton, remaining === 0 && styles.generateButtonDisabled]}
+              onPress={handleGenerate}
+              activeOpacity={0.7}
+              disabled={remaining === 0}
+            >
+              <Text style={styles.generateButtonText}>AI 코칭 받기</Text>
+            </TouchableOpacity>
+            <Text style={styles.usageText}>
+              오늘 {dailyUsed}/{dailyLimit}회 사용
+            </Text>
+          </View>
+        </DetailLayout>
+      </>
     );
   }
 
   return (
+    <>
     <DetailLayout
       title="AI 행동 진단"
       onBack={handleBack}
@@ -299,7 +331,6 @@ function CoachingResultPage() {
             activeDog={activeDog}
             onToggleActionItem={handleToggleActionItem}
             onNavigateToTraining={handleNavigateToAcademy}
-            onNavigateToAnalysis={handleNavigateToAnalysis}
             onNavigateToSubscription={handleNavigateToSubscription}
             onStarPress={handleStarPress}
             selectedScore={selectedScore}
@@ -313,6 +344,8 @@ function CoachingResultPage() {
         </>
       )}
     </DetailLayout>
+    {interceptModal}
+    </>
   );
 }
 

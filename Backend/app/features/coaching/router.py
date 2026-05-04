@@ -196,6 +196,28 @@ async def export_jsonl(
     return {"count": count, "batch_name": batch_name, "content": content}
 
 
+@router.post("/{dog_id}/ask-coach", response_model=schemas.CoachingQuestionResponse)
+async def ask_coach(
+    dog_id: UUID,
+    request: schemas.CoachingQuestionRequest,
+    user_id: str = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db),
+):
+    """Pro 전용 AI 코치 1:1 질문"""
+    return await service.ask_coach(db, user_id, dog_id, request)
+
+
+@router.get("/{dog_id}/question", response_model=List[schemas.CoachingQuestionResponse])
+async def get_question_history(
+    dog_id: UUID,
+    user_id: str = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db),
+):
+    """AI 코치 질문 이력 조회"""
+    await verify_dog_ownership(db, dog_id, user_id=user_id)
+    return await service.get_question_history(db, user_id, dog_id)
+
+
 def _seconds_until_midnight() -> int:
     """자정까지 남은 초"""
     from datetime import datetime, timezone

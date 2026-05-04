@@ -12,7 +12,7 @@ import { colors, typography } from 'styles/tokens';
 
 export interface QuickLogFormProps {
   dogId: string;
-  onSubmit: (input: QuickLogInput) => void;
+  onSubmit: (inputs: QuickLogInput[]) => void;
   isLoading?: boolean;
 }
 
@@ -30,7 +30,7 @@ const DURATION_CHIPS = [
 ] as const;
 
 export function QuickLogForm({ dogId, onSubmit, isLoading = false }: QuickLogFormProps) {
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [intensity, setIntensity] = useState<IntensityLevel>(3);
   const [occurredAt, setOccurredAt] = useState(new Date());
   const [memo, setMemo] = useState('');
@@ -38,41 +38,50 @@ export function QuickLogForm({ dogId, onSubmit, isLoading = false }: QuickLogFor
   const [selectedLocation, setSelectedLocation] = useState<string | null>(null);
   const [selectedDuration, setSelectedDuration] = useState<number | null>(null);
 
-  const canSubmit = selectedCategory !== null;
+  const canSubmit = selectedCategories.length > 0;
 
   const handleBehaviorSelect = useCallback((category: QuickLogCategory) => {
-    setSelectedCategory(category);
+    setSelectedCategories((prev) =>
+      prev.includes(category) ? prev.filter((c) => c !== category) : [...prev, category],
+    );
   }, []);
 
   const handleActivitySelect = useCallback((category: DailyActivityCategory) => {
-    setSelectedCategory(category);
+    setSelectedCategories((prev) =>
+      prev.includes(category) ? prev.filter((c) => c !== category) : [...prev, category],
+    );
   }, []);
 
   const handleSubmit = useCallback(() => {
-    if (!canSubmit || !selectedCategory) return;
-    onSubmit({
+    if (!canSubmit) return;
+    const base = {
       dog_id: dogId,
-      category: selectedCategory as QuickLogCategory | DailyActivityCategory,
       intensity,
       occurred_at: occurredAt.toISOString(),
       memo: memo || undefined,
       location: selectedLocation || undefined,
       duration_minutes: selectedDuration ?? undefined,
-    });
-  }, [dogId, selectedCategory, intensity, occurredAt, memo, selectedLocation, selectedDuration, canSubmit, onSubmit]);
+    };
+    onSubmit(
+      selectedCategories.map((cat) => ({
+        ...base,
+        category: cat as QuickLogCategory | DailyActivityCategory,
+      })),
+    );
+  }, [dogId, selectedCategories, intensity, occurredAt, memo, selectedLocation, selectedDuration, canSubmit, onSubmit]);
 
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
       <QuickLogChips
         onSelectBehavior={handleBehaviorSelect}
         onSelectActivity={handleActivitySelect}
-        selectedKey={selectedCategory ?? undefined}
+        selectedKeys={selectedCategories}
       />
 
       <View style={styles.section}>
         <Text style={styles.sectionLabel}>강도: {intensity}</Text>
         <View style={styles.intensityRow}>
-          {([1, 2, 3, 5, 7, 10] as IntensityLevel[]).map((v) => (
+          {([1, 2, 3, 5, 6, 7, 10] as IntensityLevel[]).map((v) => (
             <TouchableOpacity
               key={v}
               style={[styles.intensityChip, intensity === v && styles.intensityActive]}

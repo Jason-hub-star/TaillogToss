@@ -2,16 +2,28 @@
 SCHEMA-ISSUE-1: training_behavior_snapshots UNIQUE 제약으로 추이 분석 불가
 → behavior_logs 직접 집계 + idx_logs_dog_occurred 인덱스 활용
 """
+import re
 from datetime import datetime, timedelta, timezone
 from uuid import UUID
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from typing import List, Optional
+from typing import Dict, List, Optional
 
 from app.shared.models import BehaviorLog, TrainingStepAttempt
 from . import schemas
+
+_STOPWORDS = {
+    '에서','때','중','이','가','을','를','의','은','는','도','로','에','와','과',
+    '도','만','까지','부터','이나','이라','라','한','하는','하고','하면','하여',
+    '그','이','저','것','수','더','또','및','등','나','너','우리','아','어',
+}
+
+def _extract_keywords(text: str) -> List[str]:
+    """메모 텍스트에서 의미 있는 단어 추출 (2자 이상, 조사 제외)"""
+    words = re.split(r'[\s,·\(\)\.\!\?\-\/]+', text)
+    return [w for w in words if len(w) >= 2 and w not in _STOPWORDS]
 
 
 async def get_behavior_analytics(
@@ -44,6 +56,7 @@ async def get_behavior_analytics(
             weekly_trend={},
             peak_hour=None,
             stats=[],
+            memo_keywords={},
         )
 
     # behavior 집계
@@ -118,6 +131,18 @@ async def get_behavior_analytics(
         )
     ]
 
+    # memo 키워드 집계 (behavior별 최대 5개 키워드, 빈도순)
+    memo_keywords: Dict[str, List[str]] = {}
+    for behavior, blogs in behavior_groups.items():
+        word_freq: Dict[str, int] = {}
+        for log in blogs:
+            if log.memo and isinstance(log.memo, str) and log.memo.strip():
+                for word in _extract_keywords(log.memo[:100]):
+                    word_freq[word] = word_freq.get(word, 0) + 1
+        if word_freq:
+            sorted_words = sorted(word_freq, key=lambda w: word_freq[w], reverse=True)
+            memo_keywords[behavior] = sorted_words[:5]
+
     return schemas.BehaviorAnalyticsResponse(
         dog_id=str(dog_id),
         analysis_days=days,
@@ -127,6 +152,7 @@ async def get_behavior_analytics(
         weekly_trend=weekly_trend,
         peak_hour=peak_hour,
         stats=stats,
+        memo_keywords=memo_keywords,
     )
 
 

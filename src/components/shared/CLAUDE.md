@@ -19,11 +19,18 @@
 | `TabLayout.tsx` | D 탭형 | dashboard 3탭, analysis |
 | `ModalLayout.tsx` | E 모달형 | quick-log, dog-switcher |
 
-### ads/ — 광고 래퍼
+### ads/ — 광고 래퍼 (7슬롯)
 
-| 파일 | 용도 |
-|------|------|
-| `RewardedAdButton.tsx` | 토스 Ads SDK 보상형 광고 R1/R2/R3 |
+```ts
+import { RewardedAdButton, BannerAd, InterstitialAd } from 'components/shared/ads';
+```
+
+| 파일 | 슬롯 | 용도 |
+|------|------|------|
+| `RewardedAdButton.tsx` | R1/R2/R3 | 보상형 — 버튼 UI, 클릭 시 광고 표시 후 onRewarded |
+| `BannerAd.tsx` | B1/B2/B3 | 배너 — InlineAd 래퍼, 테스트 ID 시 목업 자동 전환 |
+| `InterstitialAd.tsx` | I1 | 전면형 — render-prop, 광고 후 onProceed 자동 호출 |
+| `index.ts` | — | barrel export |
 
 ### 루트 파일
 

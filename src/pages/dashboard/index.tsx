@@ -23,12 +23,14 @@ import { BottomNavBar } from 'components/shared/BottomNavBar';
 import { usePageGuard } from 'lib/hooks/usePageGuard';
 import { SkeletonDashboard } from 'components/features/dashboard/SkeletonDashboard';
 import { CoachingPreviewCard } from 'components/features/dashboard/CoachingPreviewCard';
+import { ProfileCompletionBanner } from 'components/features/survey/ProfileCompletionBanner';
 import type { BehaviorLog } from 'types/log';
 import { colors, typography, spacing } from 'styles/tokens';
 import { useAuth } from 'stores/AuthContext';
 import { isB2BRole } from 'stores/OrgContext';
 import { useIsPro } from 'lib/hooks/useSubscription';
 import { useDailyUsage } from 'lib/hooks/useCoaching';
+import { BannerAd } from 'components/shared/ads';
 
 export const Route = createRoute('/dashboard', {
   component: DashboardPage,
@@ -151,6 +153,9 @@ function DashboardPage() {
 
       <StreakBanner logs={recentLogs} streakOverride={dashboardData?.stats.current_streak} />
 
+      {/* B1: 배너 광고 — 무료 사용자 대시보드 홈 */}
+      {!isPro && <BannerAd placement="B1" />}
+
       {dashboardLoading && <SkeletonDashboard />}
 
       {dashboardError && (
@@ -209,6 +214,25 @@ function DashboardPage() {
         )}
       </View>
 
+      {/* 설문 완성도 배너 */}
+      <ProfileCompletionBanner
+        dogId={activeDog?.id}
+        isPro={isPro ?? false}
+        onPressCTA={(targetStage) => {
+          if (targetStage === 2) {
+            navigation.navigate('/onboarding/stage2-form', {
+              dogId: activeDog?.id ?? '',
+              dogName: activeDog?.name ?? '우리 강아지',
+            });
+          } else {
+            navigation.navigate('/onboarding/stage3-form', {
+              dogId: activeDog?.id ?? '',
+              dogName: activeDog?.name ?? '우리 강아지',
+            });
+          }
+        }}
+      />
+
       {/* 코칭 프리뷰 카드 */}
       <CoachingPreviewCard
         dogId={activeDog?.id}
@@ -217,16 +241,16 @@ function DashboardPage() {
         dailyLimit={dailyLimit}
       />
 
-      {/* 상세 분석 링크 */}
+      {/* 행동 차트 분석 링크 */}
       <TouchableOpacity
-        style={styles.analysisLink}
+        style={styles.chartLink}
         onPress={() => navigation.navigate('/dashboard/analysis')}
         activeOpacity={0.7}
       >
-        <Text style={styles.analysisIcon}>{'\uD83D\uDCCA'}</Text>
-        <Text style={styles.analysisText}>상세 분석 보기</Text>
-        <Text style={styles.analysisArrow}>{'\u2192'}</Text>
+        <Text style={styles.chartLinkText}>📊 행동 차트 자세히 보기</Text>
+        <Text style={styles.chartLinkArrow}>›</Text>
       </TouchableOpacity>
+
     </View>
   );
 
@@ -348,28 +372,24 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: colors.textSecondary,
   },
-  analysisLink: {
+  chartLink: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.divider,
-    paddingHorizontal: spacing.xxl,
-    paddingVertical: spacing.lg,
+    backgroundColor: colors.surfaceSecondary,
     borderRadius: 12,
+    paddingHorizontal: spacing.screenHorizontal,
+    paddingVertical: spacing.lg,
     marginHorizontal: spacing.screenHorizontal,
-    marginTop: spacing.lg,
+    marginTop: spacing.md,
   },
-  analysisIcon: {
-    ...typography.sectionTitle,
-    marginRight: spacing.sm,
-  },
-  analysisText: {
-    ...typography.label,
+  chartLinkText: {
+    ...typography.bodySmall,
     fontWeight: '600',
     color: colors.textPrimary,
     flex: 1,
   },
-  analysisArrow: {
-    ...typography.subtitle,
+  chartLinkArrow: {
+    ...typography.sectionTitle,
     color: colors.textSecondary,
   },
   // B2B 배너

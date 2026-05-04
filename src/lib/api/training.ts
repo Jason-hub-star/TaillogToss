@@ -4,137 +4,25 @@
  */
 import { supabase } from './supabase';
 import { requestBackend, withBackendFallback } from './backend';
-import { getCurriculumById } from 'lib/data/published/runtime';
-import type { TrainingProgress, CurriculumId, PlanVariant, DogReaction, StepFeedback } from 'types/training';
+import type { TrainingProgress, CurriculumId, PlanVariant } from 'types/training';
+import {
+  normalizeVariant,
+  getCurrentUserId,
+  isMissingRelationError,
+  parseStepIdentifier,
+  summarizeBackendRows,
+  type BackendTrainingStatusRow,
+} from './training.transform';
 
-interface BackendTrainingStatusRow {
-  id: string;
-  user_id: string;
-  dog_id: string;
-  curriculum_id: string;
-  stage_id: string;
-  step_number: number;
-  status: string;
-  current_variant?: string;
-  memo?: string | null;
-  reaction?: string | null;
-  created_at: string;
-}
-
-const MISSING_RELATION_CODES = new Set(['42P01', 'PGRST205']);
-// 42703 = undefined_column, PGRST204 = column not found in schema cache
-const SCHEMA_MISMATCH_CODES = new Set(['42703', 'PGRST204']);
-
-function isMissingRelationError(error: unknown): boolean {
-  if (!error || typeof error !== 'object') return false;
-  const code = 'code' in error ? String((error as { code?: unknown }).code ?? '') : '';
-  return MISSING_RELATION_CODES.has(code);
-}
-
-function isSchemaMismatchError(error: unknown): boolean {
-  if (!error || typeof error !== 'object') return false;
-  const code = 'code' in error ? String((error as { code?: unknown }).code ?? '') : '';
-  return SCHEMA_MISMATCH_CODES.has(code) || MISSING_RELATION_CODES.has(code);
-}
-
-function normalizeVariant(value: string | undefined): PlanVariant {
-  if (value === 'B' || value === 'C') return value;
-  return 'A';
-}
-
-function parseDayNumber(stageId: string): number {
-  const match = stageId.match(/(\d+)/);
-  if (!match) return 1;
-  const parsed = Number(match[1]);
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : 1;
-}
-
-function parseStepIdentifier(stepId: string): { curriculumId: CurriculumId; day: number; stepNumber: number } | null {
-  const match = stepId.match(/^(.*)_d(\d+)_s(\d+)$/);
-  if (!match) return null;
-
-  const curriculumId = match[1] as CurriculumId;
-  const day = Number(match[2]);
-  const stepNumber = Number(match[3]);
-  if (!Number.isFinite(day) || !Number.isFinite(stepNumber)) return null;
-
-  return { curriculumId, day, stepNumber };
-}
-
-function toStepId(curriculumId: string, day: number, stepNumber: number): string {
-  const curriculum = getCurriculumById(curriculumId as CurriculumId);
-  if (!curriculum) return `${curriculumId}_d${day}_s${stepNumber}`;
-
-  const dayData = curriculum.days.find((d) => d.day_number === day);
-  if (!dayData) return `${curriculumId}_d${day}_s${stepNumber}`;
-
-  const matched = dayData.steps.find((s) => s.order === stepNumber) ?? dayData.steps[stepNumber - 1];
-  return matched?.id ?? `${curriculumId}_d${day}_s${stepNumber}`;
-}
-
-function summarizeBackendRows(rows: BackendTrainingStatusRow[]): TrainingProgress[] {
-  const grouped = new Map<string, BackendTrainingStatusRow[]>();
-  for (const row of rows) {
-    const list = grouped.get(row.curriculum_id) ?? [];
-    list.push(row);
-    grouped.set(row.curriculum_id, list);
-  }
-
-  const result: TrainingProgress[] = [];
-
-  for (const [curriculumId, statusRows] of grouped.entries()) {
-    const sortedRows = [...statusRows].sort(
-      (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
-    );
-    const latest = sortedRows[sortedRows.length - 1];
-    if (!latest) continue;
-
-    const completedStepIds = new Set<string>();
-    for (const row of sortedRows) {
-      if (row.status !== 'COMPLETED') continue;
-      const day = parseDayNumber(row.stage_id);
-      completedStepIds.add(toStepId(curriculumId, day, row.step_number));
-    }
-
-    const curriculum = getCurriculumById(curriculumId as CurriculumId);
-    const totalSteps = curriculum
-      ? curriculum.days.reduce((sum, day) => sum + day.steps.length, 0)
-      : completedStepIds.size;
-
-    let currentDay = parseDayNumber(latest.stage_id);
-    if (curriculum) {
-      currentDay = curriculum.total_days;
-      for (const day of curriculum.days) {
-        const allCompleted = day.steps.every((step) => completedStepIds.has(step.id));
-        if (!allCompleted) {
-          currentDay = day.day_number;
-          break;
-        }
-      }
-    }
-
-    const status = totalSteps > 0 && completedStepIds.size >= totalSteps ? 'completed' : 'in_progress';
-    const startedAt = sortedRows[0]?.created_at ?? latest.created_at;
-
-    result.push({
-      id: latest.id,
-      dog_id: latest.dog_id,
-      curriculum_id: curriculumId as CurriculumId,
-      current_day: currentDay,
-      current_variant: normalizeVariant(latest.current_variant),
-      status,
-      completed_steps: [...completedStepIds],
-      memo: latest.memo ?? null,
-      started_at: startedAt,
-      updated_at: latest.created_at,
-    });
-  }
-
-  return result;
-}
+export type { BackendTrainingStatusRow };
+export {
+  submitStepFeedback,
+  getStepFeedback,
+  getStepAttempts,
+  submitStepAttempt,
+} from './training.feedback';
 
 async function getTrainingProgressFromSupabase(dogId: string): Promise<TrainingProgress[]> {
-  // user_training_status는 row-per-step 구조 → summarizeBackendRows로 요약
   const { data, error } = await supabase
     .from('user_training_status')
     .select('*')
@@ -181,15 +69,7 @@ export async function startTraining(
     async () => {
       const created = await requestBackend<
         BackendTrainingStatusRow,
-        {
-          dog_id: string;
-          curriculum_id: string;
-          stage_id: string;
-          step_number: number;
-          status: string;
-          current_variant: string;
-          memo: string | null;
-        }
+        { dog_id: string; curriculum_id: string; stage_id: string; step_number: number; status: string; current_variant: string; memo: string | null }
       >('/api/v1/training/status', {
         method: 'POST',
         body: {
@@ -216,10 +96,12 @@ export async function startTraining(
       };
     },
     async () => {
+      const userId = await getCurrentUserId();
       const { data, error } = await supabase
         .from('user_training_status')
         .upsert(
           {
+            user_id: userId,
             dog_id: dogId,
             curriculum_id: curriculumId,
             stage_id: 'day_1',
@@ -260,9 +142,7 @@ export async function completeStep(
   return withBackendFallback(
     async () => {
       const parsed = parseStepIdentifier(stepId);
-      if (!parsed) {
-        throw new Error('TRAINING_STEP_ID_INVALID');
-      }
+      if (!parsed) throw new Error('TRAINING_STEP_ID_INVALID');
       await requestBackend('/api/v1/training/status', {
         method: 'POST',
         body: {
@@ -279,10 +159,12 @@ export async function completeStep(
     async () => {
       const parsed = parseStepIdentifier(stepId);
       if (!parsed) return;
+      const userId = await getCurrentUserId();
       const { error } = await supabase
         .from('user_training_status')
         .upsert(
           {
+            user_id: userId,
             dog_id: dogId,
             curriculum_id: parsed.curriculumId,
             stage_id: `day_${parsed.day}`,
@@ -309,9 +191,7 @@ export async function uncompleteStep(
   return withBackendFallback(
     async () => {
       const parsed = parseStepIdentifier(stepId);
-      if (!parsed) {
-        throw new Error('TRAINING_STEP_ID_INVALID');
-      }
+      if (!parsed) throw new Error('TRAINING_STEP_ID_INVALID');
       await requestBackend('/api/v1/training/status', {
         method: 'POST',
         body: {
@@ -328,10 +208,12 @@ export async function uncompleteStep(
     async () => {
       const parsed = parseStepIdentifier(stepId);
       if (!parsed) return;
+      const userId = await getCurrentUserId();
       const { error } = await supabase
         .from('user_training_status')
         .upsert(
           {
+            user_id: userId,
             dog_id: dogId,
             curriculum_id: parsed.curriculumId,
             stage_id: `day_${parsed.day}`,
@@ -362,100 +244,6 @@ export async function changeVariant(
   if (error) throw error;
 }
 
-/** 스텝 피드백(반응) 저장 — user_training_status.reaction UPDATE */
-export async function submitStepFeedback(
-  dogId: string,
-  stepId: string,
-  reaction: DogReaction,
-  memo: string | null,
-): Promise<void> {
-  const parsed = parseStepIdentifier(stepId);
-  if (!parsed) throw new Error('TRAINING_STEP_ID_INVALID');
-
-  return withBackendFallback(
-    async () => {
-      await requestBackend('/api/v1/training/feedback', {
-        method: 'POST',
-        body: {
-          dog_id: dogId,
-          curriculum_id: parsed.curriculumId,
-          stage_id: `day_${parsed.day}`,
-          step_number: parsed.stepNumber,
-          reaction,
-          memo,
-        },
-      });
-    },
-    async () => {
-      const { error } = await supabase
-        .from('user_training_status')
-        .update({ reaction, memo })
-        .eq('dog_id', dogId)
-        .eq('curriculum_id', parsed.curriculumId)
-        .eq('stage_id', `day_${parsed.day}`)
-        .eq('step_number', parsed.stepNumber);
-      if (error) {
-        // 42703: reaction column not yet migrated — silently skip
-        if (isMissingRelationError(error) || isSchemaMismatchError(error)) return;
-        throw error;
-      }
-    },
-  );
-}
-
-/** 피드백 조회 — reaction IS NOT NULL 행 (migration 미적용 시 빈 배열 반환) */
-export async function getStepFeedback(
-  dogId: string,
-  curriculumId?: string,
-): Promise<StepFeedback[]> {
-  return withBackendFallback(
-    async () => {
-      const url = curriculumId
-        ? `/api/v1/training/feedback/${dogId}?curriculum_id=${curriculumId}`
-        : `/api/v1/training/feedback/${dogId}`;
-      const rows = await requestBackend<BackendTrainingStatusRow[]>(url);
-      if (!Array.isArray(rows)) return [];
-      return rows
-        .filter((r) => r.reaction)
-        .map((r) => ({
-          step_id: toStepId(r.curriculum_id, parseDayNumber(r.stage_id), r.step_number),
-          curriculum_id: r.curriculum_id as CurriculumId,
-          day: parseDayNumber(r.stage_id),
-          step_number: r.step_number,
-          reaction: r.reaction as DogReaction,
-          memo: r.memo ?? null,
-        }));
-    },
-    async () => {
-      let query = supabase
-        .from('user_training_status')
-        .select('*')
-        .eq('dog_id', dogId);
-      if (curriculumId) {
-        query = query.eq('curriculum_id', curriculumId);
-      }
-      const { data, error } = await query;
-      if (error) {
-        // 42703: reaction column not yet migrated — return empty
-        if (isMissingRelationError(error) || isSchemaMismatchError(error)) return [];
-        throw error;
-      }
-      if (!data) return [];
-      // Filter client-side (column may not exist before migration)
-      return (data as BackendTrainingStatusRow[])
-        .filter((r) => r.reaction)
-        .map((r) => ({
-          step_id: toStepId(r.curriculum_id, parseDayNumber(r.stage_id), r.step_number),
-          curriculum_id: r.curriculum_id as CurriculumId,
-          day: parseDayNumber(r.stage_id),
-          step_number: r.step_number,
-          reaction: r.reaction as DogReaction,
-          memo: r.memo ?? null,
-        }));
-    },
-  );
-}
-
 /** 행동 분석 데이터 조회 (로그 기반 추천 엔진용) */
 export async function getBehaviorAnalytics(dogId: string, days = 30): Promise<{
   total_logs: number;
@@ -463,80 +251,11 @@ export async function getBehaviorAnalytics(dogId: string, days = 30): Promise<{
   avg_intensity_by_behavior: Record<string, number>;
   weekly_trend: Record<string, string>;
   peak_hour: number | null;
+  memo_keywords?: Record<string, string[]>;
 } | null> {
   try {
     return await requestBackend(`/api/v1/dogs/${dogId}/behavior-analytics?days=${days}`);
   } catch {
     return null;
   }
-}
-
-/** 시행착오 기록 조회 */
-export async function getStepAttempts(
-  dogId: string,
-  stepId?: string,
-): Promise<import('types/training').StepAttempt[]> {
-  try {
-    const url = stepId
-      ? `/api/v1/dogs/${dogId}/step-attempts?step_id=${encodeURIComponent(stepId)}`
-      : `/api/v1/dogs/${dogId}/step-attempts`;
-    const rows = await requestBackend<
-      Array<{
-        id: string;
-        step_id: string;
-        curriculum_id: string;
-        day_number: number;
-        attempt_number: number;
-        reaction?: string;
-        situation_tags?: string[];
-        method_used?: string;
-        what_worked?: string;
-        what_didnt_work?: string;
-        created_at: string;
-      }>
-    >(url);
-    if (!Array.isArray(rows)) return [];
-    return rows.map((r) => ({
-      id: r.id,
-      dog_id: dogId,
-      step_id: r.step_id,
-      curriculum_id: r.curriculum_id,
-      day_number: r.day_number,
-      attempt_number: r.attempt_number,
-      reaction: r.reaction as import('types/training').DogReaction | undefined,
-      situation_tags: r.situation_tags ?? [],
-      method_used: r.method_used ?? undefined,
-      what_worked: r.what_worked ?? undefined,
-      what_didnt_work: r.what_didnt_work ?? undefined,
-      created_at: r.created_at,
-    }));
-  } catch {
-    return [];
-  }
-}
-
-/** 시행착오 상세 기록 저장 */
-export async function submitStepAttempt(
-  dogId: string,
-  data: {
-    step_id: string;
-    curriculum_id: string;
-    day_number: number;
-    attempt_number?: number;
-    reaction?: string;
-    situation_tags?: string[];
-    method_used?: string;
-    what_worked?: string;
-    what_didnt_work?: string;
-  }
-): Promise<void> {
-  const { error } = await supabase
-    .from('training_step_attempts')
-    .insert({
-      dog_id: dogId,
-      ...data,
-      attempt_number: data.attempt_number ?? 1,
-    });
-  if (error) throw error;
-  return undefined;
 }

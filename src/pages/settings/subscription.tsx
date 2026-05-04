@@ -25,6 +25,7 @@ import { B2B_IAP_PRODUCTS } from 'types/b2b';
 import type { IAPProduct } from 'types/subscription';
 import { colors, typography } from 'styles/tokens';
 import { ICONS } from 'lib/data/iconSources';
+import { verifyAndGrant } from 'lib/api/iap';
 
 export const Route = createRoute('/settings/subscription', {
   component: SubscriptionPage,
@@ -81,6 +82,31 @@ function SubscriptionPage() {
       onError: () => Alert.alert('복원 실패', '복원할 구독 정보가 없습니다.'),
     });
   }, [user?.id, restoreMutation]);
+
+  // DEV only: AIT 테스트 앱 IAP 크래시 우회 — getEdgeValue SDK 버그 회피
+  const handleDevDirectGrant = useCallback(async (productId: string) => {
+    if (!__DEV__) return;
+    setPurchasingId(productId);
+    try {
+      const mockOrderId = `dev_${Date.now()}`;
+      const granted = await verifyAndGrant({
+        orderId: mockOrderId,
+        productId,
+        transactionId: mockOrderId,
+      });
+      setPurchasingId(null);
+      if (granted) {
+        Alert.alert('[DEV] 지급 완료', `productId: ${productId.slice(-8)}\n→ verify-iap-order 성공`, [
+          { text: '확인', onPress: () => navigation.goBack() },
+        ]);
+      } else {
+        Alert.alert('[DEV] 지급 실패', 'verifyAndGrant returned false. 로그 확인.');
+      }
+    } catch (e) {
+      setPurchasingId(null);
+      Alert.alert('[DEV] 에러', String(e));
+    }
+  }, [navigation]);
 
   if (!isReady) return null;
 
@@ -144,15 +170,27 @@ function SubscriptionPage() {
               ))}
             </View>
             <TouchableOpacity
-              style={[styles.purchaseButton, purchasingId === 'pro_monthly' && styles.buttonDisabled]}
-              onPress={() => handlePurchase('pro_monthly')}
+              style={[styles.purchaseButton, purchasingId === proProduct.product_id && styles.buttonDisabled]}
+              onPress={() => handlePurchase(proProduct.product_id)}
               disabled={!!purchasingId}
               activeOpacity={0.8}
             >
               <Text style={styles.purchaseButtonText}>
-                {purchasingId === 'pro_monthly' ? '처리 중...' : 'PRO 시작하기'}
+                {purchasingId === proProduct.product_id ? '처리 중...' : 'PRO 시작하기'}
               </Text>
             </TouchableOpacity>
+            {__DEV__ && (
+              <TouchableOpacity
+                style={[styles.devBypassButton, purchasingId === proProduct.product_id && styles.buttonDisabled]}
+                onPress={() => void handleDevDirectGrant(proProduct.product_id)}
+                disabled={!!purchasingId}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.devBypassText}>
+                  [DEV] IAP 바이패스 — verify-iap-order 직접 호출
+                </Text>
+              </TouchableOpacity>
+            )}
           </View>
         )}
 
@@ -163,15 +201,15 @@ function SubscriptionPage() {
             <View style={styles.badgePlaceholder} />
             <Text style={styles.tokenAmount}>10회</Text>
             <Text style={styles.tokenPrice}>₩{token10.price.toLocaleString()}</Text>
-            <Text style={styles.tokenUnit}>회당 ₩190</Text>
+            <Text style={styles.tokenUnit}>회당 ₩{Math.floor(token10.price / 10).toLocaleString()}</Text>
             <TouchableOpacity
-              style={[styles.tokenButton, purchasingId === 'ai_token_10' && styles.buttonDisabled]}
-              onPress={() => handlePurchase('ai_token_10')}
+              style={[styles.tokenButton, purchasingId === token10.product_id && styles.buttonDisabled]}
+              onPress={() => handlePurchase(token10.product_id)}
               disabled={!!purchasingId}
               activeOpacity={0.8}
             >
               <Text style={styles.tokenButtonText}>
-                {purchasingId === 'ai_token_10' ? '...' : '충전'}
+                {purchasingId === token10.product_id ? '...' : '충전'}
               </Text>
             </TouchableOpacity>
           </View>
@@ -181,15 +219,15 @@ function SubscriptionPage() {
             </View>
             <Text style={styles.tokenAmount}>30회</Text>
             <Text style={styles.tokenPrice}>₩{token30.price.toLocaleString()}</Text>
-            <Text style={styles.tokenUnit}>회당 ₩163</Text>
+            <Text style={styles.tokenUnit}>회당 ₩{Math.floor(token30.price / 30).toLocaleString()}</Text>
             <TouchableOpacity
-              style={[styles.tokenButton, styles.tokenButtonHighlight, purchasingId === 'ai_token_30' && styles.buttonDisabled]}
-              onPress={() => handlePurchase('ai_token_30')}
+              style={[styles.tokenButton, styles.tokenButtonHighlight, purchasingId === token30.product_id && styles.buttonDisabled]}
+              onPress={() => handlePurchase(token30.product_id)}
               disabled={!!purchasingId}
               activeOpacity={0.8}
             >
               <Text style={[styles.tokenButtonText, styles.tokenButtonTextHighlight]}>
-                {purchasingId === 'ai_token_30' ? '...' : '충전'}
+                {purchasingId === token30.product_id ? '...' : '충전'}
               </Text>
             </TouchableOpacity>
           </View>
@@ -372,4 +410,14 @@ const styles = StyleSheet.create({
 
   /* 공통 */
   buttonDisabled: { opacity: 0.5 },
+
+  /* DEV 바이패스 */
+  devBypassButton: {
+    marginTop: 8,
+    backgroundColor: colors.orange700,
+    borderRadius: 10,
+    paddingVertical: 10,
+    alignItems: 'center',
+  },
+  devBypassText: { ...typography.caption, fontWeight: '700', color: colors.white },
 });

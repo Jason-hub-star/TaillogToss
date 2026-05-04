@@ -86,9 +86,9 @@
 | `SUPER_SECRET_PEPPER` | 비밀번호 파생 |
 | `TOSS_PII_DECRYPTION_KEY_BASE64` | Toss 암호화 PII 복호화 키 (login-with-toss 전용) |
 | `TOSS_PROFILE_DECRYPTION_KEY_BASE64` | 구 키명 호환 (레거시) |
-| `TOSS_MTLS_MODE` | mTLS 모드 강제(`real`/`mock`). `real`일 때 `TOSS_CLIENT_CERT_BASE64`/`TOSS_CLIENT_KEY_BASE64` 필수 |
-| `TOSS_CLIENT_CERT_BASE64` | mTLS 인증서 ✅ 등록 완료 (2026-04-02) |
-| `TOSS_CLIENT_KEY_BASE64` | mTLS 개인키 ✅ 등록 완료 (2026-04-02) |
+| `TOSS_MTLS_MODE` | mTLS 모드 강제(`real`/`mock`). `real`일 때 `TOSS_CLIENT_CERT_BASE64`/`TOSS_CLIENT_KEY_BASE64` 필수. **현재 `mock`** (테스트 앱 sandbox auth code 호환용). **프로덕션 배포 전 반드시 `real`로 복구** |
+| `TOSS_CLIENT_CERT_BASE64` | mTLS 인증서 ✅ 등록 완료 (2026-04-02) — 프로덕션 전용 |
+| `TOSS_CLIENT_KEY_BASE64` | mTLS 개인키 ✅ 등록 완료 (2026-04-02) — 프로덕션 전용 |
 | `TOSS_CALLBACK_AUTH_ID` | toss-disconnect Basic Auth |
 | `TOSS_CALLBACK_AUTH_PW` | toss-disconnect Basic Auth |
 | `OPENAI_API_KEY` | AI 코칭 (generate-report) |
@@ -524,10 +524,12 @@ Backend/
 | FE 함수 | BE 엔드포인트 |
 |---------|-------------|
 | `getTrainingProgress(dogId)` | `GET /api/v1/training/{dogId}` |
-| `getCurriculumProgress(dogId, cId)` | `GET /api/v1/training/{dogId}/{curriculumId}` |
-| `startTraining(dogId, cId, variant)` | `POST /api/v1/training/start` |
-| `completeStep(progressId, stepId)` | `PATCH /api/v1/training/{progressId}/step` |
-| `changeVariant(progressId, variant)` | `PATCH /api/v1/training/{progressId}/variant` |
+| `startTraining(dogId, cId, variant)` | `POST /api/v1/training/status` (upsert sentinel row) |
+| `completeStep(progressId, stepId)` | `POST /api/v1/training/status` (upsert COMPLETED) |
+| `uncompleteStep(stepId, dogId)` | `POST /api/v1/training/status` (upsert HIDDEN_BY_AI) |
+| `submitStepFeedback(dogId, stepId, reaction, memo)` | `POST /api/v1/training/feedback` ← 신규 (2026-04-27) |
+| `getStepFeedback(dogId, curriculumId?)` | `GET /api/v1/training/feedback/{dogId}` ← 신규 (2026-04-27) |
+| `changeVariant(progressId, variant)` | Supabase direct (`.update({ current_variant })`) |
 
 **settings/**:
 
@@ -758,7 +760,7 @@ DogCoach 참조 파일도 같이 읽어서 패턴 맞춰줘."
 - [ ] Supabase MCP 연결 (INFRA-1용, 선택사항)
 - [ ] `tosstaillog/Backend/.env` 파일 준비 (DB URL, JWT Secret 등)
 
-### 현재 상태 (2026-02-28 업데이트)
+### 현재 상태 (2026-05-03 업데이트)
 - INFRA-1: ✅ 완료 — Supabase MCP로 B2C+B2B 마이그레이션 적용 (26→38 테이블)
 - INFRA-2~3: 수동 작업 필요 (Edge Function 배포, 콘솔 등록, mTLS 인증서)
 - BE-P1: ✅ 완료 — scaffolding, config, database, security, exceptions, models, main, Dockerfile, alembic
@@ -769,6 +771,27 @@ DogCoach 참조 파일도 같이 읽어서 패턴 맞춰줘."
 - BE-P6: ✅ 완료 — training, settings, subscription, notification
 - BE-P7: ✅ 완료 — org (14 endpoints), report (9 endpoints)
 - BE-P8: ✅ 완료 — 셀프리뷰 + 패리티 검증 + pytest 기본 테스트
+- PP-Phase1~4: ✅ 완료 (2026-04-28) — Progressive Profiling 3단계 설문 분리
+  - Supabase `onboarding_survey` JSONB + `coaching_questions` 테이블 마이그레이션 적용
+  - models.py Enum values_callable 4컬럼 버그 수정 (UserRole/UserStatus/PlanType/DogSex)
+  - onboarding Stage1/2/3 router + service + repository + schemas 추가
+  - coaching gate (stage<2 규칙폴백, stage≥2 AI, stage3 풀개인화) + ask_coach Pro 전용
+  - Frontend stage1/2/3-form.tsx + ProfileCompletionBanner + Stage2InterceptModal + useSurveyStatus 연결
+- Survey Field Gap Fix: ✅ 완료 (2026-05-01) — 설문 누락 필드 8종 전체 연결
+  - `schemas.py` `ActivityMeta` +walk_frequency/walk_duration_minutes, `Temperament` +5종 기질, `SurveyStage2` +activity_meta/rewards_meta 서브모델
+  - `repository.py` stage2 activity_meta merge 저장, stage3 overwrite→merge(walk_frequency 보존)
+  - FE `SurveyStage2Request`/`SurveyStage3Request` 타입 확장 + stage2/3 payload 8필드 연결
+  - `recommendPlan()` `DogPlanSignals` +5 기질 필드, Plan B `hasAnxietyTemperament` 조건 추가
+  - `training/detail.tsx` 5 기질 필드 엔진에 전달 + behaviors 경로 버그 수정
+  - Draft Save: `useDraftSave<T>` + `draftStorage.ts` (AsyncStorage, stage1/2/3 통합)
+- Bug Fix Session: ✅ 완료 (2026-05-03) — 5대 버그 + 리팩터링
+  - (1) Survey 루프: `supabase/functions/_shared/mTLSClient.ts` MockMTLSClient.fetchLoginProfile userKey 고정(`mock_stable_user_001`) + `login-with-toss` Edge 재배포
+  - (2) 구독 탭 크래시(404): `src/lib/api/iap.ts:269-284` 404 감지 → FastAPI proxy(http://127.0.0.1:8765) 우회, `src/lib/api/backend.ts` adb reverse port 8765 지정
+  - (3) settings PATCH 500: `Backend/app/features/settings/schemas.py` validator에 `ai_persona` str→json.loads 처리
+  - (4) IAP service role 인증: `supabase/functions/verify-iap-order/main.ts` JWT claims `role === 'service_role'` 파싱 감지
+  - (5) 사진 업로드: `src/pages/onboarding/stage1-form.tsx` dog 생성 후 Supabase Storage 직접 업로드
+  - 리팩터링: `src/lib/api/iap-invoke.ts` 신규(토큰 헬퍼 7개 분리), `iap.ts` 438→364줄 축소, 주석 정리
+  - E2E 검증: 다른 authCode도 동일 userId ✅, getDogs→hasCompletedOnboarding ✅, settings PATCH 200 ✅, IAP logcat ✅
 
 ### 구현 통계
 - Python 파일: 48개

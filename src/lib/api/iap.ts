@@ -5,8 +5,18 @@
  * Parity: IAP-001, B2B-001
  */
 import { IAP } from '@apps-in-toss/native-modules';
+import { requestBackend } from './backend';
 import { getSupabasePublicConfig, supabase } from './supabase';
 import { tracker } from '../analytics/tracker';
+import {
+  resolveAccessToken,
+  normalizeJwtToken,
+  isUsableAccessToken,
+  resolveAccessTokenForInvoke,
+  isTestEnvironment,
+  invokeVerifyIapOrderViaFetch,
+  getInvokeHttpStatus,
+} from './iap-invoke';
 
 // ──────────────────────────────────────
 // 공식 SDK 인터페이스 미러
@@ -57,93 +67,10 @@ export interface CreateOrderOptions {
   onError?: (error: Error) => void;
 }
 
-async function resolveAccessToken(forceRefresh = false): Promise<string | null> {
-  if (forceRefresh) {
-    const { data: refreshed, error: refreshError } = await supabase.auth.refreshSession();
-    if (!refreshError && refreshed.session?.access_token) {
-      return refreshed.session.access_token;
-    }
-  }
-
-  const { data, error } = await supabase.auth.getSession();
-  if (error) return null;
-  return data.session?.access_token ?? null;
-}
-
-function normalizeJwtToken(raw: string | null | undefined): string | null {
-  if (!raw) return null;
-  const token = raw.trim();
-  if (!token) return null;
-  return token.split('.').length === 3 ? token : null;
-}
-
-async function isUsableAccessToken(token: string): Promise<boolean> {
-  const { data, error } = await supabase.auth.getUser(token);
-  return !error && !!data.user;
-}
-
-async function resolveAccessTokenForInvoke(): Promise<string | null> {
-  const activeToken = normalizeJwtToken(await resolveAccessToken(false));
-  if (activeToken && (await isUsableAccessToken(activeToken))) return activeToken;
-
-  const refreshedToken = normalizeJwtToken(await resolveAccessToken(true));
-  if (refreshedToken && (await isUsableAccessToken(refreshedToken))) return refreshedToken;
-  return null;
-}
-
-function isTestEnvironment(): boolean {
-  return typeof process !== 'undefined' && process.env?.NODE_ENV === 'test';
-}
-
-async function invokeVerifyIapOrderViaFetch(
-  body: Record<string, unknown>,
-  accessToken: string | null,
-): Promise<{ data: unknown; error: unknown }> {
-  const { url, anonKey } = getSupabasePublicConfig();
-  const response = await fetch(`${url}/functions/v1/verify-iap-order`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      apikey: anonKey,
-      ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
-    },
-    body: JSON.stringify(body),
-  });
-
-  let payload: unknown = null;
-  try {
-    payload = await response.json();
-  } catch {
-    payload = null;
-  }
-
-  if (!response.ok) {
-    return {
-      data: null,
-      error: {
-        status: response.status,
-        payload,
-      },
-    };
-  }
-
-  return { data: payload, error: null };
-}
-
-function getInvokeHttpStatus(error: unknown): number | undefined {
-  if (!error || typeof error !== 'object') return undefined;
-  const withContext = error as { context?: unknown; status?: number };
-  if (typeof withContext.status === 'number') return withContext.status;
-
-  const context = withContext.context as { status?: number } | undefined;
-  if (typeof context?.status === 'number') return context.status;
-  return undefined;
-}
-
 /**
- * createOneTimePurchaseOrder — 공식 패턴 래퍼
- * 실 SDK 확인 전까지 Edge Function 직통 방식으로 동작
- * Returns cleanup function
+ * createOneTimePurchaseOrder — 실 Toss IAP SDK 래퍼
+ * IAP.createOneTimePurchaseOrder 공식 인터페이스에 위임.
+ * SDK가 결제 UI + orderId 생성을 처리하고, processProductGrant 콜백으로 서버 검증을 호출.
  */
 export function createOneTimePurchaseOrder({
   sku,
@@ -151,58 +78,40 @@ export function createOneTimePurchaseOrder({
   onEvent,
   onError,
 }: CreateOrderOptions): () => void {
-  let cancelled = false;
+  onEvent?.({ type: 'PURCHASE_STARTED' });
 
-  (async () => {
-    try {
-      onEvent?.({ type: 'PURCHASE_STARTED' });
-
-      // TODO(IAP-001): 실 SDK(@apps-in-toss/framework)로 교체 시
-      //   SDK가 내부적으로 결제 플로우를 처리하고 PurchaseResult(orderId 포함)를 반환.
-      //   현재는 mock 값으로 Edge Function 검증 플로우만 테스트.
-      const orderId = `order_${Date.now().toString(36)}`;
-      const mockResult: PurchaseResult = {
-        orderId,
-        displayName: sku,
-        displayAmount: '0원',
-        amount: 0,
-        currency: 'KRW',
-        fraction: 0,
-        miniAppIconUrl: '',
-      };
-
-      if (cancelled) return;
-      onEvent?.({ type: 'PAYMENT_COMPLETED', result: mockResult });
-
-      // processProductGrant: 서버 검증 + 상품 지급 (공식: orderId만 전달)
-      const granted = await processProductGrant({ orderId });
-
-      // 서버 지급 완료 후 영수증 소비 신호 — 실 SDK 호출
-      if (granted) {
-        try {
-          await IAP.completeProductGrant({ params: { orderId } });
-        } catch (e) {
-          if (__DEV__) {
-            console.warn('[IAP-001] completeProductGrant failed (non-fatal):', e);
+  return IAP.createOneTimePurchaseOrder({
+    options: {
+      sku,
+      processProductGrant: async ({ orderId }) => {
+        const granted = await processProductGrant({ orderId });
+        if (granted) {
+          // 서버 지급 완료 후 SDK에 영수증 소비 신호 전달
+          try {
+            await IAP.completeProductGrant({ params: { orderId } });
+          } catch (e) {
+            if (__DEV__) {
+              console.warn('[IAP-001] completeProductGrant failed (non-fatal):', e);
+            }
           }
         }
+        return granted;
+      },
+    },
+    onEvent: () => {
+      // SDK가 결제 + 지급 전체 성공 후 발화
+      onEvent?.({ type: 'GRANT_COMPLETED' });
+    },
+    onError: (error) => {
+      const code = (error as { code?: string })?.code;
+      if (code === 'PRODUCT_NOT_GRANTED_BY_PARTNER' || code === 'USER_CANCELED') {
+        // 지급 실패 또는 사용자 취소 → 에러 없이 GRANT_FAILED로 처리
+        onEvent?.({ type: 'GRANT_FAILED' });
+      } else {
+        onError?.(error instanceof Error ? error : new Error(String(error)));
       }
-
-      if (cancelled) return;
-      if (granted) {
-        tracker.iapPurchaseSuccess(sku);
-      }
-      onEvent?.({ type: granted ? 'GRANT_COMPLETED' : 'GRANT_FAILED' });
-    } catch (err) {
-      if (!cancelled) {
-        onError?.(err instanceof Error ? err : new Error(String(err)));
-      }
-    }
-  })();
-
-  return () => {
-    cancelled = true;
-  };
+    },
+  });
 }
 
 /**
@@ -240,13 +149,36 @@ export async function verifyAndGrant(
       tokenUserError: tokenUserError?.message ?? null,
     });
   }
-  const firstInvoke = await supabase.functions.invoke('verify-iap-order', {
-    body,
-    headers: firstToken ? { Authorization: `Bearer ${firstToken}` } : undefined,
-  });
 
-  let data = firstInvoke.data;
-  let error = firstInvoke.error;
+  // Toss mini-app은 /functions/v1/ 를 네트워크 레벨에서 차단 (404도 아닌 hang)
+  // 5초 타임아웃 후 즉시 FastAPI 프록시로 전환
+  const INVOKE_TIMEOUT_MS = 5000;
+  let data: unknown = null;
+  let error: unknown = null;
+
+  const invokeWithTimeout = async (): Promise<{ data: unknown; error: unknown }> => {
+    const timeout = new Promise<{ data: null; error: { status: 408 } }>((resolve) =>
+      setTimeout(() => resolve({ data: null, error: { status: 408 } }), INVOKE_TIMEOUT_MS)
+    );
+    return Promise.race([
+      supabase.functions.invoke('verify-iap-order', {
+        body,
+        headers: firstToken ? { Authorization: `Bearer ${firstToken}` } : undefined,
+      }),
+      timeout,
+    ]);
+  };
+
+  const firstInvoke = await invokeWithTimeout();
+  data = firstInvoke.data;
+  error = firstInvoke.error;
+
+  if (__DEV__ && error) {
+    console.warn('[IAP-001] firstInvoke error', {
+      status: getInvokeHttpStatus(error),
+      error,
+    });
+  }
 
   if (error && getInvokeHttpStatus(error) === 401) {
     const refreshedToken = normalizeJwtToken(await resolveAccessToken(true));
@@ -266,11 +198,30 @@ export async function verifyAndGrant(
     data = secondInvoke.data;
     error = secondInvoke.error;
 
-    // RN 런타임에서 invoke 헤더 전달이 누락되는 경우를 대비해 fetch로 한 번 더 시도한다.
     if (!isTestEnvironment() && error && getInvokeHttpStatus(error) === 401) {
       const fallback = await invokeVerifyIapOrderViaFetch(body, retryToken);
       data = fallback.data;
       error = fallback.error;
+    }
+  }
+
+  // 404 또는 408(timeout): Toss mini-app → FastAPI 프록시 우회
+  // adb reverse tcp:8765 tcp:8765
+  const errStatus = getInvokeHttpStatus(error);
+  if (!isTestEnvironment() && error && (errStatus === 404 || errStatus === 408)) {
+    if (__DEV__) {
+      console.log(`[IAP-001] verify-iap-order ${errStatus} → FastAPI proxy :8765`);
+    }
+    try {
+      data = await requestBackend<unknown>('http://127.0.0.1:8765/api/v1/subscription/iap/verify', {
+        method: 'POST',
+        body,
+      });
+      error = null;
+    } catch (proxyErr) {
+      if (__DEV__) {
+        console.warn('[IAP-001] FastAPI proxy failed', proxyErr);
+      }
     }
   }
 

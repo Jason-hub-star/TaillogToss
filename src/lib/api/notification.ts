@@ -17,7 +17,6 @@ export async function sendSmartMessage(request: SmartMessageRequest): Promise<vo
     userId: request.user_id,
     notificationType: request.notification_type,
     templateCode: request.template.template_set_code,
-    variables: request.template.variables,
     idempotencyKey:
       request.idempotencyKey ??
       request.idempotency_key ??

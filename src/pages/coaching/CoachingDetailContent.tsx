@@ -3,11 +3,11 @@
  * result.tsx에서 분리. 6블록 + 인사이트 CTA + 피드백 + 재생성
  * Parity: AI-001
  */
-import { useNavigation } from '@granite-js/react-native';
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { colors, typography, spacing } from 'styles/tokens';
 import { CoachingBlockList } from 'components/features/coaching/CoachingBlockList';
+import { UsageLimitBanner } from 'components/features/coaching/UsageLimitBanner';
 import { RewardedAdButton } from 'components/shared/ads/RewardedAdButton';
 import type { CoachingResult } from 'types/coaching';
 
@@ -29,7 +29,6 @@ export interface CoachingDetailContentProps {
   activeDog: { id: string; name: string; profile_image_url?: string | null } | null;
   onToggleActionItem: (itemId: string) => void;
   onNavigateToTraining: () => void;
-  onNavigateToAnalysis: () => void;
   onNavigateToSubscription: () => void;
   onStarPress: (score: 1 | 2 | 3 | 4 | 5) => void;
   selectedScore: number;
@@ -47,7 +46,6 @@ export function CoachingDetailContent({
   activeDog,
   onToggleActionItem,
   onNavigateToTraining,
-  onNavigateToAnalysis,
   onNavigateToSubscription,
   onStarPress,
   selectedScore,
@@ -58,11 +56,11 @@ export function CoachingDetailContent({
   generateError,
   usage,
 }: CoachingDetailContentProps) {
-  const navigation = useNavigation();
   const completedCount = coaching.blocks.action_plan.items.filter((i) => i.is_completed).length;
   const totalCount = coaching.blocks.action_plan.items.length;
   const trend = coaching.blocks.insight.trend;
   const existingFeedback = coaching.feedback_score;
+  const isLimitReached = usage != null && usage.used >= usage.limit;
 
   return (
     <>
@@ -112,31 +110,22 @@ export function CoachingDetailContent({
         onNavigateToTraining={onNavigateToTraining}
         dogName={activeDog?.name}
         dogImageUrl={activeDog?.profile_image_url}
+        isPro={isPro}
       />
 
-      {/* 인사이트 리포트 CTA — Pro: 리포트 진입 / 무료: 구독 유도 */}
-      <TouchableOpacity
-        style={styles.insightCTA}
-        onPress={isPro
-          ? () => navigation.navigate('/coaching/insights', { coachingId: coaching.id })
-          : onNavigateToSubscription
-        }
-        activeOpacity={0.8}
-      >
-        <Text style={styles.insightCTAText}>
-          {isPro ? '📊 심화 인사이트 리포트 보기' : '✨ PRO — 광고 제거 + 심화 인사이트'}
-        </Text>
-        <Text style={styles.insightCTAArrow}>›</Text>
-      </TouchableOpacity>
-
-      {/* 분석 링크 */}
-      <TouchableOpacity
-        style={styles.analysisLink}
-        onPress={onNavigateToAnalysis}
-        activeOpacity={0.7}
-      >
-        <Text style={styles.analysisLinkText}>📊 분석 자세히 보기</Text>
-      </TouchableOpacity>
+      {/* Pro 업그레이드 유도 CTA — 무료 유저만 */}
+      {!isPro && (
+        <TouchableOpacity
+          style={styles.insightCTA}
+          onPress={onNavigateToSubscription}
+          activeOpacity={0.8}
+        >
+          <Text style={styles.insightCTAText}>
+            🔒 7일 플랜 + 위험신호 분석 + 전문가 상담 잠금 해제
+          </Text>
+          <Text style={styles.insightCTAArrow}>›</Text>
+        </TouchableOpacity>
+      )}
 
       {/* AI 생성물 명시 */}
       <View style={styles.aiDisclaimer}>
@@ -181,13 +170,16 @@ export function CoachingDetailContent({
 
       {/* 새 코칭 생성 */}
       <View style={styles.regenerateSection}>
+        {isLimitReached && (
+          <UsageLimitBanner isPro={isPro} limit={usage!.limit} />
+        )}
         <TouchableOpacity
-          style={styles.regenerateButton}
+          style={[styles.regenerateButton, isLimitReached && styles.regenerateButtonDisabled]}
           onPress={onGenerate}
           activeOpacity={0.7}
-          disabled={isGenerating}
+          disabled={isGenerating || isLimitReached}
         >
-          <Text style={styles.regenerateButtonText}>
+          <Text style={[styles.regenerateButtonText, isLimitReached && styles.regenerateButtonDisabledText]}>
             {isGenerating ? '생성 중...' : '새 코칭 받기'}
           </Text>
         </TouchableOpacity>
@@ -307,16 +299,6 @@ const styles = StyleSheet.create({
     color: colors.primaryBlue,
     marginLeft: spacing.sm,
   },
-  analysisLink: {
-    alignItems: 'center',
-    paddingVertical: spacing.lg,
-    marginTop: spacing.sm,
-  },
-  analysisLinkText: {
-    ...typography.bodySmall,
-    color: colors.primaryBlue,
-    fontWeight: '500',
-  },
   aiDisclaimer: {
     marginTop: spacing.lg,
     marginHorizontal: spacing.md,
@@ -382,10 +364,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     borderRadius: 10,
   },
+  regenerateButtonDisabled: {
+    opacity: 0.5,
+    borderColor: colors.grey300,
+  },
   regenerateButtonText: {
     ...typography.bodySmall,
     color: colors.primaryBlue,
     fontWeight: '600',
+  },
+  regenerateButtonDisabledText: {
+    color: colors.textSecondary,
   },
   usageTextSmall: {
     ...typography.caption,

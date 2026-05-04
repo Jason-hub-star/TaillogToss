@@ -348,13 +348,14 @@ class MockMTLSClient implements MTLSClient {
   }
 
   async fetchLoginProfile(accessToken: string): Promise<TossLoginProfile> {
-    const userKey = accessToken.replace('mock_access_', '').trim() || 'unknown';
-    return {
-      userKey: `toss_${userKey}`,
-      email: null,
-      name: null,
-      isNewUser: !userKey.startsWith('existing_'),
-    };
+    // TOSS_MOCK_STABLE_USER=true (AIT dev): 고정 userKey — code가 매번 달라 유저 중복 생성 방지
+    // 미설정 (테스트): code 기반 userKey — 테스트 예측 가능성 유지
+    const isStable =
+      (typeof Deno !== 'undefined' ? Deno.env.get('TOSS_MOCK_STABLE_USER') : process.env.TOSS_MOCK_STABLE_USER) === 'true';
+    const userKey = isStable
+      ? 'mock_stable_user_001'
+      : `toss_${accessToken.replace('mock_access_', '')}`;
+    return { userKey, email: null, name: null, isNewUser: false };
   }
 
   async verifyIapOrder(request: {

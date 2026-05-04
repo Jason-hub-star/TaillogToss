@@ -10,6 +10,8 @@ export interface EventPayloadMap {
   ad_requested: { placement: string };
   ad_loaded: { placement: string };
   ad_rewarded: { placement: string };
+  ad_impression: { placement: string };
+  ad_dismissed: { placement: string };
   ad_error: { placement: string };
   ad_no_fill: { placement: string; reason: string };
   // B2B 이벤트
@@ -46,6 +48,8 @@ export const tracker = {
   adRequested: (placement: string) => track('ad_requested', { placement }),
   adLoaded: (placement: string) => track('ad_loaded', { placement }),
   adRewarded: (placement: string) => track('ad_rewarded', { placement }),
+  adImpression: (placement: string) => track('ad_impression', { placement }),
+  adDismissed: (placement: string) => track('ad_dismissed', { placement }),
   adError: (placement: string) => track('ad_error', { placement }),
   adNoFill: (placement: string, reason: string) =>
     track('ad_no_fill', { placement, reason }),

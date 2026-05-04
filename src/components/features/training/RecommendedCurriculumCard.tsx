@@ -16,6 +16,7 @@ interface Props {
   logCount: number;
   isPro: boolean;
   onPress: () => void;
+  contextTags?: string[];
 }
 
 export function RecommendedCurriculumCard({
@@ -25,6 +26,7 @@ export function RecommendedCurriculumCard({
   logCount,
   isPro,
   onPress,
+  contextTags,
 }: Props) {
   const curriculum = CURRICULUMS.find((c) => c.id === curriculumId);
   if (!curriculum) return null;
@@ -53,6 +55,17 @@ export function RecommendedCurriculumCard({
         <Text style={styles.reasonIcon}>💡</Text>
         <Text style={styles.reasonText}>{reasoning}</Text>
       </View>
+
+      {/* 메모 기반 상황 태그 (최대 2개) */}
+      {contextTags && contextTags.length > 0 && (
+        <View style={styles.tagRow}>
+          {contextTags.slice(0, 2).map((tag) => (
+            <View key={tag} style={styles.contextTag}>
+              <Text style={styles.contextTagText}>{tag}</Text>
+            </View>
+          ))}
+        </View>
+      )}
 
       {/* 로그 기반 근거 (5개 이상일 때만) */}
       {logCount >= 5 ? (
@@ -150,6 +163,23 @@ const styles = StyleSheet.create({
     ...typography.caption,
     color: colors.textPrimary,
     flex: 1,
+  },
+  tagRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    marginBottom: 10,
+  },
+  contextTag: {
+    backgroundColor: `${colors.orange500}18`,
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  contextTagText: {
+    ...typography.badge,
+    color: colors.orange500,
+    fontWeight: '600',
   },
   logBadge: {
     backgroundColor: `${colors.primaryBlue}15`,

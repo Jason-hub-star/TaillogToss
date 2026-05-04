@@ -22,10 +22,10 @@ export function DogPhotoPicker({ uri, onSelect }: Props) {
     try {
       setIsLoading(true);
 
-      // 1단계: 권한 확인
+      // 1단계: 권한 확인 — notDetermined(최초)도 포함해서 다이얼로그 호출
       let permission = await fetchAlbumPhotos.getPermission();
 
-      if (permission === 'denied') {
+      if (permission !== 'allowed') {
         permission = await fetchAlbumPhotos.openPermissionDialog();
       }
 

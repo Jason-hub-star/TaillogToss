@@ -189,7 +189,7 @@ function WelcomePage() {
           <View style={styles.lottieArea}>
             <LottieAnimation asset="cute-doggie" size={120} />
           </View>
-          <Text style={styles.heading}>반려견 행동,{'\n'}90초면 기록 끝</Text>
+          <Text style={styles.heading}>반려견 행동,{'\n'}30초면 기록 끝</Text>
           <Text style={styles.subtitle}>AI가 분석하고,{'\n'}맞춤 훈련까지</Text>
 
           <View style={styles.features}>

@@ -104,6 +104,9 @@ Page/feature skill root: `.claude/skills/page-skills/`
 - `Skill("toss-supabase-mcp")`
 - `Skill("toss-sandbox-metro")`
 - `Skill("toss-dev-server")`
+- `Skill("toss-iap-proxy-ops")` — IAP 404→FastAPI proxy, service role JWT 감지, mTLS mock
+- `Skill("toss-mock-auth-ops")` — Mock stable userKey, survey 루프 진단, adb 트러블슈팅
+- `Skill("toss-ait-build-ops")` — .ait 빌드/배포 성공 패턴, supabase url 에러 해결, env var 인라인
 
 ### Page hardening skills
 - Source of truth: `docs/status/PAGE-UPGRADE-BOARD.md`

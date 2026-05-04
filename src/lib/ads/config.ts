@@ -1,30 +1,37 @@
 /**
- * 토스 Ads SDK 2.0 ver2 설정 — 공식 인터페이스 기준
- * loadFullScreenAd / showFullScreenAd / adGroupId / destroy 패턴.
- * 사업자등록 후 실제 adGroupId로 교체. 현재 테스트 ID 사용.
+ * 토스 Ads SDK 2.0 ver2 설정
+ * Rewarded R1/R2/R3 · Banner B1/B2/B3 · Interstitial I1
+ * 환경변수 미설정 시 테스트 ID로 자동 fallback
  * Parity: AD-001
  */
-import type { AdPlacement } from 'types/ads';
+import type { AdPlacement, BannerPlacement, InterstitialPlacement } from 'types/ads';
 
-/** Ad Group ID 매핑 (사업자등록 후 Developers Console에서 발급)
- * 환경변수 AIT_AD_R1/R2/R3 설정 시 실 ID 사용, 없으면 테스트 ID fallback
- */
-const AD_GROUP_IDS: Record<AdPlacement, string> = {
-  R1: process.env.AIT_AD_R1 || 'ait-ad-test-rewarded-id', // survey-result
-  R2: process.env.AIT_AD_R2 || 'ait-ad-test-rewarded-id', // dashboard/analysis
-  R3: process.env.AIT_AD_R3 || 'ait-ad-test-rewarded-id', // coaching-result
+type AllPlacement = AdPlacement | BannerPlacement | InterstitialPlacement;
+
+const AD_GROUP_IDS: Record<AllPlacement, string> = {
+  // Rewarded
+  R1: process.env.AIT_AD_R1 ?? 'ait-ad-test-rewarded-id',
+  R2: process.env.AIT_AD_R2 ?? 'ait-ad-test-rewarded-id',
+  R3: process.env.AIT_AD_R3 ?? 'ait-ad-test-rewarded-id',
+  // Banner
+  B1: process.env.AIT_AD_B1 ?? 'ait-ad-test-banner-id',
+  B2: process.env.AIT_AD_B2 ?? 'ait-ad-test-native-image-id',
+  B3: process.env.AIT_AD_B3 ?? 'ait-ad-test-banner-id',
+  // Interstitial
+  I1: process.env.AIT_AD_I1 ?? 'ait-ad-test-interstitial-id',
 };
 
-export function getAdGroupId(placement: AdPlacement): string {
+export function getAdGroupId(placement: AllPlacement): string {
   return AD_GROUP_IDS[placement];
 }
 
-/**
- * 토스 Ads SDK 2.0 ver2 공식 인터페이스 — 이벤트 콜백 패턴
- * loadFullScreenAd({ adGroupId, onLoaded, onError })
- * → showFullScreenAd({ onRewarded, onClosed, onError })
- * → destroy()
- */
+/** 테스트 ID 사용 중 여부 — BannerAd 목업 전환에 사용 */
+export function isMockMode(placement: AllPlacement): boolean {
+  return AD_GROUP_IDS[placement].startsWith('ait-ad-test-');
+}
+
+// ─── Fullscreen SDK 인터페이스 (Rewarded + Interstitial 공용) ─────────────────
+
 export interface AdLoadCallbacks {
   onLoaded: () => void;
   onError: (error: Error) => void;
@@ -43,53 +50,31 @@ export interface TossAdsSdk {
   destroy(): void;
 }
 
-/** Mock SDK — 콜백 패턴으로 보상 지급 시뮬레이션 */
 export function createMockAdsSdk(): TossAdsSdk {
   let loaded = false;
-
   return {
     loadFullScreenAd({ onLoaded, onError }) {
       setTimeout(() => {
-        try {
-          loaded = true;
-          onLoaded();
-        } catch (err) {
-          onError(err instanceof Error ? err : new Error(String(err)));
-        }
+        try { loaded = true; onLoaded(); }
+        catch (err) { onError(err instanceof Error ? err : new Error(String(err))); }
       }, 300);
     },
     showFullScreenAd({ onRewarded, onError }) {
-      if (!loaded) {
-        onError(new Error('Ad not loaded'));
-        return;
-      }
+      if (!loaded) { onError(new Error('Ad not loaded')); return; }
       loaded = false;
       setTimeout(() => {
-        try {
-          onRewarded();
-        } catch (err) {
-          onError(err instanceof Error ? err : new Error(String(err)));
-        }
+        try { onRewarded(); }
+        catch (err) { onError(err instanceof Error ? err : new Error(String(err))); }
       }, 700);
     },
-    isAdLoaded() {
-      return loaded;
-    },
-    destroy() {
-      loaded = false;
-    },
+    isAdLoaded() { return loaded; },
+    destroy() { loaded = false; },
   };
 }
 
-/**
- * SDK 싱글턴 — 사업자등록 후 실제 토스 Ads SDK로 교체
- * TODO: import { createAdsClient } from '@apps-in-toss/ads'; 후 실구현체 반환
- */
 let sdkInstance: TossAdsSdk | null = null;
 
 export function getAdsSdk(): TossAdsSdk {
-  if (!sdkInstance) {
-    sdkInstance = createMockAdsSdk();
-  }
+  if (!sdkInstance) sdkInstance = createMockAdsSdk();
   return sdkInstance;
 }

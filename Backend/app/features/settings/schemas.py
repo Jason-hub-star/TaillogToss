@@ -7,7 +7,7 @@ from datetime import datetime
 from typing import Literal, Optional
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, field_validator
 
 
 class ChannelsSchema(BaseModel):
@@ -52,9 +52,29 @@ class UserSettingsResponse(BaseModel):
     id: UUID
     user_id: UUID
     notification_pref: NotificationPrefSchema
-    ai_persona: AiPersonaSchema
+    ai_persona: AiPersonaSchema = AiPersonaSchema()
     marketing_agreed: bool = False
     marketing_agreed_at: Optional[datetime] = None
     updated_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
+
+    @field_validator('ai_persona', mode='before')
+    @classmethod
+    def default_ai_persona(cls, v: object) -> object:
+        if v is None:
+            return AiPersonaSchema()
+        if isinstance(v, str):
+            import json
+            return json.loads(v)
+        return v
+
+    @field_validator('notification_pref', mode='before')
+    @classmethod
+    def default_notification_pref(cls, v: object) -> object:
+        if v is None:
+            return NotificationPrefSchema()
+        if isinstance(v, str):
+            import json
+            return json.loads(v)
+        return v

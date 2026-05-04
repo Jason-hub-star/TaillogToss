@@ -28,7 +28,7 @@ async def require_pro_for_curriculum(
         return
     q = select(Subscription).where(Subscription.user_id == UUID(user_id))
     sub = (await db.execute(q)).scalar_one_or_none()
-    is_pro = bool(sub and sub.plan_type.value == "PRO_MONTHLY" and sub.is_active)
+    is_pro = bool(sub and sub.plan_type.value in ("PRO_MONTHLY", "PRO_YEARLY") and sub.is_active)
     if not is_pro:
         raise HTTPException(
             status_code=403,

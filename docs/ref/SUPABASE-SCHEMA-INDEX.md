@@ -25,7 +25,7 @@ Source priority: 1) Supabase MCP live metadata 2) `supabase/migrations/*.sql` 3)
 - `users`
 - `subscriptions`
 - `dogs`
-- `dog_env`
+- `dog_env` ← `onboarding_survey` JSONB 추가 (2026-04-28, Progressive Profiling Stage 1~3 완성도 추적); `activity_meta` +`walk_frequency`/`walk_duration_minutes` (2026-05-01); `temperament` +`env_reaction`/`person_reaction`/`dog_reaction`/`focus_level`/`attach_level` 5종 기질 (2026-05-01); `rewards_meta.ids` stage2 초기 저장 연결 (2026-05-01) — 모두 JSONB 키 추가, migration 불필요
 - `user_settings`
 - `noti_history`
 - `toss_orders`
@@ -43,6 +43,7 @@ Source priority: 1) Supabase MCP live metadata 2) `supabase/migrations/*.sql` 3)
 - `ai_cost_usage_monthly`
 - `coaching_training_batches` ← 신규 (Fine-tuning 배치 버전 관리, service_role RLS)
 - `coaching_synthetic_log` ← 신규 (합성 생성 일별 추적, UNIQUE run_date, service_role RLS)
+- `coaching_questions` ← 신규 (2026-04-28): Pro 전용 AI 코치 1:1 질문, 횟수 정책 TBD, auth RLS (select/insert owner)
 
 ### Training Content/Execution
 - `content_providers`
@@ -54,7 +55,7 @@ Source priority: 1) Supabase MCP live metadata 2) `supabase/migrations/*.sql` 3)
 - `training_sessions`
 - `training_goals`
 - `training_behavior_snapshots`
-- `user_training_status`
+- `user_training_status` ← `reaction VARCHAR(20) CHECK ('enjoyed','neutral','sensitive')` 컬럼 추가 (2026-04-27, psql 직접 적용)
 - `training_step_attempts` ← 신규 (2026-04-22): 스텝별 시행착오 상세 기록, RLS owner+trainer_read, org_id B2B연결
 
 ### B2B Layer
@@ -146,6 +147,7 @@ B2B helper functions present:
 - `20260420200000_coaching_training_flywheel.sql` ← **적용 완료** (2026-04-21, psql 직접 적용, ai_coaching 컬럼 6개 + coaching_training_batches + coaching_synthetic_log)
 - `20260420010000_verify_parent_phone_last4_rpc.sql` ← **적용 완료** (2026-04-21, `gxvtgrcqkbdibkyeqyil`에 직접 적용)
 - `20260421100000_create_org_rpc.sql` ← **적용 완료** (2026-04-21, `create_organization(p_name, p_type) RETURNS organizations` RPC, 조직 생성 + owner 멤버 자동 등록)
+- `20260301160000_add_reaction_to_training_status.sql` ← **적용 완료** (2026-04-27, psql 직접 적용, `user_training_status.reaction VARCHAR(20)` + `idx_training_status_reaction` 인덱스)
 
 ### Drift notes (needs sync)
 - Remote has versions not present in local repo: `20260212083318`, `20260212092350`, `20260212095042`, `20260214134529`, `20260301111950`.

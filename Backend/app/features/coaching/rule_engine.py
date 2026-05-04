@@ -94,6 +94,16 @@ def generate_rule_based_blocks(
             severity="high", recommendation="즉시 행동 전문가 상담 필요",
         ))
         overall_risk = "high"
+    if total_logs >= 10 and overall_risk == "low":
+        signals.append(RiskSignal(
+            type="pattern", description=f"최근 {total_logs}건의 행동이 기록되었습니다",
+            severity="low", recommendation="꾸준한 훈련으로 패턴을 개선해 보세요",
+        ))
+    if not signals:
+        signals.append(RiskSignal(
+            type="monitoring", description="현재 특이 위험 신호는 없습니다",
+            severity="low", recommendation="현재 패턴을 유지하며 긍정 강화 훈련을 계속하세요",
+        ))
 
     risk_signals = RiskSignalsBlock(signals=signals, overall_risk=overall_risk)
 

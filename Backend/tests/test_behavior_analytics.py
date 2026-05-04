@@ -18,12 +18,14 @@ def _make_log(
     intensity: int,
     hours_ago: int = 1,
     day_offset: int = 0,
+    memo: str | None = None,
 ) -> MagicMock:
     log = MagicMock(spec=BehaviorLog)
     log.dog_id = dog_id
     log.behavior = behavior
     log.quick_category = behavior
     log.intensity = intensity
+    log.memo = memo
     log.occurred_at = datetime.now(timezone.utc) - timedelta(hours=hours_ago, days=day_offset)
     return log
 
@@ -135,3 +137,33 @@ async def test_top_behaviors_sorted_by_frequency(mock_db, dog_id):
     assert result.top_behaviors[2] == "anxiety"
     assert result.total_logs == 9
     assert result.avg_intensity_by_behavior["barking"] == 7.0
+
+
+# ── 케이스 6: 메모 있는 로그 → memo_keywords 추출 ─────────────────────────
+@pytest.mark.asyncio
+async def test_memo_keywords_extracted(mock_db, dog_id):
+    logs = [
+        _make_log(dog_id, "barking", 7, memo="산책 중 자전거 지나갈 때 짖음"),
+        _make_log(dog_id, "barking", 6, memo="초인종 울릴 때 짖음"),
+        _make_log(dog_id, "barking", 8, memo="자전거 소리에 반응"),
+    ]
+    _patch_db(mock_db, logs)
+    result = await get_behavior_analytics(mock_db, dog_id)
+
+    assert result.memo_keywords is not None
+    keywords = result.memo_keywords.get("barking", [])
+    assert len(keywords) > 0
+    # 자전거가 2번 등장 → 상위에 포함
+    assert "자전거" in keywords
+
+
+# ── 케이스 7: 메모 없는 로그 → memo_keywords 빈 dict (None 아님) ──────────
+@pytest.mark.asyncio
+async def test_no_memo_graceful(mock_db, dog_id):
+    logs = [_make_log(dog_id, "barking", 5) for _ in range(3)]
+    _patch_db(mock_db, logs)
+    result = await get_behavior_analytics(mock_db, dog_id)
+
+    assert result.memo_keywords is not None
+    assert isinstance(result.memo_keywords, dict)
+    assert result.memo_keywords == {}

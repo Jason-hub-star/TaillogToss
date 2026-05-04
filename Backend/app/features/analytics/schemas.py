@@ -35,3 +35,5 @@ class BehaviorAnalyticsResponse(BaseModel):
     weekly_trend: Dict[str, str]       # behavior -> 'improving'|'stable'|'worsening'
     peak_hour: Optional[int]           # 0~23, 가장 많은 시간대
     stats: List[BehaviorStat]
+    memo_keywords: Optional[Dict[str, List[str]]] = None
+    # { "barking": ["자전거", "초인종", "현관"], ... } — 추천 reasoning 보강용

@@ -102,6 +102,14 @@ const APP_ROLES = new Set<UserRole>(['user', 'trainer', 'org_owner', 'org_staff'
 const ALLOWED_ROLES = new Set<UserRole>([...APP_ROLES, 'authenticated']);
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')?.replace(/\/$/, '');
 const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY');
+const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+
+// productId → 지급 유형 매핑 (IAP 상품 카탈로그와 동기화)
+const PRODUCT_GRANTS: Record<string, { planType?: string; aiTokens?: number; durationDays?: number }> = {
+  'ait.0000020829.09e69bf9.90a91624b0.7443236299': { planType: 'PRO_MONTHLY', durationDays: 30 },
+  'ait.0000020829.b0b00d71.17c5290dc1.7444362301': { aiTokens: 10 },
+  'ait.0000020829.32dc32cf.49e67a4cfa.7443541064': { aiTokens: 30 },
+};
 
 function newCorrelationId(prefix = 'err'): string {
   const stamp = Date.now().toString(36);
@@ -301,6 +309,85 @@ async function upsertTossOrder(
 }
 
 
+/**
+ * 구독/토큰 활성화 — grant 성공 후 subscriptions 테이블 업데이트.
+ * 실패해도 toss_orders grant는 기록되었으므로 non-fatal.
+ * subscriptions.user_id UNIQUE 제약 필요 (migration 20260504000001).
+ */
+async function activateSubscription(userId: string, productId: string): Promise<void> {
+  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) return;
+
+  const grant = PRODUCT_GRANTS[productId];
+  if (!grant) return;
+
+  const now = new Date();
+  const svcHeaders = {
+    apikey: SUPABASE_SERVICE_ROLE_KEY,
+    Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+    'Content-Type': 'application/json',
+  };
+
+  if (grant.planType) {
+    const nextBilling = new Date(now);
+    nextBilling.setDate(nextBilling.getDate() + (grant.durationDays ?? 30));
+
+    await fetch(
+      `${SUPABASE_URL}/rest/v1/subscriptions?on_conflict=user_id`,
+      {
+        method: 'POST',
+        headers: { ...svcHeaders, Prefer: 'resolution=merge-duplicates,return=minimal' },
+        body: JSON.stringify([{
+          user_id: userId,
+          plan_type: grant.planType,
+          is_active: true,
+          next_billing_date: nextBilling.toISOString().split('T')[0],
+          updated_at: now.toISOString(),
+        }]),
+      },
+    );
+  } else if (grant.aiTokens) {
+    const getResp = await fetch(
+      `${SUPABASE_URL}/rest/v1/subscriptions?user_id=eq.${userId}&select=id,ai_tokens_remaining,ai_tokens_total`,
+      { headers: svcHeaders },
+    );
+    const rows = await getResp.json().catch(() => []) as Array<{
+      id: string;
+      ai_tokens_remaining: number | null;
+      ai_tokens_total: number | null;
+    }>;
+
+    if (rows.length > 0) {
+      await fetch(
+        `${SUPABASE_URL}/rest/v1/subscriptions?user_id=eq.${userId}`,
+        {
+          method: 'PATCH',
+          headers: { ...svcHeaders, Prefer: 'return=minimal' },
+          body: JSON.stringify({
+            ai_tokens_remaining: (rows[0].ai_tokens_remaining ?? 0) + grant.aiTokens,
+            ai_tokens_total: (rows[0].ai_tokens_total ?? 0) + grant.aiTokens,
+            updated_at: now.toISOString(),
+          }),
+        },
+      );
+    } else {
+      await fetch(
+        `${SUPABASE_URL}/rest/v1/subscriptions?on_conflict=user_id`,
+        {
+          method: 'POST',
+          headers: { ...svcHeaders, Prefer: 'resolution=merge-duplicates,return=minimal' },
+          body: JSON.stringify([{
+            user_id: userId,
+            plan_type: 'FREE',
+            is_active: false,
+            ai_tokens_remaining: grant.aiTokens,
+            ai_tokens_total: grant.aiTokens,
+          }]),
+        },
+      );
+    }
+  }
+}
+
 /** 요청 전체 타임아웃 — processProductGrant 30초 한도보다 1초 마진 */
 const REQUEST_TIMEOUT_MS = 29_000;
 
@@ -326,14 +413,26 @@ async function handleRequest(request: Request): Promise<Response> {
     return toJsonResponse(fail('AUTH_UNAUTHORIZED', 'Missing bearer token', 401));
   }
 
-  const auth = await verifyJwtViaAuth(token);
-  if (!auth.ok) {
-    return toJsonResponse(auth.error);
-  }
+  // FastAPI 프록시 경로: service_role JWT로 호출 시 JWT 검증 없이 body.userId 사용
+  // service_role key는 /auth/v1/user 엔드포인트에서 user.id를 반환하지 않으므로 claims 직접 파싱
+  const isServiceRole = parseTokenRole(token) === 'service_role';
 
-  const role = resolveEffectiveRole(token, auth.user);
-  if (!role || !ALLOWED_ROLES.has(role)) {
-    return toJsonResponse(fail('AUTH_FORBIDDEN', 'Only authenticated app roles can verify IAP orders', 403));
+  let resolvedUserId: string | undefined;
+  let role: UserRole;
+
+  if (isServiceRole) {
+    role = 'service_role';
+  } else {
+    const auth = await verifyJwtViaAuth(token);
+    if (!auth.ok) {
+      return toJsonResponse(auth.error);
+    }
+    const effectiveRole = resolveEffectiveRole(token, auth.user);
+    if (!effectiveRole || !ALLOWED_ROLES.has(effectiveRole)) {
+      return toJsonResponse(fail('AUTH_FORBIDDEN', 'Only authenticated app roles can verify IAP orders', 403));
+    }
+    role = effectiveRole;
+    resolvedUserId = auth.user.id;
   }
 
   const body = await request.json().catch(() => null) as VerifyIapOrderRequest | null;
@@ -345,6 +444,14 @@ async function handleRequest(request: Request): Promise<Response> {
     return toJsonResponse(
       fail('VALIDATION_ERROR', 'orderId/productId/transactionId/idempotencyKey are required', 400),
     );
+  }
+
+  // service_role 호출은 FastAPI가 이미 검증한 userId를 body에서 가져온다
+  if (isServiceRole) {
+    if (!body.userId) {
+      return toJsonResponse(fail('VALIDATION_ERROR', 'userId is required for service_role calls', 400));
+    }
+    resolvedUserId = body.userId;
   }
 
   // authenticated 기본 세션은 개인 결제만 허용하고 조직/트레이너 지급 컨텍스트는 차단한다.
@@ -381,7 +488,7 @@ async function handleRequest(request: Request): Promise<Response> {
     : 'pending';
 
   const persisted = await upsertTossOrder(token, {
-    user_id: auth.user.id,
+    user_id: resolvedUserId!,
     product_id: body.productId,
     idempotency_key: body.idempotencyKey,
     toss_status: tossResult.tossStatus,
@@ -394,6 +501,14 @@ async function handleRequest(request: Request): Promise<Response> {
 
   if (!persisted.ok) {
     return toJsonResponse(persisted.error);
+  }
+
+  if (grantStatus === 'granted') {
+    try {
+      await activateSubscription(resolvedUserId!, body.productId);
+    } catch (err) {
+      console.error('[verify-iap-order] subscription activation failed (non-fatal):', err);
+    }
   }
 
   const response: VerifyIapOrderResponse = {

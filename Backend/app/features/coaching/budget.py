@@ -76,7 +76,9 @@ async def check_user_daily_limit(db: AsyncSession, user_id: str) -> tuple[bool, 
     """
     from app.shared.models import Subscription
 
-    today_start = datetime.combine(date.today(), datetime.min.time()).replace(tzinfo=timezone.utc)
+    KST = timezone(timedelta(hours=9))
+    today_kst = datetime.now(KST).date()
+    today_start = datetime.combine(today_kst, datetime.min.time(), tzinfo=KST)
 
     # ai_coaching → dogs JOIN으로 user별 오늘 생성 수 카운팅
     daily_q = (

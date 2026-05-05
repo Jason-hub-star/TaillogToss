@@ -1,6 +1,8 @@
 # TaillogToss Project Status
 
-Last Updated: 2026-05-04 (KST) — IAP 재진입 인증 버그 2종 수정: (1) `TOSS_MTLS_MODE=mock` 강제 설정 + `login-with-toss` 재배포 → 테스트 앱 sandbox auth code를 real Toss 서버가 거부하던 `토스인증서버응답실패` 해소 (2) `supabase.ts` AsyncStorage adapter(`@granite-js/native`) + `detectSessionInUrl:false` 추가 → IAP JS 런타임 재시작 후 세션 소멸 방지 (3) `AuthContext` `onAuthStateChange` 리스너 추가 → SIGNED_IN/SIGNED_OUT 이벤트 자동 반영. 빌드 성공(0 tsc errors). ⚠️ 프로덕션 배포 전 `TOSS_MTLS_MODE=real` 복구 필수.
+Last Updated: 2026-05-05 (KST) — 행동분석 `0/10회` 버그 2종 수정: (1) `check_user_daily_limit` 집계 테이블 오류(`AIRecommendationSnapshot` → `ai_coaching JOIN dogs`) (2) `today_start` timezone 오류(`date.today()+replace(utc)` → KST 자정 기준 변환). IAP E2E `subscriptions.is_active=true` 활성화 완료: `verify-iap-order` Edge Function에 `activateSubscription()` 추가 + `subscriptions_user_id_key` UNIQUE 제약 적용. `toss-iap-proxy-ops` 스킬 Pattern 5(subscriptions 활성화 E2E) 추가.
+
+Previous: IAP 재진입 인증 버그 2종 수정: (1) `TOSS_MTLS_MODE=mock` 강제 설정 + `login-with-toss` 재배포 → 테스트 앱 sandbox auth code를 real Toss 서버가 거부하던 `토스인증서버응답실패` 해소 (2) `supabase.ts` AsyncStorage adapter(`@granite-js/native`) + `detectSessionInUrl:false` 추가 → IAP JS 런타임 재시작 후 세션 소멸 방지 (3) `AuthContext` `onAuthStateChange` 리스너 추가 → SIGNED_IN/SIGNED_OUT 이벤트 자동 반영. 빌드 성공(0 tsc errors). ⚠️ 프로덕션 배포 전 `TOSS_MTLS_MODE=real` 복구 필수.
 
 Previous: FastAPI 서버사이드 E2E 13종 전체 통과: dogs/settings/dashboard/logs/onboarding-3stage/coaching-generate/coaching-feedback/behavior-analytics/IAP-proxy 모두 ✅. settings JSONB 픽스(tone 왕복) 검증 완료. 온보딩 3단계 연속 (stage1→2→3, completion 100%) 확인. IAP proxy `grant_status:granted` 재검증. 이전: DogPhotoPicker notDetermined 버그 픽스 + 갤러리 테스트 환경 한계 확인.
 

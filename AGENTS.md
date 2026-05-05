@@ -1,4 +1,142 @@
-TaillogToss global operating index. Keep this file slim.
+# TaillogToss — Codex Agent Context Map
+
+> AI 에이전트(Codex / codex-rescue)가 이 프로젝트를 풀로 파악하기 위한 진입점.
+> **작업 시작 전 아래 § 0 순서대로 반드시 읽을 것.**
+
+---
+
+## § 0. 작업 전 필독 순서 (Codex 전용)
+
+```
+Step 1: cat CLAUDE.md                                   ← 실행 규칙 + 금지사항 MUST
+Step 2: cat docs/status/PROJECT-STATUS.md               ← 최신 1줄 상태
+Step 3: cat docs/status/11-FEATURE-PARITY-MATRIX.md     ← 완료/미완료 파리티
+Step 4: 해당 작업 스킬 SKILL.md 읽기 (§ 2 스킬 경로 참조)
+```
+
+---
+
+## § 1. 하네스 (CLAUDE.md) 전체 경로
+
+```bash
+# 전역 규칙 (MUST)
+CLAUDE.md
+src/CLAUDE.md
+src/pages/CLAUDE.md
+src/components/CLAUDE.md
+src/lib/CLAUDE.md
+src/styles/CLAUDE.md
+supabase/functions/CLAUDE.md
+
+# 페이지별 로컬 규칙
+src/pages/coaching/CLAUDE.md
+src/pages/dashboard/CLAUDE.md
+src/pages/training/CLAUDE.md
+src/pages/onboarding/CLAUDE.md
+src/pages/settings/CLAUDE.md
+src/components/features/coaching/CLAUDE.md
+src/components/features/training/CLAUDE.md
+src/components/features/dashboard/CLAUDE.md
+src/components/tds-ext/CLAUDE.md
+src/components/shared/CLAUDE.md
+```
+
+---
+
+## § 2. 스킬 파일 경로 (SKILL.md)
+
+```bash
+# 도메인 스킬
+.claude/skills/toss-guide/core/toss_apps/SKILL.md           # TDS 컴포넌트/SDK 패턴
+.claude/skills/toss-guide/core/toss_journey/SKILL.md         # 사용자 여정/전환 흐름
+.claude/skills/toss-guide/core/toss_wireframes/SKILL.md      # 화면 와이어프레임
+.claude/skills/toss-guide/data/toss_db_migration/SKILL.md    # DB 마이그레이션
+.claude/skills/toss-guide/auth/toss-login-token-ops/SKILL.md # 로그인/토큰
+.claude/skills/toss-guide/auth/toss-mock-auth-ops/SKILL.md   # Mock 인증/survey 루프
+.claude/skills/toss-guide/monetization/toss-iap-proxy-ops/SKILL.md  # IAP E2E ★
+.claude/skills/toss-guide/monetization/toss-growth-ops/SKILL.md
+.claude/skills/toss-guide/monetization/toss-monetization-ops/SKILL.md
+.claude/skills/toss-guide/ops/toss-ait-build-ops/SKILL.md   # .ait 빌드/배포
+.claude/skills/toss-guide/ops/toss-dev-server/SKILL.md      # 개발 서버 기동
+.claude/skills/toss-guide/ops/toss-sandbox-metro/SKILL.md
+.claude/skills/toss-guide/ops/toss-supabase-mcp/SKILL.md
+.claude/skills/toss-guide/ops/toss-phase13-gate/SKILL.md
+.claude/skills/toss-guide/security/toss-edge-hardening/SKILL.md
+.claude/skills/toss-guide/security/toss-iap-edge-recovery/SKILL.md
+
+# 페이지 스킬
+.claude/skills/page-skills/page/coaching/page-coaching-result-upgrade/SKILL.md
+.claude/skills/page-skills/page/dashboard/page-dashboard-upgrade/SKILL.md
+.claude/skills/page-skills/page/dashboard/page-dashboard-analysis-upgrade/SKILL.md
+.claude/skills/page-skills/page/dashboard/page-dashboard-quick-log-upgrade/SKILL.md
+.claude/skills/page-skills/page/training/page-training-academy-upgrade/SKILL.md
+.claude/skills/page-skills/page/training/page-training-detail-upgrade/SKILL.md
+.claude/skills/page-skills/page/onboarding/page-onboarding-survey-upgrade/SKILL.md
+.claude/skills/page-skills/page/settings/page-settings-subscription-upgrade/SKILL.md
+.claude/skills/page-skills/page/dog/page-dog-profile-upgrade/SKILL.md
+
+# 피처 스킬
+.claude/skills/page-skills/feature/feature-ui-empty-and-skeleton/SKILL.md
+.claude/skills/page-skills/feature/feature-data-binding-and-loading/SKILL.md
+.claude/skills/page-skills/feature/feature-error-and-retry-state/SKILL.md
+.claude/skills/page-skills/feature/feature-form-validation-and-submit/SKILL.md
+.claude/skills/page-skills/feature/feature-navigation-and-gesture/SKILL.md
+.claude/skills/page-skills/feature/feature-analytics-and-tracking/SKILL.md
+```
+
+---
+
+## § 3. 상태 문서 경로
+
+```bash
+docs/status/PROJECT-STATUS.md             # 최신 상태 (항상 읽을 것)
+docs/status/11-FEATURE-PARITY-MATRIX.md   # 파리티 Done/InProgress/Blocked
+docs/status/PAGE-UPGRADE-BOARD.md         # 라우트별 완성도
+docs/status/MISSING-AND-UNIMPLEMENTED.md  # 미구현/목업 목록 ★
+docs/status/PROGRESS-CHECKLIST.md         # 종합 완성도 (72%)
+docs/status/SKILL-DOC-MATRIX.md           # 스킬 ↔ 코드 매핑
+```
+
+---
+
+## § 4. Mock/미구현 현황 (배포 전 처리 필수)
+
+| 항목 | 파일 | 조치 |
+|------|------|------|
+| mTLS mock 모드 | `supabase/functions/_shared/mtlsMode.ts` | `TOSS_MTLS_MODE=real` |
+| grant-toss-points | `supabase/functions/grant-toss-points/` | 실 API 연결 |
+| send-smart-message | `supabase/functions/send-smart-message/` | 콘솔 캠페인 승인 후 |
+| DevMenu 플랜 오버라이드 | `src/lib/devPlanOverride.ts` | 프로덕션 빌드 제거 |
+| Chip 다중선택 | `src/components/tds-ext/Chip.tsx:37` | Phase 6 예정 |
+
+---
+
+## § 5. 개발 서버 기동
+
+```bash
+# FastAPI
+cd Backend && venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8765 --reload
+
+# 프론트엔드
+node_modules/.bin/granite dev
+
+# adb 포트 포워딩
+adb reverse tcp:8765 tcp:8765 && adb reverse tcp:8081 tcp:8081
+```
+
+---
+
+## § 6. 테스트 명령
+
+```bash
+cd Backend && venv/bin/pytest tests/ -v   # Backend pytest
+npx tsc --noEmit                          # TypeScript 타입체크
+npx jest --passWithNoTests                # Jest
+```
+
+---
+
+---
 
 # TaillogToss Orchestration Index (Slim)
 

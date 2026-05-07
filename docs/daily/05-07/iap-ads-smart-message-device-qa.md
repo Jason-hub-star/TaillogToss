@@ -301,6 +301,21 @@ Deployment: `019e01f5-9ae6-774d-90d7-e68ac7132db5`
 
 Conclusion: the minimal single-screen AIT also fails before JS execution. This rules out Taillog app bundle complexity, navigation, IAP, Ads, Smart Message, DEV menu, and most application-level runtime code. The remaining blocker is the Apps in Toss standalone host path: deployment lookup/entitlement/registration, console QR/test context mismatch, or an AIT host compatibility/ingestion issue.
 
+## Review Request Candidate AIT
+
+Deployment: `019e0219-fcc0-7eaf-aa96-6853fd8a7553`
+
+- [x] Source state: normal Taillog app restored; `_app.tsx` uses official `AppsInToss.registerApp(AppContainer, { context })` and marker `[AIT-BUILD] taillog-appsintoss-wrapper-20260507-1745`.
+- [x] Typecheck: `npx tsc --noEmit` PASS.
+- [x] Build: `node_modules/.bin/ait build` PASS for RN `0.84.0` and `0.72.6`, both `0 errors / 0 warnings`.
+- [x] Artifact renamed for console review upload: `/Users/family/jason/TaillogToss/taillog-app-final-review-019e0219.ait`.
+- [x] Artifact hash: `dec4303b3931eae03c976f08805c650f7df20f2ca76b44a0beac63af3ced62d3`, size about `17MB`.
+- [x] Android syntax scan: `node --check` PASS for `bundle.android.0_84_0.js` and `bundle.android.0_72_6.js`.
+- [x] Bundle scan: deploymentId present once, smoke markers `0`, normal AIT markers present, `ait-ad-test-*` `0`, live adGroupId count `7`, brand icon is the Toss HTTPS URL, no data URI/local brand path, Railway URL and Supabase URL present.
+- [x] Release gate scan: `isDevToolsEnabled() { return false; }`, so DevMenu/plan override/guard bypass/DEV IAP bypass are disabled in the review candidate.
+
+Recommendation: submit this final candidate for review/escalation rather than the smoke artifact. Include the minimal smoke failure evidence (`019e01f5...`) in the review/support note so Toss can distinguish app-code issues from standalone host/deployment execution issues.
+
 ## Daily Sync
 
 - `docs/status/PROJECT-STATUS.md`: updated to QA state for IAP/MSG/AD

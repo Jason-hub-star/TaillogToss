@@ -259,7 +259,21 @@ Conclusion: app JS and the official Apps in Toss wrapper are healthy under Metro
 - [x] Scheme resolver check: `intoss-private://taillog-app?...` resolves to `viva.republica.toss.test/.MiniAppSchemeActivity`, so the direct private scheme is being handled by the sandbox app.
 - [x] Official `AppsInToss.registerApp(AppContainer, { context })` example confirms the current wrapper shape is valid; missing `appName` in `_app.tsx` is not the likely cause.
 
-Conclusion: the strongest remaining cause is an outdated sandbox app host. The installed Android sandbox app predates the official current Android sandbox build, while Metro succeeds because it bypasses the uploaded standalone host path.
+Initial conclusion: the strongest remaining cause was an outdated sandbox app host. The installed Android sandbox app predates the official current Android sandbox build, while Metro succeeds because it bypasses the uploaded standalone host path.
+
+## Latest Sandbox APK Recheck
+
+Source: `/Users/family/Downloads/rn-miniapp-real-release-protected.DL3GxCd4.zip`
+
+- [x] Zip contents: `rn-miniapp-real-release-protected.apk`, timestamp `2026-04-22 12:18`, size about `84MB`.
+- [x] `adb install -r /tmp/taillog-toss-sandbox-apk/rn-miniapp-real-release-protected.apk`: `Success`.
+- [x] Device package after install: `viva.republica.toss.test`, `versionCode=100000`, `versionName=1.0.0`, `lastUpdateTime=2026-05-07 18:38:12`, same signature hash as previous install.
+- [x] Metro-off `intoss-private://taillog-app?_deploymentId=019e01b9-3c4c-7677-b6b9-d80529a2d868` in sandbox app: still host error before JS marker (`앱 실행도중 문제가 발생했습니다.`).
+- [x] Real Toss app check: `viva.republica.toss` version `5.258.1`, direct private scheme shows `지금은 서비스를 사용할 수 없어요.` with no JS marker.
+- [x] Sandbox app launcher/home opens and lists `taillog-app`, so developer login/workspace app listing is present.
+- [x] SDK source recheck: `AppsInToss.registerApp` internally derives `appName` from `global.__granite.app.name` and calls `Granite.registerApp` with that value, so not passing `appName` in `_app.tsx` is not the cause.
+
+Conclusion: outdated sandbox app is ruled out. Remaining likely causes are deployment entitlement/lookup in the Apps in Toss host, a difference between direct adb scheme launch and console QR/test-button context, or a server-side registration issue for private deployment `019e01b9...`.
 
 ## Daily Sync
 

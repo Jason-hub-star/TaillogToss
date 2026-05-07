@@ -287,6 +287,20 @@ Conclusion: outdated sandbox app is ruled out. Remaining likely causes are deplo
 
 Next: upload the current `taillog-app.ait` smoke artifact in the Apps in Toss console and run it by console QR/test button. If this minimal artifact also fails before JS, the blocker is host/deployment registration rather than the Taillog app bundle.
 
+## Minimal AIT Smoke Upload Recheck
+
+Deployment: `019e01f5-9ae6-774d-90d7-e68ac7132db5`
+
+- [x] User uploaded the minimal smoke artifact to Apps in Toss console.
+- [x] Metro state before launch: no process listening on `tcp:8081`; `adb reverse --list` only had `tcp:8765`.
+- [x] Artifact identity before launch: current root `taillog-app.ait` hash `552c233d3d5d3ada1eee5676f66fc6950e667b65664713d2e72c060b6ed81d03`, size about `17MB`.
+- [x] Sandbox package state: latest installed `viva.republica.toss.test` from the 2026-04-22 APK, `lastUpdateTime=2026-05-07 18:38:12`.
+- [x] Direct standalone launch: `adb shell am start -a android.intent.action.VIEW -d 'intoss-private://taillog-app?_deploymentId=019e01f5-9ae6-774d-90d7-e68ac7132db5' viva.republica.toss.test`.
+- [x] UI result: host dialog `앱 실행도중 문제가 발생했습니다.` / `앱인토스 개발자 커뮤니티로 문의해주세요.` with `돌아가기` button.
+- [x] Logcat result: RN/native host process starts and `GraniteActivity` is resumed, but no `ReactNativeJS`, `[AIT-SMOKE]`, or `Taillog AIT Smoke` marker appears. The only relevant RN signal is `Unable to update root layout specs for uninitialized ReactInstanceManager`, followed by the host error dialog.
+
+Conclusion: the minimal single-screen AIT also fails before JS execution. This rules out Taillog app bundle complexity, navigation, IAP, Ads, Smart Message, DEV menu, and most application-level runtime code. The remaining blocker is the Apps in Toss standalone host path: deployment lookup/entitlement/registration, console QR/test context mismatch, or an AIT host compatibility/ingestion issue.
+
 ## Daily Sync
 
 - `docs/status/PROJECT-STATUS.md`: updated to QA state for IAP/MSG/AD

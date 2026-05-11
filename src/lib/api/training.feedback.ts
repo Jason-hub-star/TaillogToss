@@ -5,14 +5,14 @@
 import { supabase } from './supabase';
 import { requestBackend, withBackendFallback } from './backend';
 import { measureStartupAsync } from 'lib/performance/startupPerformance';
-import type { DogReaction, StepFeedback, CurriculumId } from 'types/training';
+import type { DogReaction, StepFeedback } from 'types/training';
 import {
   parseStepIdentifier,
-  toStepId,
-  parseDayNumber,
   isMissingRelationError,
   isSchemaMismatchError,
+  rowsToStepFeedback,
 } from './training.transform';
+import { clearTrainingRowsCache, getSharedTrainingRows } from './training.rows';
 
 /** 스텝 피드백(반응) 저장 — user_training_status.reaction UPDATE */
 export async function submitStepFeedback(
@@ -37,6 +37,7 @@ export async function submitStepFeedback(
           memo,
         },
       });
+      clearTrainingRowsCache(dogId);
     },
     async () => {
       const { error } = await supabase
@@ -50,6 +51,7 @@ export async function submitStepFeedback(
         if (isMissingRelationError(error) || isSchemaMismatchError(error)) return;
         throw error;
       }
+      clearTrainingRowsCache(dogId);
     },
   );
 }
@@ -59,63 +61,10 @@ export async function getStepFeedback(
   dogId: string,
   curriculumId?: string,
 ): Promise<StepFeedback[]> {
-  return withBackendFallback(
-    () =>
-      measureStartupAsync(
-        'api_training_feedback_backend',
-        { dogId, curriculumId: curriculumId ?? null },
-        async () => {
-          const url = curriculumId
-            ? `/api/v1/training/feedback/${dogId}?curriculum_id=${curriculumId}`
-            : `/api/v1/training/feedback/${dogId}`;
-          const rows = await requestBackend<Array<{
-            id: string; user_id: string; dog_id: string; curriculum_id: string;
-            stage_id: string; step_number: number; status: string; current_variant?: string;
-            memo?: string | null; reaction?: string | null; created_at: string;
-          }>>(url);
-          if (!Array.isArray(rows)) return [];
-          return rows
-            .filter((r) => r.reaction)
-            .map((r) => ({
-              step_id: toStepId(r.curriculum_id, parseDayNumber(r.stage_id), r.step_number),
-              curriculum_id: r.curriculum_id as CurriculumId,
-              day: parseDayNumber(r.stage_id),
-              step_number: r.step_number,
-              reaction: r.reaction as DogReaction,
-              memo: r.memo ?? null,
-            }));
-        },
-      ),
-    () =>
-      measureStartupAsync(
-        'api_training_feedback_supabase',
-        { dogId, curriculumId: curriculumId ?? null },
-        async () => {
-          let query = supabase
-            .from('user_training_status')
-            .select('*')
-            .eq('dog_id', dogId);
-          if (curriculumId) {
-            query = query.eq('curriculum_id', curriculumId);
-          }
-          const { data, error } = await query;
-          if (error) {
-            if (isMissingRelationError(error) || isSchemaMismatchError(error)) return [];
-            throw error;
-          }
-          if (!data) return [];
-          return (data as Array<{ curriculum_id: string; stage_id: string; step_number: number; reaction?: string | null; memo?: string | null }>)
-            .filter((r) => r.reaction)
-            .map((r) => ({
-              step_id: toStepId(r.curriculum_id, parseDayNumber(r.stage_id), r.step_number),
-              curriculum_id: r.curriculum_id as CurriculumId,
-              day: parseDayNumber(r.stage_id),
-              step_number: r.step_number,
-              reaction: r.reaction as DogReaction,
-              memo: r.memo ?? null,
-            }));
-        },
-      ),
+  return measureStartupAsync(
+    'api_training_feedback_from_rows',
+    { dogId, curriculumId: curriculumId ?? null },
+    async () => rowsToStepFeedback(await getSharedTrainingRows(dogId, 'feedback'), curriculumId),
   );
 }
 

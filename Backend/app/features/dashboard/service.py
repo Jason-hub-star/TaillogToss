@@ -19,9 +19,15 @@ from app.shared.utils.timezone import get_today_with_timezone
 async def get_dashboard_data(
     db: AsyncSession, dog_id: str, timezone_str: str = "Asia/Seoul",
 ) -> schemas.DashboardResponse:
-    # 1. Dog 정보
-    result = await db.execute(select(Dog).where(Dog.id == dog_id))
-    dog = result.scalar_one_or_none()
+    # 1. Dog + DogEnv 정보 (한 번의 DB 왕복)
+    profile_result = await db.execute(
+        select(Dog, DogEnv)
+        .outerjoin(DogEnv, DogEnv.dog_id == Dog.id)
+        .where(Dog.id == UUID(dog_id))
+    )
+    profile_row = profile_result.first()
+    dog = profile_row[0] if profile_row else None
+    dog_env = profile_row[1] if profile_row else None
     if not dog:
         raise NotFoundException("Dog not found")
 
@@ -40,40 +46,28 @@ async def get_dashboard_data(
         profile_image_url=dog.profile_image_url,
     )
 
-    # 1.5 DogEnv → issues, triggers
-    env_result = await db.execute(select(DogEnv).where(DogEnv.dog_id == dog_id))
-    dog_env = env_result.scalar_one_or_none()
-
     issues = _extract_list(dog_env.chronic_issues if dog_env else None, "top_issues")
     env_triggers = _extract_list(dog_env.triggers if dog_env else None, "ids")
 
-    # 2. 통계
-    count_q = select(func.count()).where(BehaviorLog.dog_id == dog_id)
-    total_logs = (await db.execute(count_q)).scalar() or 0
-
-    last_log_q = (
-        select(BehaviorLog.occurred_at)
-        .where(BehaviorLog.dog_id == dog_id)
+    # 2. 통계 + 최근 로그 + 스트릭용 최근 날짜를 한 번에 조회
+    logs_q = (
+        select(BehaviorLog, func.count().over().label("total_count"))
+        .where(BehaviorLog.dog_id == UUID(dog_id))
         .order_by(desc(BehaviorLog.occurred_at))
-        .limit(1)
+        .limit(500)
     )
-    last_logged_at = (await db.execute(last_log_q)).scalar_one_or_none()
+    log_rows = (await db.execute(logs_q)).all()
+    logs = [row[0] for row in log_rows]
+    total_logs = int(log_rows[0][1]) if log_rows else 0
+    last_logged_at = logs[0].occurred_at if logs else None
 
     # 스트릭 계산
     current_streak = 0
-    if last_logged_at:
+    if logs:
         user_today = get_today_with_timezone(timezone_str)
         tz = ZoneInfo(timezone_str)
-        recent_q = (
-            select(BehaviorLog.occurred_at)
-            .where(BehaviorLog.dog_id == dog_id)
-            .order_by(desc(BehaviorLog.occurred_at))
-            .limit(500)
-        )
-        raw_result = await db.execute(recent_q)
-        raw_dates = [row[0] for row in raw_result.all()]
         log_dates = sorted(
-            {dt.astimezone(tz).date() for dt in raw_dates},
+            {log.occurred_at.astimezone(tz).date() for log in logs if log.occurred_at},
             reverse=True,
         )
         if log_dates:
@@ -94,14 +88,7 @@ async def get_dashboard_data(
     )
 
     # 3. 최근 로그
-    logs_q = (
-        select(BehaviorLog)
-        .where(BehaviorLog.dog_id == dog_id)
-        .order_by(desc(BehaviorLog.occurred_at))
-        .limit(5)
-    )
-    recent_result = (await db.execute(logs_q)).scalars().all()
-    recent_logs = [schemas.RecentLogItem.model_validate(log) for log in recent_result]
+    recent_logs = [schemas.RecentLogItem.model_validate(log) for log in logs[:20]]
 
     return schemas.DashboardResponse(
         dog_profile=dog_profile,

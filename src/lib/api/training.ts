@@ -14,6 +14,7 @@ import {
   summarizeBackendRows,
   type BackendTrainingStatusRow,
 } from './training.transform';
+import { clearTrainingRowsCache, getSharedTrainingRows } from './training.rows';
 
 export type { BackendTrainingStatusRow };
 export {
@@ -23,42 +24,10 @@ export {
   submitStepAttempt,
 } from './training.feedback';
 
-async function getTrainingProgressFromSupabase(dogId: string): Promise<TrainingProgress[]> {
-  const { data, error } = await supabase
-    .from('user_training_status')
-    .select('*')
-    .eq('dog_id', dogId)
-    .order('created_at', { ascending: true });
-  if (error) {
-    if (isMissingRelationError(error)) return [];
-    throw error;
-  }
-  if (!data || data.length === 0) return [];
-  return summarizeBackendRows(data as BackendTrainingStatusRow[]);
-}
-
-async function getTrainingProgressFromBackend(dogId: string): Promise<TrainingProgress[]> {
-  const rows = await requestBackend<BackendTrainingStatusRow[]>(`/api/v1/training/${dogId}`);
-  if (!Array.isArray(rows)) return [];
-  return summarizeBackendRows(rows);
-}
-
 /** 전체 훈련 진행 상태 */
 export async function getTrainingProgress(dogId: string): Promise<TrainingProgress[]> {
-  return withBackendFallback(
-    () =>
-      measureStartupAsync(
-        'api_training_progress_backend',
-        { dogId },
-        () => getTrainingProgressFromBackend(dogId),
-      ),
-    () =>
-      measureStartupAsync(
-        'api_training_progress_supabase',
-        { dogId },
-        () => getTrainingProgressFromSupabase(dogId),
-      ),
-  );
+  const rows = await getSharedTrainingRows(dogId, 'progress');
+  return summarizeBackendRows(rows);
 }
 
 /** 특정 커리큘럼 진행 상태 */
@@ -93,6 +62,7 @@ export async function startTraining(
           memo: null,
         },
       });
+      clearTrainingRowsCache(dogId);
       return {
         id: created.id,
         dog_id: created.dog_id,
@@ -126,6 +96,7 @@ export async function startTraining(
         .select()
         .single();
       if (error) throw error;
+      clearTrainingRowsCache(dogId);
       const row = data as BackendTrainingStatusRow;
       return {
         id: row.id,
@@ -166,6 +137,7 @@ export async function completeStep(
           memo: null,
         },
       });
+      clearTrainingRowsCache(dogId);
     },
     async () => {
       const parsed = parseStepIdentifier(stepId);
@@ -190,6 +162,7 @@ export async function completeStep(
         if (isMissingRelationError(error)) return;
         throw error;
       }
+      clearTrainingRowsCache(dogId);
     },
   );
 }
@@ -215,6 +188,7 @@ export async function uncompleteStep(
           memo: null,
         },
       });
+      clearTrainingRowsCache(dogId);
     },
     async () => {
       const parsed = parseStepIdentifier(stepId);
@@ -239,6 +213,7 @@ export async function uncompleteStep(
         if (isMissingRelationError(error)) return;
         throw error;
       }
+      clearTrainingRowsCache(dogId);
     },
   );
 }

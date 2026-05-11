@@ -18,7 +18,7 @@ jest.mock('lib/api/backend', () => ({
   withBackendFallback: (...args: unknown[]) => mockWithBackendFallback(...args),
 }));
 
-import { completeStep, getTrainingProgress } from '../training';
+import { completeStep, getStepFeedback, getTrainingProgress } from '../training';
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -65,6 +65,48 @@ describe('getTrainingProgress', () => {
       expect.arrayContaining(['basic_obedience_d1_s1', 'basic_obedience_d1_s2']),
     );
   });
+
+  it('progress와 feedback 동시 조회는 같은 backend rows 요청을 공유한다', async () => {
+    let resolveRows!: (rows: unknown[]) => void;
+    mockRequestBackend.mockReturnValue(
+      new Promise((resolve) => {
+        resolveRows = resolve;
+      }),
+    );
+
+    const progressPromise = getTrainingProgress('dog-1');
+    const feedbackPromise = getStepFeedback('dog-1');
+
+    await Promise.resolve();
+    expect(mockRequestBackend).toHaveBeenCalledTimes(1);
+    expect(mockRequestBackend).toHaveBeenCalledWith('/api/v1/training/dog-1');
+
+    resolveRows([
+      {
+        id: 'row-1',
+        user_id: 'u-1',
+        dog_id: 'dog-1',
+        curriculum_id: 'basic_obedience',
+        stage_id: 'day_1',
+        step_number: 1,
+        status: 'COMPLETED',
+        current_variant: 'A',
+        memo: '잘 따라왔어요',
+        reaction: 'enjoyed',
+        created_at: '2026-02-28T00:00:01Z',
+      },
+    ]);
+
+    const [progress, feedback] = await Promise.all([progressPromise, feedbackPromise]);
+    expect(progress).toHaveLength(1);
+    expect(feedback).toEqual([
+      expect.objectContaining({
+        curriculum_id: 'basic_obedience',
+        reaction: 'enjoyed',
+        memo: '잘 따라왔어요',
+      }),
+    ]);
+  });
 });
 
 describe('completeStep', () => {
@@ -88,4 +130,3 @@ describe('completeStep', () => {
     );
   });
 });
-

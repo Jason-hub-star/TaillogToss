@@ -4,7 +4,13 @@
  * Parity: UI-001
  */
 import { getCurriculumById } from 'lib/data/published/runtime';
-import type { TrainingProgress, CurriculumId, PlanVariant } from 'types/training';
+import type {
+  TrainingProgress,
+  CurriculumId,
+  PlanVariant,
+  DogReaction,
+  StepFeedback,
+} from 'types/training';
 import { supabase } from './supabase';
 
 export interface BackendTrainingStatusRow {
@@ -134,4 +140,21 @@ export function summarizeBackendRows(rows: BackendTrainingStatusRow[]): Training
   }
 
   return result;
+}
+
+export function rowsToStepFeedback(
+  rows: BackendTrainingStatusRow[],
+  curriculumId?: string,
+): StepFeedback[] {
+  return rows
+    .filter((row) => row.reaction)
+    .filter((row) => !curriculumId || row.curriculum_id === curriculumId)
+    .map((row) => ({
+      step_id: toStepId(row.curriculum_id, parseDayNumber(row.stage_id), row.step_number),
+      curriculum_id: row.curriculum_id as CurriculumId,
+      day: parseDayNumber(row.stage_id),
+      step_number: row.step_number,
+      reaction: row.reaction as DogReaction,
+      memo: row.memo ?? null,
+    }));
 }

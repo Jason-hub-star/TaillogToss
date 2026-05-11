@@ -13,6 +13,10 @@ import React, {
 import * as authApi from 'lib/api/auth';
 import * as dogApi from 'lib/api/dog';
 import { supabase } from 'lib/api/supabase';
+import { queryPolicy } from 'lib/api/queryConfig';
+import { queryKeys } from 'lib/api/queryKeys';
+import { clearPersistedQueryCache, setQueryCacheOwner } from 'lib/queryPersistence';
+import { queryClient } from './queryClient';
 import { clearPostLoginRedirect } from 'stores/postLoginRedirect';
 import type { AuthState, User } from 'types/auth';
 
@@ -53,7 +57,11 @@ function buildUserFromSession(sessionUser: SessionUserLike): User {
 async function getHasCompletedOnboarding(userId: string | undefined): Promise<boolean> {
   if (!userId) return false;
   try {
-    const dogs = await dogApi.getDogs(userId);
+    const dogs = await queryClient.fetchQuery({
+      queryKey: queryKeys.dogs.list(userId),
+      queryFn: () => dogApi.getDogs(userId),
+      ...queryPolicy.default,
+    });
     return dogs.length > 0;
   } catch {
     return false;
@@ -69,6 +77,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   });
 
   const login = useCallback((user: User) => {
+    void setQueryCacheOwner(user.id);
     setState({
       user,
       isAuthenticated: true,
@@ -79,6 +88,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logout = useCallback(() => {
     clearPostLoginRedirect();
+    void clearPersistedQueryCache();
     setState({
       user: null,
       isAuthenticated: false,
@@ -111,6 +121,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
 
         const user = buildUserFromSession(session.user as SessionUserLike);
+        await setQueryCacheOwner(user.id);
         const hasCompletedOnboarding = await getHasCompletedOnboarding(user.id);
         if (!mounted) return;
 
@@ -129,18 +140,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     void bootstrap();
 
     // IAP 등 앱 재진입 시 Supabase 세션 변경 이벤트 감지
-    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+    const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (!mounted) return;
       if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
         if (session?.user) {
           const user = buildUserFromSession(session.user as SessionUserLike);
-          getHasCompletedOnboarding(user.id).then((hasCompletedOnboarding) => {
-            if (!mounted) return;
-            setState({ user, isAuthenticated: true, isLoading: false, hasCompletedOnboarding });
-          });
+          await setQueryCacheOwner(user.id);
+          const hasCompletedOnboarding = await getHasCompletedOnboarding(user.id);
+          if (!mounted) return;
+          setState({ user, isAuthenticated: true, isLoading: false, hasCompletedOnboarding });
         }
       } else if (event === 'SIGNED_OUT') {
         if (mounted) {
+          await clearPersistedQueryCache();
           setState({ user: null, isAuthenticated: false, isLoading: false, hasCompletedOnboarding: false });
         }
       }

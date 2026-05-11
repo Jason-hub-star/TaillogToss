@@ -15,6 +15,15 @@ interface Props {
   onSelect: (uri: string) => void;
 }
 
+const DEV_FALLBACK_PHOTO_URI = ICONS['ic-dog'] ?? '';
+
+function isPermissionLikeError(error: unknown): boolean {
+  if (error instanceof FetchAlbumPhotosPermissionError) return true;
+
+  const message = error instanceof Error ? error.message : String(error);
+  return /permission|denied|READ_MEDIA|READ_EXTERNAL|SecurityException/i.test(message);
+}
+
 export function DogPhotoPicker({ uri, onSelect }: Props) {
   const [isLoading, setIsLoading] = useState(false);
 
@@ -23,23 +32,7 @@ export function DogPhotoPicker({ uri, onSelect }: Props) {
     try {
       setIsLoading(true);
 
-      // 1단계: 권한 확인 — notDetermined(최초)도 포함해서 다이얼로그 호출
-      let permission = await fetchAlbumPhotos.getPermission();
-
-      if (permission !== 'allowed') {
-        permission = await fetchAlbumPhotos.openPermissionDialog();
-      }
-
-      if (permission !== 'allowed') {
-        Alert.alert(
-          '갤러리 접근 필요',
-          '반려견 사진을 선택하려면 갤러리 접근 권한이 필요해요.\n설정에서 허용해주세요.',
-          [{ text: '확인', style: 'cancel' }]
-        );
-        return;
-      }
-
-      // 2단계: 사진 선택 (1장, 로컬 file:// URI 반환)
+      // fetchAlbumPhotos 내부에서 권한 확인과 요청을 한 번만 처리한다.
       const images = await fetchAlbumPhotos({
         base64: false,
         maxCount: 1,
@@ -49,10 +42,30 @@ export function DogPhotoPicker({ uri, onSelect }: Props) {
       const first = images[0];
       if (first != null) {
         onSelect(first.dataUri);
+        return;
+      }
+
+      if (__DEV__) {
+        console.info('[DogPhotoPicker] photo selection cancelled or empty');
       }
     } catch (error) {
-      if (error instanceof FetchAlbumPhotosPermissionError) {
-        Alert.alert('권한 필요', '갤러리 접근 권한을 허용해주세요.');
+      if (isPermissionLikeError(error)) {
+        if (__DEV__) console.warn('[DogPhotoPicker] photo permission unavailable:', error);
+        if (__DEV__) {
+          Alert.alert(
+            '개발용 사진 선택 제한',
+            '개발용 Toss 앱은 앨범 권한이 없어 실제 사진 선택이 막혀요.\n업로드 흐름은 테스트 사진으로 계속 확인할 수 있어요.',
+            [
+              { text: '취소', style: 'cancel' },
+              { text: '테스트 사진 사용', onPress: () => onSelect(DEV_FALLBACK_PHOTO_URI) },
+            ],
+          );
+        } else {
+          Alert.alert(
+            '사진 접근 권한 필요',
+            '사진을 선택하려면 Toss 앱의 사진 접근 권한이 필요해요.\n허용 후 다시 시도해주세요.',
+          );
+        }
       } else {
         console.error('[DogPhotoPicker] fetchAlbumPhotos error:', error);
         Alert.alert('사진 선택 실패', '다시 시도해주세요.');

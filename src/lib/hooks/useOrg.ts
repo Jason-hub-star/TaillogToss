@@ -3,6 +3,7 @@
  * Parity: B2B-001
  */
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { queryPolicy } from 'lib/api/queryConfig';
 import { queryKeys } from 'lib/api/queryKeys';
 import * as orgApi from 'lib/api/org';
 import type { OrgMember, DogAssignment, OrgType } from 'types/b2b';
@@ -26,6 +27,7 @@ export function useOrgDetail(orgId: string | undefined) {
     queryKey: queryKeys.org.detail(orgId ?? ''),
     queryFn: () => orgApi.getOrg(orgId!),
     enabled: !!orgId,
+    ...queryPolicy.default,
   });
 }
 
@@ -34,6 +36,7 @@ export function useOrgMembers(orgId: string | undefined) {
     queryKey: queryKeys.org.members(orgId ?? ''),
     queryFn: () => orgApi.getOrgMembers(orgId!),
     enabled: !!orgId,
+    ...queryPolicy.default,
   });
 }
 
@@ -42,6 +45,7 @@ export function useOrgDogs(orgId: string | undefined) {
     queryKey: queryKeys.orgDogs.list(orgId ?? ''),
     queryFn: () => orgApi.getOrgDogs(orgId!),
     enabled: !!orgId,
+    ...queryPolicy.short,
   });
 }
 
@@ -107,6 +111,7 @@ export function useMyAssignments(trainerId: string | undefined) {
     queryKey: queryKeys.assignments.byTrainer(trainerId ?? ''),
     queryFn: () => orgApi.getMyAssignments(trainerId!),
     enabled: !!trainerId,
+    ...queryPolicy.default,
   });
 }
 
@@ -115,6 +120,7 @@ export function useOrgAssignments(orgId: string | undefined) {
     queryKey: queryKeys.assignments.byOrg(orgId ?? ''),
     queryFn: () => orgApi.getOrgAssignments(orgId!),
     enabled: !!orgId,
+    ...queryPolicy.default,
   });
 }
 
@@ -147,8 +153,9 @@ export function useUpdateOrg() {
 /** 조직 오늘의 통계 */
 export function useOrgTodayStats(orgId: string | undefined) {
   return useQuery({
-    queryKey: [...queryKeys.org.all, 'stats', orgId ?? ''] as const,
+    queryKey: queryKeys.org.stats(orgId ?? ''),
     queryFn: () => orgApi.getOrgTodayStats(orgId!),
     enabled: !!orgId,
+    ...queryPolicy.short,
   });
 }

@@ -3,16 +3,17 @@
  * Parity: APP-001
  */
 import { QueryClient } from '@tanstack/react-query';
+import { queryPolicy } from 'lib/api/queryConfig';
 
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 5 * 60 * 1000,
+      ...queryPolicy.default,
       retry: 2,
       refetchOnWindowFocus: false,
     },
     mutations: {
-      retry: 1,
+      retry: 0,
     },
   },
 });

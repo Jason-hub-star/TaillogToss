@@ -1,0 +1,135 @@
+# Page Performance Cache Loading
+
+- Date: 2026-05-11
+- Scope: APP-001, LOG-001, UIUX-001, UIUX-002, UIUX-005, UIUX-006
+- Routes: `/dashboard`, `/training/academy`, `/training/detail`, `/dashboard/analysis`, `/coaching/result`, `/dog/profile`, `/settings`
+- Board status: affected routes remain `Done`; performance hardening evidence added.
+
+## Checklist
+
+- [x] React Query persistence added with user-scoped AsyncStorage cache.
+- [x] Persist allowlist limited to read data: dogs, logs, dashboard, coaching, training, settings, notification, survey, reports.
+- [x] Auth/session, subscription/orders/IAP, org entitlement data excluded from persisted cache.
+- [x] Logout/SIGNED_OUT clears persisted cache and in-memory query cache.
+- [x] Shared `queryPolicy` added for stale/gc timings and reused across major hooks.
+- [x] Mutation global retry lowered to 0.
+- [x] Auth onboarding bootstrap now shares `dogs.list` cache via `queryClient.fetchQuery()`.
+- [x] `usePageGuard` only enables subscription query for feature guards.
+- [x] Dashboard/Training/Analysis/Coaching/Profile/Settings avoid full blank/loading when cached/shell data is available.
+- [x] FastAPI logs list supports `?limit=` and frontend uses dashboard 20 / analysis 200 / default 100.
+- [x] Remaining frontend cache/limit/refetch hardcoding removed: dashboard uses `queryPolicy.short`, daily/org log limits and background refetch threshold are imported from `queryConfig`.
+- [x] Post-paint bootstrap deferral added: pending IAP order recovery, app-state refetch listener, and org bootstrap mount after the first paint boundary.
+- [x] Startup performance markers added: `js_entry`, `first_paint_boundary`, `deferred_bootstrap_mounted`, `pending_order_recovery_*`, `org_bootstrap_*`, and app-state listener registration.
+- [x] DEV_LOCAL mode restored after AIT check: Sandbox app + Metro + FastAPI + adb reverse.
+- [x] Route data markers added for `/dashboard`, `/training/academy`, and `/dog/profile`: `page_shell_ready`, `page_cached_data_ready`, `page_fresh_data_settled`.
+- [x] DEV_LOCAL transient `Invalid semver: ''` render error triaged: clean Sandbox restart recovered without code change.
+
+## Evidence
+
+- `npm run typecheck` PASS
+- `npm run test:app -- --runInBand --passWithNoTests` PASS: 16 suites, 100 tests
+- `cd Backend && venv/bin/pytest tests/ -v` PASS: 48 tests
+- Metro status: `http://localhost:8081/status` -> `packager-status:running`
+- FastAPI status: `http://localhost:8765/health` -> `{"status":"ok"}`
+- 실기기 timing sweep: blocked because `adb devices` returned no connected devices/emulators.
+- Later dev-device check: Sandbox + Metro route launch is still dominated by host/Metro bundle startup, about 5s by `adb am start` + `uiautomator` measurement. This is not a pure cached-shell metric.
+- Post-paint bootstrap code validation: `npm run typecheck` PASS, `npm run test:app -- --runInBand --passWithNoTests` PASS: 16 suites, 100 tests.
+- Device verification of new `[PERF][startup]` logs completed after adb reconnect:
+  - `js_entry`: `fromLoadingStartMs=13665`, `fromJsStartMs=0`
+  - `first_paint_boundary`: `fromLoadingStartMs=14040`, `fromJsStartMs=375`
+  - `deferred_bootstrap_mounted`: `fromLoadingStartMs=14042`, `fromJsStartMs=377`
+  - `pending_order_recovery_start`: `fromJsStartMs=1142`
+  - `org_bootstrap_start`: `fromJsStartMs=1146`
+  - `app_state_refetch_listener_registered`: `fromJsStartMs=1150`
+  - `org_bootstrap_done`: `fromJsStartMs=1393`
+  - `pending_order_recovery_done`: `fromJsStartMs=2723`, `recovered=0`
+  - Dashboard UI dump confirmed visible text: `테일로그`, `기록`, `분석`, `첫 기록을 남겨보세요`, `+ 빠른 기록`, `홈`, `훈련`, `설정`.
+- AIT private performance build created and uploaded:
+  - deploymentId: `019e15ca-cc11-7848-ba68-acd2482ff770`
+  - URL: `intoss-private://taillog-app?_deploymentId=019e15ca-cc11-7848-ba68-acd2482ff770`
+  - hash: `17194075cd90309848db5c772dc774d4776bdb900f0adb9d7b7f32f7151054bf`
+  - size: 17MB
+  - bundle scan PASS: HTTPS `brandIcon`, Supabase public URL, `isDevToolsEnabled() { return false; }`, `[AIT-BUILD] taillog-startup-perf-20260511-1545`, and `[PERF][startup]` marker present.
+  - local `.env` deploy key returned HTTP 403, but the current AIT deploy API key succeeded.
+  - Uploaded-build runtime check PASS after adb reconnect on `SM_S926N`.
+  - Runtime activity: `viva.republica.toss/im.toss.rn.granite.core.GraniteActivity`.
+  - UI dump confirmed dashboard visible: `테일로그`, `기록`, `분석`, `메이`, `오늘 0건`, `첫 기록을 남겨보세요`, `+ 빠른 기록`, `홈`, `훈련`, `설정`.
+  - No `loadJSBundleFromMetro()`, `RNCSafeAreaProvider`, or `Invariant` marker was found in the filtered runtime log.
+  - AIT uploaded-build timings:
+    - `js_entry`: `fromLoadingStartMs=869`, `fromJsStartMs=0`
+    - `first_paint_boundary`: `fromLoadingStartMs=1163`, `fromJsStartMs=294`
+    - `deferred_bootstrap_mounted`: `fromLoadingStartMs=1163`, `fromJsStartMs=294`
+    - `pending_order_recovery_start`: `fromLoadingStartMs=2407`, `fromJsStartMs=1538`
+    - `org_bootstrap_start`: `fromLoadingStartMs=2408`, `fromJsStartMs=1539`
+    - `app_state_refetch_listener_registered`: `fromLoadingStartMs=2414`, `fromJsStartMs=1545`
+    - `org_bootstrap_done`: `fromLoadingStartMs=2529`, `fromJsStartMs=1660`
+    - `pending_order_recovery_done`: `fromLoadingStartMs=2573`, `fromJsStartMs=1704`, `recovered=0`
+  - Screenshot evidence: `/tmp/taillog-ait-019e15ca-dashboard.png`
+- DEV_LOCAL retest after switching back from AIT:
+  - Device: `SM_S926N`
+  - Servers: Metro `8081` -> `packager-status:running`, FastAPI `8765` -> `{"status":"ok"}`
+  - adb reverse: `tcp:8081`, `tcp:8765`
+  - Launch: `intoss://taillog-app/` on `viva.republica.toss.test`
+  - Runtime activity: `viva.republica.toss.test/im.toss.rn.granite.core.GraniteActivity`
+  - Dev-mode proof: `loadJSBundleFromMetro()` and `Running "shared"` in logcat.
+  - UI dump confirmed dashboard visible: `테일로그`, `기록`, `분석`, `메이`, `오늘 0건`, `첫 기록을 남겨보세요`, `+ 빠른 기록`, `홈`, `훈련`, `설정`.
+  - DEV_LOCAL timings:
+    - `js_entry`: `fromLoadingStartMs=2146`, `fromJsStartMs=0`
+    - `first_paint_boundary`: `fromLoadingStartMs=2525`, `fromJsStartMs=379`
+    - `deferred_bootstrap_mounted`: `fromLoadingStartMs=2527`, `fromJsStartMs=381`
+    - `pending_order_recovery_done`: `fromLoadingStartMs=4608`, `fromJsStartMs=2462`, `recovered=0`
+  - Screenshot evidence: `/tmp/taillog-dev-local-dashboard.png`
+  - `npm run typecheck` PASS after mode switch.
+- Route data marker implementation validation:
+  - Files: `src/lib/performance/usePageDataPerformance.ts`, `src/pages/dashboard/index.tsx`, `src/pages/training/academy.tsx`, `src/pages/dog/profile.tsx`
+  - `npm run typecheck` PASS
+  - `npm run test:app -- --runInBand --passWithNoTests` PASS: 16 suites, 100 tests
+- DEV_LOCAL route sweep with route data markers:
+  - `/dashboard`
+    - activity: `viva.republica.toss.test/im.toss.rn.granite.core.GraniteActivity`
+    - proof: `loadJSBundleFromMetro()` in logcat
+    - `js_entry`: `fromLoadingStartMs=1727`, `fromJsStartMs=1`
+    - `page_shell_ready`: `fromLoadingStartMs=1965`, `fromJsStartMs=239`
+    - `page_cached_data_ready`: `fromLoadingStartMs=1965`, `fromJsStartMs=239`, `hasDashboardData=true`, `hasDisplayDog=true`, `isFetching=true`
+    - `first_paint_boundary`: `fromLoadingStartMs=2114`, `fromJsStartMs=388`
+    - `page_fresh_data_settled`: `fromLoadingStartMs=8267`, `fromJsStartMs=6541`
+    - screenshot: `/tmp/taillog-perf-dashboard.png`
+  - `/training/academy`
+    - activity: `viva.republica.toss.test/im.toss.rn.granite.core.GraniteActivity`
+    - proof: `loadJSBundleFromMetro()` in logcat
+    - `js_entry`: `fromLoadingStartMs=1834`, `fromJsStartMs=0`
+    - `page_shell_ready`: `fromLoadingStartMs=2096`, `fromJsStartMs=262`
+    - `page_cached_data_ready`: `fromLoadingStartMs=2096`, `fromJsStartMs=262`, `hasProgress=true`, `progressCount=1`, `hasBehaviorAnalytics=true`
+    - `first_paint_boundary`: `fromLoadingStartMs=2238`, `fromJsStartMs=404`
+    - `page_fresh_data_settled`: `fromLoadingStartMs=8174`, `fromJsStartMs=6340`, `progressCount=1`, `feedbackCount=0`, `behaviorLogCount=0`
+    - screenshot: `/tmp/taillog-perf-training-academy.png`
+  - `/dog/profile`
+    - activity: `viva.republica.toss.test/im.toss.rn.granite.core.GraniteActivity`
+    - proof: `loadJSBundleFromMetro()` in logcat
+    - `js_entry`: `fromLoadingStartMs=1636`, `fromJsStartMs=0`
+    - `page_shell_ready`: `fromLoadingStartMs=1835`, `fromJsStartMs=199`
+    - `page_cached_data_ready`: `fromLoadingStartMs=1835`, `fromJsStartMs=199`, `hasActiveDog=true`, `hasDogDetail=false`, `hasDogEnv=true`
+    - `first_paint_boundary`: `fromLoadingStartMs=2023`, `fromJsStartMs=387`
+    - `page_fresh_data_settled`: `fromLoadingStartMs=2340`, `fromJsStartMs=704`, `hasDogDetail=true`, `hasDogEnv=true`
+    - screenshot: `/tmp/taillog-perf-dog-profile.png`
+- DEV_LOCAL transient render error retest:
+  - Symptom: `Invalid semver: ''` from `AppsInTossContainer` after a prior `No current activity` native-module log.
+  - Cause hypothesis: AppsInToss native constants were temporarily incomplete, leaving `MiniAppModule.getConstants().tossAppVersion` empty before SDK semver comparison.
+  - SDK source reference: `node_modules/@apps-in-toss/native-modules/src/MiniAppModule/native-modules/isMinVersionSupported.ts` reads `tossAppVersion`; `node_modules/@apps-in-toss/native-modules/src/utils/compareVersion.ts` throws on empty semver.
+  - Recovery: `adb logcat -c`, restore `adb reverse tcp:8765/tcp:8081`, force-stop `viva.republica.toss.test` and `viva.republica.toss`, relaunch `intoss://taillog-app/`.
+  - Result: PASS. No repeated `Invalid semver`; `loadJSBundleFromMetro()` present, `/dashboard` visible, `page_shell_ready` and `page_cached_data_ready` logged.
+  - Latest DEV_LOCAL retest timings after clean restart:
+    - `js_entry`: `fromLoadingStartMs=1717`, `fromJsStartMs=1`
+    - `first_paint_boundary`: `fromLoadingStartMs=2102`, `fromJsStartMs=386`
+    - `page_shell_ready`: `fromLoadingStartMs=2732`, `fromJsStartMs=1016`
+    - `page_cached_data_ready`: `fromLoadingStartMs=2733`, `fromJsStartMs=1017`
+
+## Notes
+
+- Acceptance target remains: cached/shell <= 1s and fresh data completion at least 50% faster than prior baseline.
+- Next real-device pass should measure two runs per route: first cached population, then process restart/re-entry with hydrated cache.
+- Next instrumentation should log `loadingStartTs -> first shell`, `loadingStartTs -> cached data`, and `loadingStartTs -> fresh data settled` separately, because external adb/UI dump timing includes Toss host and Metro overhead.
+- New data-marker evidence shows shell/cached display is working, but fresh data completion is still slow on `/dashboard` and `/training/academy` at about 8.2s in DEV_LOCAL. `/dog/profile` settles much faster at about 2.34s.
+- Next improvement target: split dashboard/training fresh fetch markers by query or API call to identify whether the slow leg is FastAPI, Supabase fallback, behavior analytics, dashboard aggregation, or app-state refetch overlap.
+- If `Invalid semver: ''` repeats, first treat it as Sandbox host/native state: unlock device, force-stop host apps, clear logcat, relaunch. Only consider app-code changes if it reproduces after a clean launch.
+- Before review/release, disable or gate private `[PERF][startup]` logging if the measurement build is promoted.

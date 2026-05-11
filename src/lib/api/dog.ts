@@ -11,6 +11,25 @@ import type {
 } from 'types/dog';
 import { mapSurveyToDogEnv } from 'components/features/survey/survey-mapper';
 
+function getImageUploadMeta(fileUri: string): { extension: string; contentType: string } {
+  const dataUriMatch = /^data:(image\/([a-zA-Z0-9.+-]+));base64,/.exec(fileUri);
+  if (dataUriMatch) {
+    const contentType = dataUriMatch[1] ?? 'image/png';
+    const rawExtension = (dataUriMatch[2] ?? 'png').toLowerCase();
+    const extension = rawExtension === 'jpeg' ? 'jpg' : rawExtension.replace('+xml', '');
+    return { extension, contentType };
+  }
+
+  const uriWithoutQuery = fileUri.split('?')[0] ?? fileUri;
+  const cleanUri = uriWithoutQuery.split('#')[0] ?? uriWithoutQuery;
+  const lastSegment = cleanUri.split('/').pop() ?? '';
+  const extension = lastSegment.includes('.') ? lastSegment.split('.').pop()?.toLowerCase() || 'jpg' : 'jpg';
+  const normalizedExtension = extension === 'jpeg' ? 'jpg' : extension;
+  const contentType = normalizedExtension === 'jpg' ? 'image/jpeg' : `image/${normalizedExtension}`;
+
+  return { extension: normalizedExtension, contentType };
+}
+
 /** 반려견 목록 조회 */
 export async function getDogs(userId: string): Promise<Dog[]> {
   const { data, error } = await supabase
@@ -41,14 +60,14 @@ export async function uploadDogProfileImage(userId: string, dogId: string, fileU
   // react-native 환경에서 파일을 fetch하여 blob으로 변환
   const response = await fetch(fileUri);
   const blob = await response.blob();
-  const fileExt = fileUri.split('.').pop();
-  const fileName = `${userId}/${dogId}-${Date.now()}.${fileExt}`;
+  const { extension, contentType } = getImageUploadMeta(fileUri);
+  const fileName = `${userId}/${dogId}-${Date.now()}.${extension}`;
   const filePath = `dog-profiles/${fileName}`;
 
   const { error: uploadError } = await supabase.storage
     .from('dog-profiles')
     .upload(filePath, blob, {
-      contentType: 'image/*',
+      contentType,
       upsert: true,
     });
 

@@ -6,7 +6,7 @@ Parity: LOG-001
 from typing import List
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Header, status
+from fastapi import APIRouter, Depends, Header, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
@@ -44,12 +44,13 @@ async def create_detailed_log(
 @router.get("/{dog_id}", response_model=List[schemas.LogResponse])
 async def get_logs(
     dog_id: UUID,
+    limit: int = Query(default=100, ge=1, le=500),
     user_id: str = Depends(get_current_user_id),
     db: AsyncSession = Depends(get_db),
 ):
     """강아지별 최근 로그 조회"""
     await verify_dog_ownership(db, dog_id, user_id=user_id)
-    return await service.get_recent_logs(db, dog_id)
+    return await service.get_recent_logs(db, dog_id, limit=limit)
 
 
 @router.patch("/{log_id}", response_model=schemas.LogResponse)

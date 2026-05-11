@@ -4,7 +4,7 @@
  * Parity: AI-001, UIUX-005
  */
 import { createRoute, useNavigation } from '@granite-js/react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Storage } from '@apps-in-toss/framework';
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Share, Image } from 'react-native';
 import { colors, typography, spacing } from 'styles/tokens';
@@ -77,10 +77,10 @@ function CoachingResultPage() {
   useEffect(() => {
     if (!isReady || !surveyStatus || surveyStatus.completion_stage >= 2) return;
     const key = `stage2_intercept_shown_${activeDog?.id}`;
-    void AsyncStorage.getItem(key).then((val) => {
+    void Storage.getItem(key).then((val) => {
       if (!val) {
         setInterceptVisible(true);
-        void AsyncStorage.setItem(key, '1');
+        void Storage.setItem(key, '1');
       }
     });
   }, [isReady, surveyStatus, activeDog?.id]);
@@ -175,7 +175,13 @@ function CoachingResultPage() {
     void Share.share({ message });
   }, [displayCoaching, activeDog?.name]);
 
-  if (!isReady) return null;
+  if (!isReady) {
+    return (
+      <DetailLayout title="AI 행동 진단" onBack={handleBack}>
+        <SkeletonCoaching />
+      </DetailLayout>
+    );
+  }
 
   const interceptModal = (
     <Stage2InterceptModal
@@ -192,7 +198,7 @@ function CoachingResultPage() {
     />
   );
 
-  if (isLoading) {
+  if (isLoading && !coaching) {
     return (
       <DetailLayout title="AI 행동 진단" onBack={handleBack}>
         <SkeletonCoaching />

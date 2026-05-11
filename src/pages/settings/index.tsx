@@ -263,12 +263,10 @@ function SettingsPage() {
     return { text: '동기화 대기', tone: 'neutral' };
   }, [syncPhase, saveError, lastSavedAt]);
 
-  if (!isReady) return null;
-
   const canGoBack = navigation.canGoBack();
   const onBack = canGoBack ? () => navigation.goBack() : undefined;
 
-  if (isLoading) {
+  if (!isReady || (isLoading && !settings)) {
     return (
       <ListLayout
         title="설정"

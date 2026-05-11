@@ -29,6 +29,7 @@ import { ErrorState } from 'components/tds-ext/ErrorState';
 import { tracker } from 'lib/analytics/tracker';
 import { getBehaviorIcon, BACK_ICON } from 'lib/data/behaviorIcons';
 import { RewardedAdButton } from 'components/shared/ads';
+import { LOG_LIMIT_ANALYSIS } from 'lib/api/queryConfig';
 import type { ChartPeriod } from 'types/chart';
 import { colors, typography, spacing } from 'styles/tokens';
 
@@ -76,7 +77,7 @@ function AnalysisPage() {
   const navigation = useNavigation();
   const { isReady } = usePageGuard({ currentPath: '/dashboard/analysis' });
 
-  const { data: allLogs, isLoading, error, refetch } = useLogList(activeDog?.id);
+  const { data: allLogs, isLoading, error, refetch } = useLogList(activeDog?.id, LOG_LIMIT_ANALYSIS);
   const { data: trainingProgress } = useTrainingProgress(activeDog?.id);
   const { data: dogEnv } = useDogEnv(activeDog?.id);
   const effectiveAllLogs = allLogs ?? [];
@@ -156,9 +157,9 @@ function AnalysisPage() {
     })();
   }, [categoryFreq, trainingEffects, heatmapData, activeDog?.name, activeDog?.id, periodConfig, filteredLogs.length, dogEnv]);
 
-  if (!isReady) return null;
+  const isInitialLoading = isLoading && !allLogs;
 
-  if (isLoading) {
+  if (!isReady || isInitialLoading) {
     return (
       <SafeAreaView style={styles.safe}>
         <SkeletonLoader message="행동 데이터를 분석 중이에요" />

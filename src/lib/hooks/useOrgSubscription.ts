@@ -4,6 +4,7 @@
  */
 import { useEffect, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { queryPolicy } from 'lib/api/queryConfig';
 import { queryKeys } from 'lib/api/queryKeys';
 import { supabase } from 'lib/api/supabase';
 import { tracker } from 'lib/analytics/tracker';
@@ -47,6 +48,7 @@ export function useOrgSubscription(orgId: string | undefined) {
     queryKey: queryKeys.orgSubscription.current(orgId ?? ''),
     queryFn: () => getOrgSubscription(orgId!),
     enabled: !!orgId,
+    ...queryPolicy.long,
   });
 }
 
@@ -55,6 +57,7 @@ export function useTrainerSubscription(trainerId: string | undefined) {
     queryKey: queryKeys.orgSubscription.trainerCurrent(trainerId ?? ''),
     queryFn: () => getTrainerSubscription(trainerId!),
     enabled: !!trainerId,
+    ...queryPolicy.long,
   });
 }
 

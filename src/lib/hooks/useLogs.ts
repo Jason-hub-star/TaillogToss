@@ -4,17 +4,17 @@
  */
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from 'lib/api/queryKeys';
-import { STALE_TIME_SHORT } from 'lib/api/queryConfig';
+import { LOG_LIMIT_DEFAULT, queryPolicy } from 'lib/api/queryConfig';
 import * as logApi from 'lib/api/log';
 import type { QuickLogInput, DetailedLogInput, BehaviorLog } from 'types/log';
 import type { DashboardData } from 'lib/api/dashboard';
 
-export function useLogList(dogId: string | undefined) {
+export function useLogList(dogId: string | undefined, limit = LOG_LIMIT_DEFAULT) {
   return useQuery({
     queryKey: queryKeys.logs.list(dogId ?? ''),
-    queryFn: () => logApi.getLogs(dogId!),
+    queryFn: () => logApi.getLogs(dogId!, limit),
     enabled: !!dogId,
-    staleTime: STALE_TIME_SHORT,
+    ...queryPolicy.short,
   });
 }
 
@@ -23,8 +23,14 @@ export function useDailyLogs(dogId: string | undefined, date: string) {
     queryKey: queryKeys.logs.daily(dogId ?? '', date),
     queryFn: () => logApi.getDailyLogs(dogId!, date),
     enabled: !!dogId,
-    staleTime: STALE_TIME_SHORT,
+    ...queryPolicy.short,
   });
+}
+
+function invalidateLogDerivedQueries(qc: ReturnType<typeof useQueryClient>, dogId: string) {
+  void qc.invalidateQueries({ queryKey: queryKeys.logs.all });
+  void qc.invalidateQueries({ queryKey: queryKeys.dashboard.detail(dogId) });
+  void qc.invalidateQueries({ queryKey: queryKeys.training.behaviorAnalytics(dogId) });
 }
 
 function buildOptimisticLog(input: QuickLogInput): BehaviorLog {
@@ -86,8 +92,7 @@ export function useCreateQuickLog() {
     },
     onSettled: (_data, _err, input) => {
       void qc.invalidateQueries({ queryKey: queryKeys.logs.list(input.dog_id) });
-      void qc.invalidateQueries({ queryKey: queryKeys.logs.all });
-      void qc.invalidateQueries({ queryKey: queryKeys.dashboard.detail(input.dog_id) });
+      invalidateLogDerivedQueries(qc, input.dog_id);
     },
   });
 }
@@ -98,8 +103,7 @@ export function useCreateDetailedLog() {
     mutationFn: (input: DetailedLogInput) => logApi.createDetailedLog(input),
     onSuccess: (_data, variables) => {
       void qc.invalidateQueries({ queryKey: queryKeys.logs.list(variables.dog_id) });
-      void qc.invalidateQueries({ queryKey: queryKeys.logs.all });
-      void qc.invalidateQueries({ queryKey: queryKeys.dashboard.detail(variables.dog_id) });
+      invalidateLogDerivedQueries(qc, variables.dog_id);
     },
   });
 }
@@ -124,8 +128,7 @@ export function useDeleteLog(dogId: string | undefined) {
     onSettled: () => {
       if (!dogId) return;
       void qc.invalidateQueries({ queryKey: queryKeys.logs.list(dogId) });
-      void qc.invalidateQueries({ queryKey: queryKeys.logs.all });
-      void qc.invalidateQueries({ queryKey: queryKeys.dashboard.detail(dogId) });
+      invalidateLogDerivedQueries(qc, dogId);
     },
   });
 }
@@ -133,8 +136,9 @@ export function useDeleteLog(dogId: string | undefined) {
 /** B2B: 조직 소속 강아지 기록 조회 */
 export function useOrgDogLogs(orgId: string | undefined, dogId: string | undefined) {
   return useQuery({
-    queryKey: [...queryKeys.logs.all, 'org', orgId ?? '', dogId ?? ''] as const,
+    queryKey: queryKeys.logs.org(orgId ?? '', dogId ?? ''),
     queryFn: () => logApi.getOrgDogLogs(orgId!, dogId!),
     enabled: !!orgId && !!dogId,
+    ...queryPolicy.short,
   });
 }

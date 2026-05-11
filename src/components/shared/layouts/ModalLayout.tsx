@@ -4,7 +4,7 @@
  */
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
-import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaProvider, useSafeAreaInsets } from '@granite-js/native/react-native-safe-area-context';
 import { colors, typography, spacing } from '../../../styles/tokens';
 
 export interface ModalLayoutProps {

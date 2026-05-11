@@ -11,12 +11,11 @@ import { useAuth } from 'stores/AuthContext';
 import { useActiveDog } from 'stores/ActiveDogContext';
 import { isB2BRole } from 'stores/OrgContext';
 import { queryKeys } from 'lib/api/queryKeys';
+import { queryPolicy } from 'lib/api/queryConfig';
 import { getDashboard } from 'lib/api/dashboard';
 import { getTrainingProgress } from 'lib/api/training';
 import { colors, typography, spacing } from '../../styles/tokens';
 import { ICONS } from 'lib/data/iconSources';
-
-const PREFETCH_STALE_TIME = 2 * 60 * 1000; // 2분 이내 fetch된 데이터는 skip
 
 export type NavTab = 'home' | 'ops' | 'training' | 'settings';
 
@@ -62,13 +61,13 @@ export function BottomNavBar({ activeTab }: BottomNavBarProps) {
           void qc.prefetchQuery({
             queryKey: queryKeys.dashboard.detail(dogId),
             queryFn: () => getDashboard(dogId),
-            staleTime: PREFETCH_STALE_TIME,
+            ...queryPolicy.short,
           });
         } else if (tab.key === 'training') {
           void qc.prefetchQuery({
             queryKey: queryKeys.training.progress(dogId),
             queryFn: () => getTrainingProgress(dogId),
-            staleTime: PREFETCH_STALE_TIME,
+            ...queryPolicy.active,
           });
         }
       }

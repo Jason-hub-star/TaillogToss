@@ -8,7 +8,7 @@ import React from 'react';
 import {
   Image, Modal, StyleSheet, Text, TouchableOpacity, View,
 } from 'react-native';
-import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaProvider, useSafeAreaInsets } from '@granite-js/native/react-native-safe-area-context';
 import { ICONS } from 'lib/data/iconSources';
 import { colors, spacing, typography } from 'styles/tokens';
 

@@ -3,14 +3,14 @@
 ## Status: SANDBOX_REAL Unblocked
 
 작성 시각: 2026-05-05 19:36 KST
-최종 업데이트: 2026-05-07 KST — `019e008c-d1e0-7148-bd63-cc61473c135f` private standalone launch PASS
+최종 업데이트: 2026-05-11 KST — `019e14a7-ca44-7f9b-bd58-a9be19376360` private standalone launch PASS
 
 ## Scope
 
 - Skill: `toss-runtime-mode-ops`
 - Modes: `DEV_LOCAL` ↔ `SANDBOX_REAL`
 - AIT URL: `intoss-private://taillog-app?_deploymentId=019df32f-40ad-785b-9d7c-ae18b9fba97e`
-- Latest AIT URL: `intoss-private://taillog-app?_deploymentId=019e008c-d1e0-7148-bd63-cc61473c135f`
+- Latest AIT URL: `intoss-private://taillog-app?_deploymentId=019e14a7-ca44-7f9b-bd58-a9be19376360`
 - Safety: real charge, mass message, promotion 지급, Smart Message real send 미실행
 
 ## Environment Snapshot
@@ -353,3 +353,51 @@ Conclusion:
 - The standalone private launch blocker was the local `brand.icon` path in the AIT runtime setup.
 - The durable build rule is to inject a resolvable string URL/data URI into `appsInToss({ brand.icon })`; do not use `./src/...` as a plain string.
 - `SANDBOX_REAL` gate is unblocked for the next IAP/Ads/Smart Message QA steps.
+
+## 2026-05-11 AIT Standalone Re-check
+
+Context:
+- User logged into the Toss app with the workspace admin account `gmdqn2tp@gmail.com`.
+- Previous `지금은 서비스를 사용할 수 없어요` result is reclassified as a Toss account/workspace tester mapping issue, not an app JS crash.
+
+Bundle:
+
+| Item | Result |
+|---|---|
+| Deployment id | `019e14a7-ca44-7f9b-bd58-a9be19376360` |
+| Artifact | `taillog-app-019e14a7-ca44-7f9b-bd58-a9be19376360.ait` |
+| Local hash | `58ce91e312fa46ea5db28fec759b054a7be656d287a6dfdb5ac2e97299c60e22` |
+| Bundle scan | `brandIcon:"https://static.toss.im/appsintoss/..."`, Supabase URL present, `ait-ad-test-*` count `0`, `isDevToolsEnabled() { return false; }` |
+
+Execution:
+
+```bash
+curl http://localhost:8081/status
+# connection refused
+
+adb shell am start -W \
+  -a android.intent.action.VIEW \
+  -d 'intoss-private://taillog-app?_deploymentId=019e14a7-ca44-7f9b-bd58-a9be19376360' \
+  -n viva.republica.toss/.intoss.MiniAppSchemeActivity
+```
+
+Evidence:
+
+| Check | Evidence | Result |
+|---|---|---|
+| ADB device | `R3CXB0QH0LY`, `SM_S926N` | PASS |
+| Metro | `curl localhost:8081/status` -> connection refused | PASS |
+| Host app | `viva.republica.toss/.intoss.MiniAppSchemeActivity` -> `viva.republica.toss/im.toss.rn.granite.core.GraniteActivity` | PASS |
+| Current intent | `intoss://taillog-app?_deploymentId=019e14a7-ca44-7f9b-bd58-a9be19376360` | PASS |
+| Screenshot | `/tmp/taillog-ait-gmdqn2tp-prod-recheck.png` | PASS: onboarding renders |
+| UI dump | `테일로그`, `반려견 행동,\n30초면 기록 끝`, `토스로 시작하기` | PASS |
+| JS marker | `[AIT-BUILD] taillog-appsintoss-wrapper-20260511-0958-cli` | PASS |
+| Bundle loader | `MiniAppBundleLoaderModule: Bundle loading completed successfully` | PASS |
+| Metro dependency | no `loadJSBundleFromMetro()` in relevant launch logs | PASS |
+| Previous crash signatures | no `RNCSafeAreaProvider`, no `Invariant` | PASS |
+
+Conclusion:
+
+- Uploaded AIT private standalone execution is now confirmed on the production Toss app path with Metro off.
+- The previous host error was resolved by testing with the Toss app account mapped to the Apps in Toss workspace admin/member.
+- `SANDBOX_REAL` is unblocked for follow-up IAP/Ads/Smart Message release-like QA on this deployment.

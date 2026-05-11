@@ -4,6 +4,7 @@
  */
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import * as dogApi from 'lib/api/dog';
+import { queryPolicy } from 'lib/api/queryConfig';
 import { queryKeys } from 'lib/api/queryKeys';
 import type {
   DogCreateResponse,
@@ -18,6 +19,7 @@ export function useSurveyStatus(dogId: string | undefined) {
     queryKey: queryKeys.survey.status(dogId ?? ''),
     queryFn: () => dogApi.getSurveyStatus(dogId!),
     enabled: !!dogId,
+    ...queryPolicy.default,
   });
 }
 

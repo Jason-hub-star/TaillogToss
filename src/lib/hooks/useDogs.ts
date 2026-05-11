@@ -4,6 +4,7 @@
  */
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from 'lib/api/queryKeys';
+import { queryPolicy } from 'lib/api/queryConfig';
 import * as dogApi from 'lib/api/dog';
 import type { Dog, SurveyData } from 'types/dog';
 
@@ -12,6 +13,7 @@ export function useDogList(userId: string | undefined) {
     queryKey: queryKeys.dogs.list(userId ?? ''),
     queryFn: () => dogApi.getDogs(userId!),
     enabled: !!userId,
+    ...queryPolicy.default,
   });
 }
 
@@ -20,6 +22,7 @@ export function useDogDetail(dogId: string | undefined) {
     queryKey: queryKeys.dogs.detail(dogId ?? ''),
     queryFn: () => dogApi.getDog(dogId!),
     enabled: !!dogId,
+    ...queryPolicy.default,
   });
 }
 
@@ -39,6 +42,7 @@ export function useDogEnv(dogId: string | undefined) {
     queryKey: queryKeys.dogs.env(dogId ?? ''),
     queryFn: () => dogApi.getDogEnv(dogId!),
     enabled: !!dogId,
+    ...queryPolicy.default,
   });
 }
 

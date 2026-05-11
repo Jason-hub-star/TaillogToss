@@ -7,7 +7,6 @@ import { createRoute, useNavigation } from '@granite-js/react-native';
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { DetailLayout } from 'components/shared/layouts/DetailLayout';
-import { LottieAnimation } from 'components/shared/LottieAnimation';
 import { SkeletonBox } from 'components/tds-ext/SkeletonBox';
 import { MissionChecklist } from 'components/features/training/MissionChecklist';
 import { VariantSelector } from 'components/features/training/VariantSelector';
@@ -261,7 +260,16 @@ function TrainingDetailPage() {
     handleMissionComplete();
   }, [handleMissionComplete]);
 
-  if (!isReady) return null;
+  if (!isReady) {
+    return (
+      <DetailLayout title={curriculum?.title ?? '훈련'} onBack={handleBack}>
+        <View style={styles.loadingContainer}>
+          <SkeletonBox width="60%" height={16} borderRadius={4} />
+          <SkeletonBox width="100%" height={4} borderRadius={2} style={{ marginTop: 12 }} />
+        </View>
+      </DetailLayout>
+    );
+  }
 
   if (!curriculum) {
     return (
@@ -280,26 +288,6 @@ function TrainingDetailPage() {
             </TouchableOpacity>
           }
         />
-      </DetailLayout>
-    );
-  }
-
-  if (isLoading) {
-    return (
-      <DetailLayout title={curriculum.title} onBack={handleBack}>
-        <View style={styles.loadingContainer}>
-          <View style={styles.lottieHeader}>
-            <LottieAnimation asset="cute-doggie" size={64} />
-            <Text style={styles.loadingText}>훈련 정보 로딩 중...</Text>
-          </View>
-          <SkeletonBox width="60%" height={16} borderRadius={4} />
-          <SkeletonBox width="100%" height={4} borderRadius={2} style={{ marginTop: 12 }} />
-          <View style={styles.loadingSkeleton}>
-            {[1, 2, 3].map((i) => (
-              <SkeletonBox key={i} width="100%" height={80} borderRadius={12} style={{ marginBottom: 8 }} />
-            ))}
-          </View>
-        </View>
       </DetailLayout>
     );
   }
@@ -330,6 +318,10 @@ function TrainingDetailPage() {
         title={curriculum.title}
         difficulty={curriculum.difficulty}
       />
+
+      {isLoading && !progressList && (
+        <SkeletonBox width="100%" height={4} borderRadius={2} style={{ marginBottom: 12 }} />
+      )}
 
       <StreakBadge streakDays={streakDays} />
 

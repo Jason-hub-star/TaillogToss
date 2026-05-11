@@ -3,6 +3,7 @@
  * Parity: B2B-001
  */
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { queryPolicy } from 'lib/api/queryConfig';
 import { queryKeys } from 'lib/api/queryKeys';
 import * as reportApi from 'lib/api/report';
 import type { ReportTemplateType, ParentInteraction } from 'types/b2b';
@@ -12,6 +13,7 @@ export function useOrgReports(orgId: string | undefined, date?: string) {
     queryKey: queryKeys.reports.byOrg(orgId ?? '', date),
     queryFn: () => reportApi.getOrgReports(orgId!, date),
     enabled: !!orgId,
+    ...queryPolicy.default,
   });
 }
 
@@ -20,6 +22,7 @@ export function useDogReports(dogId: string | undefined) {
     queryKey: queryKeys.reports.byDog(dogId ?? ''),
     queryFn: () => reportApi.getDogReports(dogId!),
     enabled: !!dogId,
+    ...queryPolicy.default,
   });
 }
 
@@ -28,6 +31,7 @@ export function useReportDetail(reportId: string | undefined) {
     queryKey: queryKeys.reports.detail(reportId ?? ''),
     queryFn: () => reportApi.getReport(reportId!),
     enabled: !!reportId,
+    ...queryPolicy.default,
   });
 }
 
@@ -36,6 +40,7 @@ export function useReportByShareToken(token: string | undefined) {
     queryKey: queryKeys.reports.byShareToken(token ?? ''),
     queryFn: () => reportApi.getReportByShareToken(token!),
     enabled: !!token,
+    ...queryPolicy.default,
   });
 }
 
@@ -96,8 +101,9 @@ export function useCreateInteraction() {
 
 export function useReportInteractions(reportId: string | undefined) {
   return useQuery({
-    queryKey: [...queryKeys.reports.detail(reportId ?? ''), 'interactions'] as const,
+    queryKey: queryKeys.reports.interactions(reportId ?? ''),
     queryFn: () => reportApi.getReportInteractions(reportId!),
     enabled: !!reportId,
+    ...queryPolicy.default,
   });
 }

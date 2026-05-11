@@ -7,7 +7,7 @@ import { useEffect, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from 'lib/api/queryKeys';
 import { tracker } from 'lib/analytics/tracker';
-import { STALE_TIME_LONG } from 'lib/api/queryConfig';
+import { queryPolicy } from 'lib/api/queryConfig';
 import * as subApi from 'lib/api/subscription';
 import {
   createOneTimePurchaseOrder,
@@ -16,13 +16,14 @@ import {
 } from 'lib/api/iap';
 import { getDevPlanOverride } from 'lib/devPlanOverride';
 import { isDevToolsEnabled } from 'lib/devTools';
+import { markStartupPerformance } from 'lib/performance/startupPerformance';
 
-export function useCurrentSubscription(userId: string | undefined) {
+export function useCurrentSubscription(userId: string | undefined, options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: queryKeys.subscription.current(userId ?? ''),
     queryFn: () => subApi.getSubscription(userId!),
-    enabled: !!userId,
-    staleTime: STALE_TIME_LONG,
+    enabled: !!userId && (options?.enabled ?? true),
+    ...queryPolicy.long,
   });
 }
 
@@ -93,10 +94,17 @@ export function usePendingOrderRecovery(userId: string | undefined) {
   useEffect(() => {
     if (!userId) return;
 
+    markStartupPerformance('pending_order_recovery_start', { userId });
     recoverPendingOrders(userId).then((recovered) => {
       if (recovered > 0) {
         void qc.invalidateQueries({ queryKey: queryKeys.subscription.all });
       }
+      markStartupPerformance('pending_order_recovery_done', { userId, recovered });
+    }).catch((error) => {
+      markStartupPerformance('pending_order_recovery_failed', {
+        userId,
+        message: error instanceof Error ? error.message : String(error),
+      });
     });
   }, [userId, qc]);
 }

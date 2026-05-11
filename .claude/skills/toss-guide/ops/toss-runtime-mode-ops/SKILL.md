@@ -22,6 +22,62 @@ TaillogToss의 개발 테스트와 AIT 콘솔 업로드 후 실배포 전 테스
 | `SANDBOX_REAL` | AIT 업로드 후 실배포 전 QA | AIT private URL, sandbox IAP, test send, approved console config smoke | real charge, mass message, promotion 지급은 명시 승인 필요 |
 | `PROD_READY` | 배포 직전 게이트 | real mTLS, real ad group, approved message, real report AI 검증 | owner 승인 없이 상태 변경/발송/과금 금지 |
 
+## 빠른 전환
+
+### DEV_LOCAL로 전환
+
+목표: 현재 로컬 코드가 Sandbox 앱에서 Metro를 통해 실행되는지 확인한다.
+
+```bash
+cd /Users/family/jason/TaillogToss
+npm run dev
+adb reverse tcp:8081 tcp:8081
+adb reverse tcp:8765 tcp:8765
+adb reverse tcp:5173 tcp:5173
+adb shell am force-stop viva.republica.toss.test
+adb shell am force-stop viva.republica.toss
+adb logcat -c
+adb shell am start -W -a android.intent.action.VIEW -d 'intoss://taillog-app/' viva.republica.toss.test
+```
+
+PASS:
+- `curl http://localhost:8081/status` -> `packager-status:running`
+- top activity가 `viva.republica.toss.test/im.toss.rn.granite.core.GraniteActivity`
+- Metro 터미널에 `Running "shared"`와 `scheme:"intoss://taillog-app/"`
+- logcat 또는 Metro 터미널에 `loadJSBundleFromMetro()` 또는 Metro bundle 로그
+- 빨간 `DEV` control이 보이면 개발모드 증거로 기록 가능
+
+### SANDBOX_REAL / AIT 업로드본으로 전환
+
+목표: 업로드된 `.ait`가 Metro 없이 실제 Toss 앱에서 실행되는지 확인한다.
+
+```bash
+cd /Users/family/jason/TaillogToss
+lsof -tiTCP:8081 -sTCP:LISTEN | xargs kill -9 2>/dev/null || true
+curl -sS --max-time 2 http://localhost:8081/status || true
+adb shell am force-stop viva.republica.toss.test
+adb shell am force-stop viva.republica.toss
+adb logcat -c
+adb shell am start -W \
+  -a android.intent.action.VIEW \
+  -d 'intoss-private://taillog-app?_deploymentId=<deploymentId>' \
+  -n viva.republica.toss/.intoss.MiniAppSchemeActivity
+```
+
+PASS:
+- `curl localhost:8081/status`가 connection refused
+- top activity가 `viva.republica.toss/im.toss.rn.granite.core.GraniteActivity`
+- UI가 렌더된다
+- logcat에 `MiniAppBundleLoaderModule: Bundle loading completed successfully`
+- logcat에 `[AIT-BUILD] ...` marker 또는 `Running "shared"`
+- `loadJSBundleFromMetro()`가 없다
+
+FAIL/BLOCKED:
+- `지금은 서비스를 사용할 수 없어요`: Toss 앱 로그인 사용자와 워크스페이스 멤버/테스터 매핑 확인
+- `앱 실행도중 문제가 발생했습니다`: 앱 JS 진입 전 host/runtime 실패 가능성. `ReactNativeJS` marker 유무로 분류
+- default resolver가 `viva.republica.toss.test`로 잡힘: production activity를 `-n viva.republica.toss/.intoss.MiniAppSchemeActivity`로 명시
+- USB는 보이지만 `adb devices`가 비어 있음: 폰 잠금 해제, USB 디버깅 재허용, `adb kill-server; adb start-server`
+
 ## 판정 입력
 
 먼저 아래 상태를 수집한다.

@@ -4,7 +4,7 @@
  */
 import React from 'react';
 import { View, Text, TouchableOpacity, Modal, StyleSheet } from 'react-native';
-import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaProvider, useSafeAreaInsets } from '@granite-js/native/react-native-safe-area-context';
 import { StepAttemptHistory } from 'components/features/training/StepAttemptHistory';
 import { colors, typography, spacing } from 'styles/tokens';
 import type { StepAttempt } from 'types/training';

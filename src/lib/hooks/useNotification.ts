@@ -3,6 +3,7 @@
  * Parity: MSG-001
  */
 import { useMutation, useQuery } from '@tanstack/react-query';
+import { queryPolicy } from 'lib/api/queryConfig';
 import { queryKeys } from 'lib/api/queryKeys';
 import * as notiApi from 'lib/api/notification';
 import { buildTemplate } from 'lib/data/notificationTemplates';
@@ -13,6 +14,7 @@ export function useNotificationHistory(userId: string | undefined) {
     queryKey: queryKeys.notification.history(userId ?? ''),
     queryFn: () => notiApi.getNotificationHistory(userId!),
     enabled: !!userId,
+    ...queryPolicy.long,
   });
 }
 

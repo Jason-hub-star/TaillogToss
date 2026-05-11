@@ -27,6 +27,7 @@ import { useDogDetail, useDogEnv, useUpdateDog, useDeleteDog } from 'lib/hooks/u
 import { uploadDogProfileImage } from 'lib/api/dog';
 import type { DogSex, HouseholdInfo } from 'types/dog';
 import { colors, typography } from 'styles/tokens';
+import { usePageDataPerformance } from 'lib/performance/usePageDataPerformance';
 
 export const Route = createRoute('/dog/profile', {
   component: DogProfilePage,
@@ -68,8 +69,11 @@ function DogProfilePage() {
   const { user } = useAuth();
   const { activeDog } = useActiveDog();
 
-  const { data: dog, isLoading, isError, refetch } = useDogDetail(activeDog?.id);
-  const { data: dogEnv } = useDogEnv(activeDog?.id);
+  const dogDetailQuery = useDogDetail(activeDog?.id);
+  const dogEnvQuery = useDogEnv(activeDog?.id);
+  const { data: dog, isLoading, isError, refetch } = dogDetailQuery;
+  const { data: dogEnv } = dogEnvQuery;
+  const displayDog = dog ?? activeDog;
   const updateDog = useUpdateDog();
   const deleteDogMutation = useDeleteDog();
 
@@ -90,23 +94,25 @@ function DogProfilePage() {
   // Triggers
   const [triggers, setTriggers] = useState<string[]>([]);
 
-  // Initialize from dog data
+  // Initialize from cached/active dog data first, then hydrate with detail.
   useEffect(() => {
-    if (dog) {
-      setName(dog.name);
-      setBreed(dog.breed);
-      setProfileImageUrl(dog.profile_image_url ?? undefined);
-      if (dog.birth_date) {
-        const birth = new Date(dog.birth_date);
+    if (displayDog) {
+      setName(displayDog.name);
+      setBreed(displayDog.breed);
+      setProfileImageUrl(displayDog.profile_image_url ?? undefined);
+      if (displayDog.birth_date) {
+        const birth = new Date(displayDog.birth_date);
         const now = new Date();
         const years = Math.floor(
           (now.getTime() - birth.getTime()) / (365.25 * 24 * 60 * 60 * 1000)
         );
         setAgeText(String(years));
+      } else {
+        setAgeText('');
       }
-      setIsNeutered(dog.sex === 'MALE_NEUTERED' || dog.sex === 'FEMALE_NEUTERED');
+      setIsNeutered(displayDog.sex === 'MALE_NEUTERED' || displayDog.sex === 'FEMALE_NEUTERED');
     }
-  }, [dog]);
+  }, [displayDog]);
 
   useEffect(() => {
     if (dogEnv) {
@@ -116,6 +122,46 @@ function DogProfilePage() {
       setTriggers(normalizeStringList(dogEnv.triggers));
     }
   }, [dogEnv]);
+
+  usePageDataPerformance('/dog/profile', [
+    {
+      label: 'shell_ready',
+      ready: isReady,
+      meta: { activeDogId: activeDog?.id },
+    },
+    {
+      label: 'cached_data_ready',
+      ready: isReady && !!displayDog,
+      meta: {
+        activeDogId: activeDog?.id,
+        hasActiveDog: !!activeDog,
+        hasDogDetail: !!dog,
+        hasDogEnv: !!dogEnv,
+        dogDetailIsFetching: dogDetailQuery.isFetching,
+        dogEnvIsFetching: dogEnvQuery.isFetching,
+        dogDetailDataUpdatedAt: dogDetailQuery.dataUpdatedAt || null,
+        dogEnvDataUpdatedAt: dogEnvQuery.dataUpdatedAt || null,
+      },
+    },
+    {
+      label: 'fresh_data_settled',
+      ready:
+        isReady &&
+        !!activeDog?.id &&
+        !dogDetailQuery.isLoading &&
+        !dogDetailQuery.isFetching &&
+        !dogEnvQuery.isLoading &&
+        !dogEnvQuery.isFetching &&
+        !isError,
+      meta: {
+        activeDogId: activeDog?.id,
+        hasDogDetail: !!dog,
+        hasDogEnv: !!dogEnv,
+        dogDetailDataUpdatedAt: dogDetailQuery.dataUpdatedAt || null,
+        dogEnvDataUpdatedAt: dogEnvQuery.dataUpdatedAt || null,
+      },
+    },
+  ]);
 
   const handleSave = useCallback(async () => {
     if (!activeDog?.id || !name.trim() || !user?.id) return;
@@ -131,7 +177,7 @@ function DogProfilePage() {
       }
     }
 
-    const baseSex = (dog?.sex?.replace('_NEUTERED', '') ?? 'MALE') as 'MALE' | 'FEMALE';
+    const baseSex = (displayDog?.sex?.replace('_NEUTERED', '') ?? 'MALE') as 'MALE' | 'FEMALE';
     const newSex: DogSex = isNeutered ? (`${baseSex}_NEUTERED` as DogSex) : baseSex;
 
     updateDog.mutate(
@@ -146,7 +192,7 @@ function DogProfilePage() {
       },
       { onSuccess: () => navigation.goBack() }
     );
-  }, [activeDog?.id, user?.id, name, breed, isNeutered, dog?.sex, profileImageUrl, updateDog, navigation]);
+  }, [activeDog?.id, user?.id, name, breed, isNeutered, displayDog?.sex, profileImageUrl, updateDog, navigation]);
 
   const handleDelete = useCallback(() => {
     if (!activeDog?.id) return;
@@ -168,7 +214,13 @@ function DogProfilePage() {
     setTriggers((prev) => (prev.includes(t) ? prev.filter((x) => x !== t) : [...prev, t]));
   }, []);
 
-  if (!isReady) return null;
+  if (!isReady) {
+    return (
+      <SafeAreaView style={styles.safe}>
+        <Navbar onBack={() => navigation.goBack()} />
+      </SafeAreaView>
+    );
+  }
 
   if (isError) {
     return (
@@ -179,7 +231,7 @@ function DogProfilePage() {
     );
   }
 
-  if (isLoading) {
+  if (isLoading && !displayDog) {
     return (
       <SafeAreaView style={styles.safe}>
         <Navbar onBack={() => navigation.goBack()} />

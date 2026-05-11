@@ -31,6 +31,7 @@ import { isB2BRole } from 'stores/OrgContext';
 import { useIsPro } from 'lib/hooks/useSubscription';
 import { useDailyUsage } from 'lib/hooks/useCoaching';
 import { BannerAd } from 'components/shared/ads';
+import { usePageDataPerformance } from 'lib/performance/usePageDataPerformance';
 
 export const Route = createRoute('/dashboard', {
   component: DashboardPage,
@@ -80,7 +81,9 @@ function DashboardPage() {
   const {
     data: dashboardData,
     isLoading: dashboardLoading,
+    isFetching: dashboardFetching,
     error: dashboardError,
+    dataUpdatedAt: dashboardDataUpdatedAt,
     refetch: refetchDashboard,
   } = useDashboard(activeDog?.id);
 
@@ -117,6 +120,36 @@ function DashboardPage() {
   const analysisSummary = useMemo(() => computeAnalysisSummary(recentLogs), [recentLogs]);
 
   const deleteLog = useDeleteLog(activeDog?.id);
+
+  usePageDataPerformance('/dashboard', [
+    {
+      label: 'shell_ready',
+      ready: isReady,
+      meta: { activeDogId: activeDog?.id, dogCount: dogs.length },
+    },
+    {
+      label: 'cached_data_ready',
+      ready: isReady && (!!displayDog || !!dashboardData),
+      meta: {
+        activeDogId: activeDog?.id,
+        hasDashboardData: !!dashboardData,
+        hasDisplayDog: !!displayDog,
+        isFetching: dashboardFetching,
+        logCount: recentLogs.length,
+        dataUpdatedAt: dashboardDataUpdatedAt || null,
+      },
+    },
+    {
+      label: 'fresh_data_settled',
+      ready: isReady && !!activeDog?.id && !dashboardLoading && !dashboardFetching && !dashboardError,
+      meta: {
+        activeDogId: activeDog?.id,
+        logCount: recentLogs.length,
+        totalLogs,
+        dataUpdatedAt: dashboardDataUpdatedAt || null,
+      },
+    },
+  ]);
 
   const handleQuickLog = useCallback(() => {
     navigation.navigate('/dashboard/quick-log');
@@ -156,7 +189,7 @@ function DashboardPage() {
       {/* B1: 배너 광고 — 무료 사용자 대시보드 홈 */}
       {!isPro && <BannerAd placement="B1" />}
 
-      {dashboardLoading && <SkeletonDashboard />}
+      {dashboardLoading && !dashboardData && <SkeletonDashboard />}
 
       {dashboardError && (
         <ErrorState onRetry={() => { void refetchDashboard(); }} />
@@ -260,7 +293,13 @@ function DashboardPage() {
     { key: 'analysis', label: '분석', content: analysisContent },
   ], [recordContent, analysisContent]);
 
-  if (!isReady) return null;
+  if (!isReady) {
+    return (
+      <SafeAreaView style={styles.safe}>
+        <SkeletonDashboard />
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.safe}>

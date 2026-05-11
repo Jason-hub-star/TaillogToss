@@ -5,6 +5,7 @@
 import { requestBackend, withBackendFallback } from './backend';
 import { getDog } from './dog';
 import { getLogs } from './log';
+import { LOG_LIMIT_DASHBOARD } from './queryConfig';
 import type { BehaviorLog } from 'types/log';
 
 interface BackendDashboardDogProfile {
@@ -97,7 +98,7 @@ async function getDashboardFromFallback(dogId?: string): Promise<DashboardData> 
   if (!dogId) {
     throw new Error('DASHBOARD_DOG_ID_REQUIRED');
   }
-  const [dog, logs] = await Promise.all([getDog(dogId), getLogs(dogId, 20)]);
+  const [dog, logs] = await Promise.all([getDog(dogId), getLogs(dogId, LOG_LIMIT_DASHBOARD)]);
 
   return {
     dogProfile: {
@@ -113,7 +114,7 @@ async function getDashboardFromFallback(dogId?: string): Promise<DashboardData> 
       current_streak: 0,
       last_logged_at: logs[0]?.occurred_at ?? null,
     },
-    recentLogs: logs.slice(0, 20),
+    recentLogs: logs.slice(0, LOG_LIMIT_DASHBOARD),
     issues: [],
     envTriggers: [],
   };

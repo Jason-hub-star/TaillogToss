@@ -69,6 +69,23 @@ describe('evaluatePageGuard', () => {
     expect(result).toEqual({ status: 'allow' });
   });
 
+  test('general pages do not wait for subscription loading', () => {
+    const result = evaluatePageGuard({
+      currentPath: '/dashboard',
+      skipAuth: false,
+      skipOnboarding: false,
+      requireFeature: undefined,
+      isAuthenticated: true,
+      hasCompletedOnboarding: true,
+      isPro: false,
+      dogCount: 1,
+      isSubscriptionLoading: true,
+      isDogsLoading: false,
+    });
+
+    expect(result).toEqual({ status: 'allow' });
+  });
+
   test('onboarding pages are allowed when skipOnboarding is true', () => {
     const result = evaluatePageGuard({
       currentPath: '/onboarding/survey',

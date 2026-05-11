@@ -4,7 +4,7 @@
  */
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from 'lib/api/queryKeys';
-import { STALE_TIME_DEFAULT } from 'lib/api/queryConfig';
+import { queryPolicy } from 'lib/api/queryConfig';
 import * as coachingApi from 'lib/api/coaching';
 import type { CoachingResult, ReportType } from 'types/coaching';
 
@@ -13,7 +13,7 @@ export function useCoachingList(dogId: string | undefined) {
     queryKey: queryKeys.coaching.list(dogId ?? ''),
     queryFn: () => coachingApi.getCoachings(dogId!),
     enabled: !!dogId,
-    staleTime: STALE_TIME_DEFAULT,
+    ...queryPolicy.default,
   });
 }
 
@@ -22,7 +22,7 @@ export function useLatestCoaching(dogId: string | undefined) {
     queryKey: queryKeys.coaching.latest(dogId ?? ''),
     queryFn: () => coachingApi.getLatestCoaching(dogId!),
     enabled: !!dogId,
-    staleTime: STALE_TIME_DEFAULT,
+    ...queryPolicy.default,
   });
 }
 
@@ -108,9 +108,9 @@ export function useToggleActionItem() {
 /** 일일 사용량 조회 */
 export function useDailyUsage(userId: string | undefined) {
   return useQuery({
-    queryKey: [...queryKeys.coaching.all, 'dailyUsage'],
+    queryKey: queryKeys.coaching.dailyUsage(userId ?? ''),
     queryFn: () => coachingApi.getDailyUsage(),
     enabled: !!userId,
-    staleTime: STALE_TIME_DEFAULT,
+    ...queryPolicy.default,
   });
 }

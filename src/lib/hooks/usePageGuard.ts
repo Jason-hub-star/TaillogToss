@@ -30,9 +30,12 @@ export function usePageGuard(options: UsePageGuardOptions): { isReady: boolean }
   } = options;
   const navigation = useNavigation();
   const { user, isAuthenticated, isLoading, hasCompletedOnboarding } = useAuth();
+  const needsSubscription = requireFeature === 'proOnly' || requireFeature === 'multiDog';
 
   const { data: dogs, isLoading: isDogsLoading } = useDogList(user?.id);
-  const { data: subscription, isLoading: isSubscriptionLoading } = useCurrentSubscription(user?.id);
+  const { data: subscription, isLoading: isSubscriptionLoading } = useCurrentSubscription(user?.id, {
+    enabled: needsSubscription,
+  });
 
   const isPro = subscription?.plan_type === 'PRO_MONTHLY' && subscription?.is_active;
   const dogCount = dogs?.length ?? 0;
@@ -112,6 +115,7 @@ export function usePageGuard(options: UsePageGuardOptions): { isReady: boolean }
     isLoading,
     isPro,
     isSubscriptionLoading,
+    needsSubscription,
     navigation,
     requireFeature,
     requireRole,

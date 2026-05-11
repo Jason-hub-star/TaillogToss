@@ -4,9 +4,15 @@
  */
 import { supabase } from './supabase';
 import { requestBackend, withBackendFallback } from './backend';
+import {
+  LOG_LIMIT_DAILY,
+  LOG_LIMIT_DEFAULT,
+  LOG_LIMIT_ORG,
+  LOG_LIMIT_ORG_BACKEND_MULTIPLIER,
+} from './queryConfig';
 import type { BehaviorLog, QuickLogInput, DetailedLogInput } from 'types/log';
 
-async function getLogsFromSupabase(dogId: string, limit = 500): Promise<BehaviorLog[]> {
+async function getLogsFromSupabase(dogId: string, limit = LOG_LIMIT_DEFAULT): Promise<BehaviorLog[]> {
   const { data, error } = await supabase
     .from('behavior_logs')
     .select('*')
@@ -17,13 +23,15 @@ async function getLogsFromSupabase(dogId: string, limit = 500): Promise<Behavior
   return data as BehaviorLog[];
 }
 
-async function getLogsFromBackend(dogId: string, limit = 500): Promise<BehaviorLog[]> {
-  const data = await requestBackend<BehaviorLog[]>(`/api/v1/logs/${dogId}`);
-  return Array.isArray(data) ? data.slice(0, limit) : [];
+async function getLogsFromBackend(dogId: string, limit = LOG_LIMIT_DEFAULT): Promise<BehaviorLog[]> {
+  const data = await requestBackend<BehaviorLog[]>(
+    `/api/v1/logs/${dogId}?limit=${encodeURIComponent(String(limit))}`,
+  );
+  return Array.isArray(data) ? data : [];
 }
 
 /** 기록 목록 조회 */
-export async function getLogs(dogId: string, limit = 500): Promise<BehaviorLog[]> {
+export async function getLogs(dogId: string, limit = LOG_LIMIT_DEFAULT): Promise<BehaviorLog[]> {
   return withBackendFallback(
     () => getLogsFromBackend(dogId, limit),
     () => getLogsFromSupabase(dogId, limit),
@@ -37,7 +45,7 @@ export async function getDailyLogs(dogId: string, date: string): Promise<Behavio
 
   return withBackendFallback(
     async () => {
-      const logs = await getLogsFromBackend(dogId, 200);
+      const logs = await getLogsFromBackend(dogId, LOG_LIMIT_DAILY);
       return logs.filter((log) => {
         const occurredAt = new Date(log.occurred_at).getTime();
         return occurredAt >= startMs && occurredAt <= endMs;
@@ -141,10 +149,14 @@ export async function deleteLog(logId: string): Promise<void> {
 }
 
 /** B2B: 조직 소속 강아지의 기록 조회 */
-export async function getOrgDogLogs(orgId: string, dogId: string, limit = 50): Promise<BehaviorLog[]> {
+export async function getOrgDogLogs(
+  orgId: string,
+  dogId: string,
+  limit = LOG_LIMIT_ORG,
+): Promise<BehaviorLog[]> {
   return withBackendFallback(
     async () => {
-      const rows = await getLogsFromBackend(dogId, limit * 2);
+      const rows = await getLogsFromBackend(dogId, limit * LOG_LIMIT_ORG_BACKEND_MULTIPLIER);
       return rows.filter((row) => row.org_id === orgId).slice(0, limit);
     },
     async () => {

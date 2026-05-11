@@ -35,6 +35,7 @@ import type { CurriculumRecommendationV2 } from 'lib/data/recommendation/engine'
 import { SkeletonAcademy } from 'components/features/training/SkeletonAcademy';
 import { BottomNavBar } from 'components/shared/BottomNavBar';
 import { colors, typography, spacing } from 'styles/tokens';
+import { usePageDataPerformance } from 'lib/performance/usePageDataPerformance';
 
 export const Route = createRoute('/training/academy', {
   component: TrainingAcademyPage,
@@ -46,10 +47,14 @@ function TrainingAcademyPage() {
   const { activeDog } = useActiveDog();
   const isPro = useIsPro(user?.id);
   const { surveyData } = useSurvey();
-  const { data: dogEnv } = useDogEnv(activeDog?.id);
-  const { data: progressList, isLoading, isError, refetch } = useTrainingProgress(activeDog?.id);
-  const { data: feedbackList } = useStepFeedback(activeDog?.id);
-  const { data: behaviorAnalytics } = useBehaviorAnalytics(activeDog?.id);
+  const dogEnvQuery = useDogEnv(activeDog?.id);
+  const progressQuery = useTrainingProgress(activeDog?.id);
+  const feedbackQuery = useStepFeedback(activeDog?.id);
+  const behaviorAnalyticsQuery = useBehaviorAnalytics(activeDog?.id);
+  const { data: dogEnv } = dogEnvQuery;
+  const { data: progressList, isLoading, isError, refetch } = progressQuery;
+  const { data: feedbackList } = feedbackQuery;
+  const { data: behaviorAnalytics } = behaviorAnalyticsQuery;
   const { isReady } = usePageGuard({ currentPath: '/training/academy' });
 
   // 진행 상태 맵: curriculumId → TrainingProgress
@@ -120,6 +125,56 @@ function TrainingAcademyPage() {
   const navigation = useNavigation();
   const { show: showProUpgrade, SheetNode: ProUpgradeSheetNode } = useProUpgradeSheet();
 
+  usePageDataPerformance('/training/academy', [
+    {
+      label: 'shell_ready',
+      ready: isReady,
+      meta: { activeDogId: activeDog?.id },
+    },
+    {
+      label: 'cached_data_ready',
+      ready: isReady && (!!activeDog || !!dogEnv || Array.isArray(progressList) || !!behaviorAnalytics),
+      meta: {
+        activeDogId: activeDog?.id,
+        hasDogEnv: !!dogEnv,
+        hasProgress: Array.isArray(progressList),
+        progressCount: Array.isArray(progressList) ? progressList.length : null,
+        hasBehaviorAnalytics: !!behaviorAnalytics,
+        progressIsFetching: progressQuery.isFetching,
+        feedbackIsFetching: feedbackQuery.isFetching,
+        analyticsIsFetching: behaviorAnalyticsQuery.isFetching,
+        dogEnvIsFetching: dogEnvQuery.isFetching,
+        progressDataUpdatedAt: progressQuery.dataUpdatedAt || null,
+        analyticsDataUpdatedAt: behaviorAnalyticsQuery.dataUpdatedAt || null,
+      },
+    },
+    {
+      label: 'fresh_data_settled',
+      ready:
+        isReady &&
+        !!activeDog?.id &&
+        !progressQuery.isLoading &&
+        !progressQuery.isFetching &&
+        !feedbackQuery.isLoading &&
+        !feedbackQuery.isFetching &&
+        !behaviorAnalyticsQuery.isLoading &&
+        !behaviorAnalyticsQuery.isFetching &&
+        !dogEnvQuery.isLoading &&
+        !dogEnvQuery.isFetching &&
+        !isError,
+      meta: {
+        activeDogId: activeDog?.id,
+        progressCount: Array.isArray(progressList) ? progressList.length : null,
+        feedbackCount: Array.isArray(feedbackList) ? feedbackList.length : null,
+        behaviorLogCount: behaviorAnalytics?.total_logs ?? null,
+        progressDataUpdatedAt: progressQuery.dataUpdatedAt || null,
+        feedbackDataUpdatedAt: feedbackQuery.dataUpdatedAt || null,
+        analyticsDataUpdatedAt: behaviorAnalyticsQuery.dataUpdatedAt || null,
+        dogEnvDataUpdatedAt: dogEnvQuery.dataUpdatedAt || null,
+      },
+    },
+  ]);
+
   // I1: 무료 사용자 커리큘럼 진입 시 전면 광고
   const pendingCurriculumRef = useRef<CurriculumId | null>(null);
   const handleInterstitialDismissed = useCallback(() => {
@@ -144,7 +199,15 @@ function TrainingAcademyPage() {
     showProUpgrade();
   }, [showProUpgrade]);
 
-  if (!isReady) return null;
+  const isInitialLoading = isLoading && !progressList;
+
+  if (!isReady) {
+    return (
+      <ListLayout title="훈련 아카데미" onBack={() => navigation.goBack()} footer={<BottomNavBar activeTab="training" />}>
+        <SkeletonAcademy />
+      </ListLayout>
+    );
+  }
 
   if (isError) {
     return (
@@ -159,7 +222,7 @@ function TrainingAcademyPage() {
 
   return (
     <ListLayout title="훈련 아카데미" onBack={() => navigation.goBack()} footer={<BottomNavBar activeTab="training" />}>
-      {isLoading ? (
+      {isInitialLoading ? (
         <SkeletonAcademy />
       ) : CURRICULUMS.length === 0 ? (
         <EmptyState

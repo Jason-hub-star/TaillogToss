@@ -4,7 +4,7 @@
  */
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from 'lib/api/queryKeys';
-import { STALE_TIME_ACTIVE } from 'lib/api/queryConfig';
+import { queryPolicy } from 'lib/api/queryConfig';
 import * as trainingApi from 'lib/api/training';
 import type { CurriculumId, PlanVariant, TrainingProgress, DogReaction, StepFeedback } from 'types/training';
 
@@ -13,7 +13,7 @@ export function useTrainingProgress(dogId: string | undefined) {
     queryKey: queryKeys.training.progress(dogId ?? ''),
     queryFn: () => trainingApi.getTrainingProgress(dogId!),
     enabled: !!dogId,
-    staleTime: STALE_TIME_ACTIVE,
+    ...queryPolicy.active,
   });
 }
 
@@ -117,7 +117,7 @@ export function useStepFeedback(dogId: string | undefined, curriculumId?: string
     queryKey: queryKeys.training.feedback(dogId ?? '', curriculumId),
     queryFn: () => trainingApi.getStepFeedback(dogId!, curriculumId),
     enabled: !!dogId,
-    staleTime: STALE_TIME_ACTIVE,
+    ...queryPolicy.active,
   });
 }
 
@@ -175,15 +175,16 @@ export function useSubmitStepFeedback() {
 
 export function useBehaviorAnalytics(dogId: string | undefined) {
   return useQuery({
-    queryKey: ['behavior-analytics', dogId],
+    queryKey: queryKeys.training.behaviorAnalytics(dogId ?? ''),
     queryFn: () => trainingApi.getBehaviorAnalytics(dogId!),
     enabled: !!dogId,
-    staleTime: 5 * 60 * 1000,  // 5분 캐시
+    ...queryPolicy.default,
     select: (data) => data ?? null,
   });
 }
 
 export function useSubmitStepAttempt() {
+  const qc = useQueryClient();
   return useMutation({
     mutationFn: ({
       dogId,
@@ -192,14 +193,20 @@ export function useSubmitStepAttempt() {
       dogId: string;
       data: Parameters<typeof trainingApi.submitStepAttempt>[1];
     }) => trainingApi.submitStepAttempt(dogId, data),
+    onSuccess: (_data, variables) => {
+      void qc.invalidateQueries({
+        queryKey: queryKeys.training.stepAttempts(variables.dogId, variables.data.step_id),
+      });
+      void qc.invalidateQueries({ queryKey: queryKeys.training.stepAttempts(variables.dogId) });
+    },
   });
 }
 
 export function useStepAttempts(dogId: string | undefined, stepId?: string) {
   return useQuery({
-    queryKey: ['step-attempts', dogId ?? '', stepId ?? ''],
+    queryKey: queryKeys.training.stepAttempts(dogId ?? '', stepId),
     queryFn: () => trainingApi.getStepAttempts(dogId!, stepId),
     enabled: !!dogId,
-    staleTime: STALE_TIME_ACTIVE,
+    ...queryPolicy.active,
   });
 }

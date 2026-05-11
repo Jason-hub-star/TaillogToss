@@ -17,6 +17,7 @@ export const queryKeys = {
   logs: {
     all: ['logs'] as const,
     list: (dogId: string) => [...queryKeys.logs.all, 'list', dogId] as const,
+    org: (orgId: string, dogId: string) => [...queryKeys.logs.all, 'org', orgId, dogId] as const,
     detail: (logId: string) => [...queryKeys.logs.all, 'detail', logId] as const,
     daily: (dogId: string, date: string) => [...queryKeys.logs.all, 'daily', dogId, date] as const,
   },
@@ -29,6 +30,7 @@ export const queryKeys = {
     list: (dogId: string) => [...queryKeys.coaching.all, 'list', dogId] as const,
     detail: (coachingId: string) => [...queryKeys.coaching.all, 'detail', coachingId] as const,
     latest: (dogId: string) => [...queryKeys.coaching.all, 'latest', dogId] as const,
+    dailyUsage: (userId: string) => [...queryKeys.coaching.all, 'dailyUsage', userId] as const,
   },
   training: {
     all: ['training'] as const,
@@ -39,6 +41,10 @@ export const queryKeys = {
       curriculumId
         ? ([...queryKeys.training.all, 'feedback', dogId, curriculumId] as const)
         : ([...queryKeys.training.all, 'feedback', dogId] as const),
+    behaviorAnalytics: (dogId: string) =>
+      [...queryKeys.training.all, 'behaviorAnalytics', dogId] as const,
+    stepAttempts: (dogId: string, stepId?: string) =>
+      [...queryKeys.training.all, 'stepAttempts', dogId, stepId ?? 'all'] as const,
   },
   subscription: {
     all: ['subscription'] as const,
@@ -62,6 +68,7 @@ export const queryKeys = {
     all: ['org'] as const,
     detail: (orgId: string) => [...queryKeys.org.all, 'detail', orgId] as const,
     members: (orgId: string) => [...queryKeys.org.all, 'members', orgId] as const,
+    stats: (orgId: string) => [...queryKeys.org.all, 'stats', orgId] as const,
   },
   orgDogs: {
     all: ['orgDogs'] as const,
@@ -81,6 +88,8 @@ export const queryKeys = {
         : [...queryKeys.reports.all, 'org', orgId] as const,
     byDog: (dogId: string) => [...queryKeys.reports.all, 'dog', dogId] as const,
     detail: (reportId: string) => [...queryKeys.reports.all, 'detail', reportId] as const,
+    interactions: (reportId: string) =>
+      [...queryKeys.reports.detail(reportId), 'interactions'] as const,
     byShareToken: (token: string) => [...queryKeys.reports.all, 'share', token] as const,
   },
   orgSubscription: {

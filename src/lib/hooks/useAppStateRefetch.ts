@@ -6,9 +6,9 @@
 import { useEffect, useRef } from 'react';
 import { AppState, type AppStateStatus } from 'react-native';
 import { useQueryClient } from '@tanstack/react-query';
+import { APP_BACKGROUND_REFETCH_THRESHOLD_MS } from 'lib/api/queryConfig';
 import { queryKeys } from 'lib/api/queryKeys';
-
-const BACKGROUND_THRESHOLD_MS = 5_000;
+import { markStartupPerformance } from 'lib/performance/startupPerformance';
 
 export function useAppStateRefetch(dogId: string | undefined) {
   const qc = useQueryClient();
@@ -16,6 +16,7 @@ export function useAppStateRefetch(dogId: string | undefined) {
 
   useEffect(() => {
     if (!dogId) return;
+    markStartupPerformance('app_state_refetch_listener_registered', { dogId });
 
     const handleChange = (nextState: AppStateStatus) => {
       if (nextState === 'background' || nextState === 'inactive') {
@@ -24,7 +25,7 @@ export function useAppStateRefetch(dogId: string | undefined) {
         const elapsed = Date.now() - backgroundAtRef.current;
         backgroundAtRef.current = null;
 
-        if (elapsed >= BACKGROUND_THRESHOLD_MS) {
+        if (elapsed >= APP_BACKGROUND_REFETCH_THRESHOLD_MS) {
           void qc.invalidateQueries({ queryKey: queryKeys.dashboard.detail(dogId) });
           void qc.invalidateQueries({ queryKey: queryKeys.logs.list(dogId) });
           void qc.invalidateQueries({ queryKey: queryKeys.training.progress(dogId) });

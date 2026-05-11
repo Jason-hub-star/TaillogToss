@@ -194,6 +194,20 @@
   - Conclusion: the first-entry request is not taking the B2B fallback. It is a B2C owner match, and almost all measured ownership time is the initial `dogs` row lookup. Next safe optimization target is DB lookup latency for `dogs.id`/connection wake, not removing B2B checks.
   - Evidence: `/tmp/taillog-ait-ownership-split.log`.
   - Validation: `Backend/venv/bin/pytest Backend/tests/test_ownership.py Backend/tests/test_behavior_analytics.py -v` PASS (13 tests); `Backend/venv/bin/pytest Backend/tests/ -v` PASS (55 tests); `git diff --check` PASS.
+- `dogs.id` index / DB wake / Railway cold-ish check:
+  - Live DB index check confirmed `dogs_pkey`: `CREATE UNIQUE INDEX dogs_pkey ON public.dogs USING btree (id)`.
+  - Live DB also has `idx_dogs_user_id` and `idx_dogs_user_created_desc`.
+  - `public.dogs` row count/size at check time: `17` rows, total size `96 kB`.
+  - Live `EXPLAIN (ANALYZE, BUFFERS, TIMING)` for `select * from public.dogs where id = '1212be92-6ece-41ac-a6b9-a9f04bd6b24c'`:
+    - Plan: `Index Scan using dogs_pkey`.
+    - Buffers: `shared hit=2`.
+    - Planning time: `0.073ms`.
+    - Execution time: `0.021ms`.
+  - Local new psql connection + same indexed query repeated 5 times: `0.12s`, `0.21s`, `0.12s`, `0.15s`, `0.13s`.
+  - Railway deployment metadata: latest `318e4e14-1c34-43a7-85d1-2078dded5bed` has `sleepApplication=true`.
+  - Railway `/health` repeated public calls while warm: about `0.48s` to `0.80s` total.
+  - Backend DB engine currently detects Supabase pooler and uses `NullPool` with `statement_cache_size=0`; therefore the first `db.execute()` in each request pays connection checkout/open cost. Since `verify_dog_ownership()` performs the first DB call in `/behavior-analytics`, its `dog_lookup_ms` includes connection/pooler wake latency, not just indexed SQL execution.
+  - Conclusion: `dogs.id` index is healthy. The measured `dog_lookup_ms=4033.1ms` is not an index/table-scan problem. It is much more likely request-time DB connection establishment/pooler wake plus Railway sleep/cold-ish behavior and region/network overhead.
 
 ## Notes
 
@@ -202,5 +216,6 @@
 - Next instrumentation should log `loadingStartTs -> first shell`, `loadingStartTs -> cached data`, and `loadingStartTs -> fresh data settled` separately, because external adb/UI dump timing includes Toss host and Metro overhead.
 - Query/API split showed the slow leg was backend refresh, not rendering: dashboard aggregate about 6.3s, training backend reads about 5.7-6.2s. Stale policy now avoids those calls on fresh cached re-entry while preserving mutation invalidation.
 - Backend-side data transfer is reduced for dashboard, training progress/feedback, and `/api/v1/dogs/{dogId}/behavior-analytics`. Server timing now shows behavior analytics SQL aggregate itself is not the only bottleneck. Ownership split confirmed the current `/training/academy` AIT run is `b2c_match=true` and `ownership_path=b2c_owner`; the slow part is `dog_lookup_ms`, not B2B fallback.
+- Next safest optimization candidate: keep the authorization rule intact, but stop paying a fresh DB connection cost on every request. Evaluate replacing Supabase pooler `NullPool` with a small app-level asyncpg pool while keeping `statement_cache_size=0`, or disable Railway sleep/keep one warm replica before changing query logic.
 - If `Invalid semver: ''` repeats, first treat it as Sandbox host/native state: unlock device, force-stop host apps, clear logcat, relaunch. Only consider app-code changes if it reproduces after a clean launch.
 - Before review/release, disable or gate private `[PERF][startup]` logging if the measurement build is promoted.

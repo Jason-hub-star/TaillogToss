@@ -36,6 +36,7 @@ import { SkeletonAcademy } from 'components/features/training/SkeletonAcademy';
 import { BottomNavBar } from 'components/shared/BottomNavBar';
 import { colors, typography, spacing } from 'styles/tokens';
 import { usePageDataPerformance } from 'lib/performance/usePageDataPerformance';
+import { useQueryPerformance } from 'lib/performance/useQueryPerformance';
 
 export const Route = createRoute('/training/academy', {
   component: TrainingAcademyPage,
@@ -171,6 +172,58 @@ function TrainingAcademyPage() {
         feedbackDataUpdatedAt: feedbackQuery.dataUpdatedAt || null,
         analyticsDataUpdatedAt: behaviorAnalyticsQuery.dataUpdatedAt || null,
         dogEnvDataUpdatedAt: dogEnvQuery.dataUpdatedAt || null,
+      },
+    },
+  ]);
+
+  useQueryPerformance('/training/academy', [
+    {
+      label: 'dog_env',
+      enabled: !!activeDog?.id,
+      isLoading: dogEnvQuery.isLoading,
+      isFetching: dogEnvQuery.isFetching,
+      isError: dogEnvQuery.isError,
+      dataUpdatedAt: dogEnvQuery.dataUpdatedAt,
+      hasData: dogEnvQuery.data !== undefined,
+      meta: { activeDogId: activeDog?.id, hasDogEnv: !!dogEnv },
+    },
+    {
+      label: 'training_progress',
+      enabled: !!activeDog?.id,
+      isLoading: progressQuery.isLoading,
+      isFetching: progressQuery.isFetching,
+      isError: progressQuery.isError,
+      dataUpdatedAt: progressQuery.dataUpdatedAt,
+      hasData: Array.isArray(progressList),
+      meta: {
+        activeDogId: activeDog?.id,
+        progressCount: Array.isArray(progressList) ? progressList.length : null,
+      },
+    },
+    {
+      label: 'step_feedback',
+      enabled: !!activeDog?.id,
+      isLoading: feedbackQuery.isLoading,
+      isFetching: feedbackQuery.isFetching,
+      isError: feedbackQuery.isError,
+      dataUpdatedAt: feedbackQuery.dataUpdatedAt,
+      hasData: Array.isArray(feedbackList),
+      meta: {
+        activeDogId: activeDog?.id,
+        feedbackCount: Array.isArray(feedbackList) ? feedbackList.length : null,
+      },
+    },
+    {
+      label: 'behavior_analytics',
+      enabled: !!activeDog?.id,
+      isLoading: behaviorAnalyticsQuery.isLoading,
+      isFetching: behaviorAnalyticsQuery.isFetching,
+      isError: behaviorAnalyticsQuery.isError,
+      dataUpdatedAt: behaviorAnalyticsQuery.dataUpdatedAt,
+      hasData: behaviorAnalyticsQuery.data !== undefined,
+      meta: {
+        activeDogId: activeDog?.id,
+        behaviorLogCount: behaviorAnalytics?.total_logs ?? null,
       },
     },
   ]);

@@ -12,6 +12,6 @@ export function useDashboard(dogId: string | undefined) {
     queryKey: queryKeys.dashboard.detail(dogId ?? ''),
     queryFn: () => getDashboard(dogId),
     enabled: !!dogId,
-    ...queryPolicy.short,
+    ...queryPolicy.default,
   });
 }

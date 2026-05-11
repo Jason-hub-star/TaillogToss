@@ -123,13 +123,28 @@
     - `first_paint_boundary`: `fromLoadingStartMs=2102`, `fromJsStartMs=386`
     - `page_shell_ready`: `fromLoadingStartMs=2732`, `fromJsStartMs=1016`
     - `page_cached_data_ready`: `fromLoadingStartMs=2733`, `fromJsStartMs=1017`
+- Query/API-level bottleneck split + stale policy retest:
+  - Files: `src/lib/performance/useQueryPerformance.ts`, `src/pages/dashboard/index.tsx`, `src/pages/training/academy.tsx`, `src/lib/api/dashboard.ts`, `src/lib/api/training.ts`, `src/lib/api/training.feedback.ts`, `src/lib/api/dog.ts`, `src/lib/hooks/useDashboard.ts`, `src/lib/hooks/useTraining.ts`
+  - Added markers: `page_query_cached_data_ready`, `page_query_fetch_start`, `page_query_fresh_settled`, `page_query_fetch_failed`, `api_*_start/done/failed`.
+  - Before stale policy adjustment:
+    - `/dashboard`: `api_dashboard_backend_done durationMs=6355`; page fresh settled at `fromJsStartMs=6597`.
+    - `/training/academy`: `api_dog_env_supabase_done durationMs=163`, `api_training_progress_backend_done durationMs=5701`, `api_training_feedback_backend_done durationMs=5823`, `api_training_behavior_analytics_backend_done durationMs=6246`; page fresh settled at `fromJsStartMs=6611`.
+  - Policy adjustment:
+    - Dashboard aggregate query: `queryPolicy.short` -> `queryPolicy.default`.
+    - Training progress/feedback: `queryPolicy.active` -> `queryPolicy.default`.
+    - Behavior analytics: `queryPolicy.default` -> `queryPolicy.long`.
+    - Mutation invalidation remains in place for logs/training changes, so user actions still force refresh.
+  - After stale policy adjustment:
+    - `/dashboard`: backend refetch skipped on cached re-entry; `page_cached_data_ready` and `page_fresh_data_settled` both `fromJsStartMs=215`.
+    - `/training/academy`: backend refetch skipped on cached re-entry; `page_cached_data_ready` and `page_fresh_data_settled` both `fromJsStartMs=420`; all query fresh-settled markers emitted with `durationMs=null`.
+  - Validation: `npm run typecheck` PASS; targeted Jest PASS (`dashboard.test.ts`, `training.test.ts`, `usePageGuard.test.ts`, plus query/log tests).
 
 ## Notes
 
 - Acceptance target remains: cached/shell <= 1s and fresh data completion at least 50% faster than prior baseline.
 - Next real-device pass should measure two runs per route: first cached population, then process restart/re-entry with hydrated cache.
 - Next instrumentation should log `loadingStartTs -> first shell`, `loadingStartTs -> cached data`, and `loadingStartTs -> fresh data settled` separately, because external adb/UI dump timing includes Toss host and Metro overhead.
-- New data-marker evidence shows shell/cached display is working, but fresh data completion is still slow on `/dashboard` and `/training/academy` at about 8.2s in DEV_LOCAL. `/dog/profile` settles much faster at about 2.34s.
-- Next improvement target: split dashboard/training fresh fetch markers by query or API call to identify whether the slow leg is FastAPI, Supabase fallback, behavior analytics, dashboard aggregation, or app-state refetch overlap.
+- Query/API split showed the slow leg was backend refresh, not rendering: dashboard aggregate about 6.3s, training backend reads about 5.7-6.2s. Stale policy now avoids those calls on fresh cached re-entry while preserving mutation invalidation.
+- Next improvement target: backend-side latency reduction for `/api/v1/dashboard/`, `/api/v1/training/{dogId}`, `/api/v1/training/feedback/{dogId}`, and `/api/v1/dogs/{dogId}/behavior-analytics`.
 - If `Invalid semver: ''` repeats, first treat it as Sandbox host/native state: unlock device, force-stop host apps, clear logcat, relaunch. Only consider app-code changes if it reproduces after a clean launch.
 - Before review/release, disable or gate private `[PERF][startup]` logging if the measurement build is promoted.

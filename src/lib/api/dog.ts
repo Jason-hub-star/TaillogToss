@@ -4,6 +4,7 @@
  */
 import { supabase } from './supabase';
 import { requestBackend } from './backend';
+import { measureStartupAsync } from 'lib/performance/startupPerformance';
 import type {
   Dog, DogEnv, SurveyData,
   SurveyStage1Request, SurveyStage2Request, SurveyStage3Request,
@@ -50,9 +51,15 @@ export async function getDog(dogId: string): Promise<Dog> {
 
 /** 반려견 환경 조회 */
 export async function getDogEnv(dogId: string): Promise<DogEnv | null> {
-  const { data, error } = await supabase.from('dog_env').select('*').eq('dog_id', dogId).single();
-  if (error && error.code !== 'PGRST116') throw error;
-  return data as DogEnv | null;
+  return measureStartupAsync(
+    'api_dog_env_supabase',
+    { dogId },
+    async () => {
+      const { data, error } = await supabase.from('dog_env').select('*').eq('dog_id', dogId).single();
+      if (error && error.code !== 'PGRST116') throw error;
+      return data as DogEnv | null;
+    },
+  );
 }
 
 /** 반려견 프로필 사진 업로드 */

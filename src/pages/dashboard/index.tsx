@@ -32,6 +32,7 @@ import { useIsPro } from 'lib/hooks/useSubscription';
 import { useDailyUsage } from 'lib/hooks/useCoaching';
 import { BannerAd } from 'components/shared/ads';
 import { usePageDataPerformance } from 'lib/performance/usePageDataPerformance';
+import { useQueryPerformance } from 'lib/performance/useQueryPerformance';
 
 export const Route = createRoute('/dashboard', {
   component: DashboardPage,
@@ -147,6 +148,23 @@ function DashboardPage() {
         logCount: recentLogs.length,
         totalLogs,
         dataUpdatedAt: dashboardDataUpdatedAt || null,
+      },
+    },
+  ]);
+
+  useQueryPerformance('/dashboard', [
+    {
+      label: 'dashboard_detail',
+      enabled: !!activeDog?.id,
+      isLoading: dashboardLoading,
+      isFetching: dashboardFetching,
+      isError: !!dashboardError,
+      dataUpdatedAt: dashboardDataUpdatedAt,
+      hasData: !!dashboardData,
+      meta: {
+        activeDogId: activeDog?.id,
+        logCount: recentLogs.length,
+        totalLogs,
       },
     },
   ]);

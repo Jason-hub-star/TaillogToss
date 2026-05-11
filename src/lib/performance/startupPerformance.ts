@@ -13,7 +13,7 @@ export type StartupPerformanceMeta = Record<string, string | number | boolean | 
 let jsStartTs = Date.now();
 let loadingStartTs: number | null = null;
 const markedOnce = new Set<string>();
-const startupPerfLoggingEnabled = true;
+const startupPerfLoggingEnabled = process.env.NODE_ENV !== 'test';
 
 function isValidTimestamp(value: number | undefined): value is number {
   return typeof value === 'number' && Number.isFinite(value) && value > 0;

@@ -13,7 +13,7 @@ export function useTrainingProgress(dogId: string | undefined) {
     queryKey: queryKeys.training.progress(dogId ?? ''),
     queryFn: () => trainingApi.getTrainingProgress(dogId!),
     enabled: !!dogId,
-    ...queryPolicy.active,
+    ...queryPolicy.default,
   });
 }
 
@@ -117,7 +117,7 @@ export function useStepFeedback(dogId: string | undefined, curriculumId?: string
     queryKey: queryKeys.training.feedback(dogId ?? '', curriculumId),
     queryFn: () => trainingApi.getStepFeedback(dogId!, curriculumId),
     enabled: !!dogId,
-    ...queryPolicy.active,
+    ...queryPolicy.default,
   });
 }
 
@@ -178,7 +178,7 @@ export function useBehaviorAnalytics(dogId: string | undefined) {
     queryKey: queryKeys.training.behaviorAnalytics(dogId ?? ''),
     queryFn: () => trainingApi.getBehaviorAnalytics(dogId!),
     enabled: !!dogId,
-    ...queryPolicy.default,
+    ...queryPolicy.long,
     select: (data) => data ?? null,
   });
 }

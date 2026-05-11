@@ -6,6 +6,7 @@ import { requestBackend, withBackendFallback } from './backend';
 import { getDog } from './dog';
 import { getLogs } from './log';
 import { LOG_LIMIT_DASHBOARD } from './queryConfig';
+import { measureStartupAsync } from 'lib/performance/startupPerformance';
 import type { BehaviorLog } from 'types/log';
 
 interface BackendDashboardDogProfile {
@@ -123,7 +124,17 @@ async function getDashboardFromFallback(dogId?: string): Promise<DashboardData> 
 /** 대시보드 데이터 조회 (backend-first + fallback) */
 export async function getDashboard(dogId?: string): Promise<DashboardData> {
   return withBackendFallback(
-    () => getDashboardFromBackend(dogId),
-    () => getDashboardFromFallback(dogId),
+    () =>
+      measureStartupAsync(
+        'api_dashboard_backend',
+        { dogId: dogId ?? null },
+        () => getDashboardFromBackend(dogId),
+      ),
+    () =>
+      measureStartupAsync(
+        'api_dashboard_fallback',
+        { dogId: dogId ?? null, limit: LOG_LIMIT_DASHBOARD },
+        () => getDashboardFromFallback(dogId),
+      ),
   );
 }

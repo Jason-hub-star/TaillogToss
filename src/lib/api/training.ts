@@ -4,6 +4,7 @@
  */
 import { supabase } from './supabase';
 import { requestBackend, withBackendFallback } from './backend';
+import { measureStartupAsync } from 'lib/performance/startupPerformance';
 import type { TrainingProgress, CurriculumId, PlanVariant } from 'types/training';
 import {
   normalizeVariant,
@@ -45,8 +46,18 @@ async function getTrainingProgressFromBackend(dogId: string): Promise<TrainingPr
 /** 전체 훈련 진행 상태 */
 export async function getTrainingProgress(dogId: string): Promise<TrainingProgress[]> {
   return withBackendFallback(
-    () => getTrainingProgressFromBackend(dogId),
-    () => getTrainingProgressFromSupabase(dogId),
+    () =>
+      measureStartupAsync(
+        'api_training_progress_backend',
+        { dogId },
+        () => getTrainingProgressFromBackend(dogId),
+      ),
+    () =>
+      measureStartupAsync(
+        'api_training_progress_supabase',
+        { dogId },
+        () => getTrainingProgressFromSupabase(dogId),
+      ),
   );
 }
 
@@ -254,7 +265,11 @@ export async function getBehaviorAnalytics(dogId: string, days = 30): Promise<{
   memo_keywords?: Record<string, string[]>;
 } | null> {
   try {
-    return await requestBackend(`/api/v1/dogs/${dogId}/behavior-analytics?days=${days}`);
+    return await measureStartupAsync(
+      'api_training_behavior_analytics_backend',
+      { dogId, days },
+      () => requestBackend(`/api/v1/dogs/${dogId}/behavior-analytics?days=${days}`),
+    );
   } catch {
     return null;
   }

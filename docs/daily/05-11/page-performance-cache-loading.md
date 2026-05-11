@@ -208,6 +208,13 @@
   - Railway `/health` repeated public calls while warm: about `0.48s` to `0.80s` total.
   - Backend DB engine currently detects Supabase pooler and uses `NullPool` with `statement_cache_size=0`; therefore the first `db.execute()` in each request pays connection checkout/open cost. Since `verify_dog_ownership()` performs the first DB call in `/behavior-analytics`, its `dog_lookup_ms` includes connection/pooler wake latency, not just indexed SQL execution.
   - Conclusion: `dogs.id` index is healthy. The measured `dog_lookup_ms=4033.1ms` is not an index/table-scan problem. It is much more likely request-time DB connection establishment/pooler wake plus Railway sleep/cold-ish behavior and region/network overhead.
+- Railway sleep-off / keep-warm follow-up:
+  - Attempted config-as-code sleep-off by adding `sleepApplication = false` to `Backend/railway.toml` and deploying Railway deployment `1e5b9f79-5c5c-449a-8df6-75f76276c974`.
+  - Result: build image push completed, but Railway marked the deployment `FAILED` with no deploy logs. Deployment history shows older `sleep=false` attempts had also failed, so this path is not safe to keep without dashboard/API support confirmation.
+  - Restored `Backend/railway.toml` and redeployed `22f9b5ed-ba4e-4234-aadf-bb58579396c7` successfully; current backend is back to `SUCCESS` with `sleepApplication=true`.
+  - Direct public `/health` immediately after a sleeping state took `5.291s`, confirming wake/cold-ish latency is observable outside the app. Warm `/health` checks after restore were about `0.646s` to `0.846s`.
+  - AIT `/training/academy` remeasurement could not proceed in this pass because `adb devices` returned no connected devices even after `adb kill-server && adb start-server`.
+  - Next action: reconnect/unlock the phone and accept USB debugging, then rerun the same AIT deployment `019e163c-d6fe-7168-9b81-2c784e043966` after a short `/health` keep-warm loop. If `dog_lookup_ms` remains high while warm, move to the small asyncpg pool experiment.
 
 ## Notes
 

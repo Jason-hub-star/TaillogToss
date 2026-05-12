@@ -215,6 +215,23 @@
   - Direct public `/health` immediately after a sleeping state took `5.291s`, confirming wake/cold-ish latency is observable outside the app. Warm `/health` checks after restore were about `0.646s` to `0.846s`.
   - AIT `/training/academy` remeasurement could not proceed in this pass because `adb devices` returned no connected devices even after `adb kill-server && adb start-server`.
   - Next action: reconnect/unlock the phone and accept USB debugging, then rerun the same AIT deployment `019e163c-d6fe-7168-9b81-2c784e043966` after a short `/health` keep-warm loop. If `dog_lookup_ms` remains high while warm, move to the small asyncpg pool experiment.
+- AIT warm remeasurement + small pool experiment preparation:
+  - ADB reconnected: `R3CXB0QH0LY`.
+  - Metro was stopped; production Toss app launched `intoss-private://taillog-app/training/academy?_deploymentId=019e163c-d6fe-7168-9b81-2c784e043966`.
+  - Keep-warm `/health` before launch: first wake `4.374s`, then warm calls about `0.520s` to `0.779s`.
+  - AIT evidence: top activity `viva.republica.toss/im.toss.rn.granite.core.GraniteActivity`, route `/training/academy`, no `loadJSBundleFromMetro()`, bundle marker `[AIT-BUILD] taillog-startup-perf-20260511-1545`.
+  - Warm AIT timing:
+    - `first_paint_boundary`: `fromLoadingStartMs=973`, `fromJsStartMs=383`.
+    - `page_shell_ready`: `fromLoadingStartMs=2281`, `fromJsStartMs=1691`.
+    - `api_training_rows_backend_done`: `durationMs=5222`.
+    - `api_training_behavior_analytics_backend_done`: `durationMs=5385`.
+    - Server timing: `ownership_ms=3156.7`, `dog_lookup_ms=3156.4`, `aggregate_ms=277.9`, `total_ms=3435.3`, `b2c_match=true`, `ownership_path=b2c_owner`.
+    - `page_fresh_data_settled`: `fromLoadingStartMs=7704`, `fromJsStartMs=7114`.
+  - Comparison: warm remeasurement improved `dog_lookup_ms` from `4033.1ms` to `3156.4ms` (about `876.7ms` faster), but it is still the dominant backend cost.
+  - Implemented small asyncpg pool experiment in `Backend/app/core/database.py`: Supabase pooler now keeps `statement_cache_size=0` but uses `pool_size=5`, `max_overflow=5`, `pool_timeout=10`, and `pool_recycle=300` instead of `NullPool`.
+  - Added `Backend/tests/test_database_config.py` to verify Supabase pooler options and direct DB options.
+  - Validation: `Backend/venv/bin/pytest Backend/tests/test_database_config.py Backend/tests/test_ownership.py Backend/tests/test_behavior_analytics.py -v` PASS (15 tests); `Backend/venv/bin/pytest Backend/tests/ -v` PASS (57 tests); `git diff --check` PASS.
+  - Railway deploy attempt for the pool experiment was blocked by Railway free-tier peak-hour policy in `us-west2`: `Free-tier deploys to us-west2 are not available during peak hours (8 AM - 8 PM America/Los_Angeles)`. AIT post-pool measurement is pending deployment.
 
 ## Notes
 

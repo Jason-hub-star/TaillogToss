@@ -76,4 +76,16 @@ describe('evaluatePageGuard + requireRole', () => {
     });
     expect(result).toEqual({ status: 'redirect', redirectTo: '/dashboard' });
   });
+
+  it('B2B 페이지는 개인 반려견 온보딩 미완료여도 역할이 맞으면 허용', () => {
+    const result = evaluatePageGuard({
+      ...baseInput,
+      hasCompletedOnboarding: false,
+      dogCount: 0,
+      currentPath: '/ops/today',
+      requireFeature: 'b2bOnly',
+      userRole: 'trainer',
+    });
+    expect(result).toEqual({ status: 'allow' });
+  });
 });

@@ -3,7 +3,7 @@
  * FlatList 40마리 성능 최적화. Wave 3 게이트 #1 핵심 화면.
  * Parity: B2B-001
  */
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import { View, Modal, StyleSheet, TouchableOpacity, Text, Alert } from 'react-native';
 import { SafeAreaView } from '@granite-js/native/react-native-safe-area-context';
 import { createRoute, useNavigation } from '@granite-js/react-native';
@@ -41,7 +41,7 @@ function OpsTodayPage() {
     currentPath: '/ops/today',
     requireFeature: 'b2bOnly',
   });
-  const { org } = useOrg();
+  const { org, isOrgLoading } = useOrg();
   const { user } = useAuth();
   const { data: orgDogs, isLoading, isError, refetch } = useOrgDogs(org?.id);
   const createQuickLog = useCreateQuickLog();
@@ -294,7 +294,21 @@ function OpsTodayPage() {
     handleReportItemPress, generatingDogId,
   ]);
 
-  if (!isReady) return null;
+  useEffect(() => {
+    if (isReady && !isOrgLoading && !org) {
+      navigation.navigate('/ops/setup' as never);
+    }
+  }, [isReady, isOrgLoading, org, navigation]);
+
+  if (!isReady || isOrgLoading) return null;
+
+  if (!org) {
+    return (
+      <SafeAreaView style={styles.safe}>
+        <EmptyState title="센터 설정이 필요해요" description="상담지 작성은 무료로 열려 있고, 리포트 생성은 구독 상태에 따라 잠겨요" icon={'\uD83D\uDCCB'} />
+      </SafeAreaView>
+    );
+  }
 
   if (isError) {
     return (

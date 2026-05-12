@@ -80,6 +80,51 @@ class Temperament(BaseModel):
     attach_level: Optional[str] = None      # velcro|moderate|independent
 
 
+class BehaviorEpisode(BaseModel):
+    id: Optional[str] = None
+    title: Optional[str] = None
+    situation: Optional[str] = None
+    antecedent: Optional[str] = None
+    behavior: Optional[str] = None
+    consequence: Optional[str] = None
+    duration: Optional[str] = None
+    intensity: Optional[int] = None
+    recovery: Optional[str] = None
+    owner_response: Optional[str] = None
+
+
+class GroomingHandlingProfile(BaseModel):
+    grooming_context: Optional[str] = None
+    handling_sensitive_areas: List[str] = []
+    grooming_tools: List[str] = []
+    handling_notes: Optional[str] = None
+    noise_sources: List[str] = []
+    noise_reaction: Optional[str] = None
+    recovery_pattern: Optional[str] = None
+
+
+class CaseIntakeSections(BaseModel):
+    case_summary: Optional[str] = None
+    owner_goals: List[str] = []
+    priority_concerns: List[str] = []
+    protective_factors: List[str] = []
+    grooming_handling: GroomingHandlingProfile = GroomingHandlingProfile()
+    health_context: Dict[str, Any] = {}
+    adoption_socialization: Dict[str, Any] = {}
+    nutrition: Dict[str, Any] = {}
+    walk_play_elimination: Dict[str, Any] = {}
+    training_history: Dict[str, Any] = {}
+    temperament_detail: Dict[str, Any] = {}
+    trainer_notes: Optional[str] = None
+
+
+class CaseIntakePayload(BaseModel):
+    status: str = "submitted"  # draft | submitted
+    source_context: str = "pro_intake"  # pro_intake | profile_edit | trainer_intake
+    sections: CaseIntakeSections = CaseIntakeSections()
+    behavior_episodes: List[BehaviorEpisode] = []
+
+
 # 설문 제출 모델
 
 class SurveySubmission(BaseModel):
@@ -184,6 +229,7 @@ class SurveyStage3(BaseModel):
     health_meta: HealthMeta = HealthMeta()
     activity_meta: ActivityMeta = ActivityMeta()
     rewards_meta: RewardsMeta = RewardsMeta()
+    case_intake: Optional[CaseIntakePayload] = None
 
 
 class SurveyStatusResponse(BaseModel):

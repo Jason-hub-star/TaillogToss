@@ -256,6 +256,7 @@ class Dog(Base):
     user = relationship("User", back_populates="dogs")
     env = relationship("DogEnv", back_populates="dog", uselist=False, cascade="all, delete-orphan")
     logs = relationship("BehaviorLog", back_populates="dog", cascade="all, delete-orphan")
+    case_intakes = relationship("CaseIntake", back_populates="dog", cascade="all, delete-orphan")
     coaching_reports = relationship("AICoaching", back_populates="dog", cascade="all, delete-orphan")
 
 
@@ -314,6 +315,34 @@ class BehaviorLog(Base):
 
     __table_args__ = (
         Index("idx_logs_dog_occurred", "dog_id", "occurred_at"),
+    )
+
+
+class CaseIntake(Base):
+    """Pro 상담지 원문/에피소드 보존 — 최신 요약은 dog_env에도 동기화"""
+    __tablename__ = "case_intakes"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid4)
+    dog_id = Column(UUID(as_uuid=True), ForeignKey("dogs.id", ondelete="CASCADE"), index=True, nullable=False)
+    author_user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    author_role = Column(String(50))
+    source_context = Column(String(50), nullable=False, default="pro_intake")
+    status = Column(String(20), nullable=False, default="submitted")
+    version = Column(Integer, nullable=False, default=1)
+    sections = Column(JSONB, nullable=False, server_default="{}")
+    behavior_episodes = Column(JSONB, nullable=False, server_default="[]")
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+    dog = relationship("Dog", back_populates="case_intakes")
+
+    __table_args__ = (
+        Index("idx_case_intakes_dog_updated", "dog_id", "updated_at"),
+        CheckConstraint("status in ('draft', 'submitted')", name="case_intakes_status_check"),
+        CheckConstraint(
+            "source_context in ('pro_intake', 'profile_edit', 'trainer_intake')",
+            name="case_intakes_source_context_check",
+        ),
     )
 
 

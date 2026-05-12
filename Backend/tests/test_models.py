@@ -10,6 +10,7 @@ from app.shared.models import (
     ActionTracker,
     Base,
     BehaviorLog,
+    CaseIntake,
     DailyReport,
     Dog,
     DogAssignment,
@@ -89,6 +90,17 @@ def test_behavior_log_b2b_extension():
     columns = {c.name for c in BehaviorLog.__table__.columns}
     assert "org_id" in columns
     assert "recorded_by" in columns
+
+
+def test_case_intake_model_fields():
+    """Pro 상담지 저장 테이블 필드"""
+    assert "case_intakes" in Base.metadata.tables
+    columns = {c.name for c in CaseIntake.__table__.columns}
+    expected = {
+        "id", "dog_id", "author_user_id", "author_role", "source_context",
+        "status", "version", "sections", "behavior_episodes", "created_at", "updated_at",
+    }
+    assert expected.issubset(columns), f"Missing CaseIntake fields: {expected - columns}"
 
 
 def test_daily_report_xor_constraint():

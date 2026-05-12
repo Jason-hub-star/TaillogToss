@@ -176,8 +176,65 @@ def _build_onboarding_section(ctx: dict | None) -> str:
             lines.append(f"- 일일 산책: {activity['daily_walk_minutes']}분")
         if rewards.get("ids"):
             lines.append(f"- 선호 보상: {', '.join(rewards['ids'][:2])}")
+        case_intake = s3.get("case_intake") or {}
+        if case_intake:
+            _append_case_intake_lines(lines, case_intake)
 
     return "\n".join(lines) + "\n" if len(lines) > 1 else ""
+
+
+def _clip_text(value: object, limit: int = 240) -> str:
+    if not isinstance(value, str):
+        return ""
+    text = " ".join(value.split())
+    return text if len(text) <= limit else text[:limit] + "..."
+
+
+def _append_case_intake_lines(lines: list[str], case_intake: dict) -> None:
+    sections = case_intake.get("sections") or {}
+    episodes = case_intake.get("behavior_episodes") or []
+    grooming = sections.get("grooming_handling") or {}
+
+    case_summary = _clip_text(sections.get("case_summary"))
+    if case_summary:
+        lines.append(f"- case_summary: {case_summary}")
+    if sections.get("owner_goals"):
+        lines.append(f"- owner_goals: {', '.join(sections['owner_goals'][:4])}")
+    if sections.get("protective_factors"):
+        lines.append(f"- protective_factors: {', '.join(sections['protective_factors'][:4])}")
+
+    if episodes:
+        lines.append("- behavior_episodes:")
+        for idx, episode in enumerate(episodes[:4], start=1):
+            episode_parts = [
+                _clip_text(episode.get("situation"), 90),
+                _clip_text(episode.get("antecedent"), 90),
+                _clip_text(episode.get("behavior"), 90),
+                _clip_text(episode.get("recovery"), 80),
+            ]
+            compact = " / ".join(part for part in episode_parts if part)
+            if compact:
+                lines.append(f"  {idx}. {compact}")
+
+    grooming_parts = []
+    if grooming.get("grooming_context"):
+        grooming_parts.append(_clip_text(grooming["grooming_context"], 120))
+    if grooming.get("handling_sensitive_areas"):
+        grooming_parts.append(f"민감 부위: {', '.join(grooming['handling_sensitive_areas'][:5])}")
+    if grooming.get("grooming_tools"):
+        grooming_parts.append(f"도구: {', '.join(grooming['grooming_tools'][:5])}")
+    if grooming_parts:
+        lines.append(f"- grooming_handling: {' / '.join(grooming_parts)}")
+
+    noise_parts = []
+    if grooming.get("noise_sources"):
+        noise_parts.append(f"소리원: {', '.join(grooming['noise_sources'][:6])}")
+    if grooming.get("noise_reaction"):
+        noise_parts.append(_clip_text(grooming["noise_reaction"], 160))
+    if grooming.get("recovery_pattern"):
+        noise_parts.append(f"회복: {_clip_text(grooming['recovery_pattern'], 120)}")
+    if noise_parts:
+        lines.append(f"- noise_sensitivity: {' / '.join(noise_parts)}")
 
 
 SYSTEM_PROMPT_ANALYSIS = """You are a dog behavior analyst. Analyze the provided behavior log data and return a JSON object with:

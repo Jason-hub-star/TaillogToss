@@ -25,8 +25,8 @@ import { useAuth } from 'stores/AuthContext';
 import { useActiveDog } from 'stores/ActiveDogContext';
 import { useDogDetail, useDogEnv, useUpdateDog, useDeleteDog } from 'lib/hooks/useDogs';
 import { uploadDogProfileImage } from 'lib/api/dog';
-import type { DogSex, HouseholdInfo } from 'types/dog';
-import { colors, typography } from 'styles/tokens';
+import type { CaseIntakePayload, DogSex, HouseholdInfo } from 'types/dog';
+import { colors, spacing, typography } from 'styles/tokens';
 import { usePageDataPerformance } from 'lib/performance/usePageDataPerformance';
 
 export const Route = createRoute('/dog/profile', {
@@ -53,6 +53,33 @@ const LIVING_TYPES: { value: HouseholdInfo['living_type']; label: string }[] = [
   { value: 'other', label: '기타' },
 ];
 
+function summarizeCaseIntake(intake?: CaseIntakePayload) {
+  const sections = intake?.sections;
+  const grooming = sections?.grooming_handling;
+  const episodeCount = intake?.behavior_episodes?.length ?? 0;
+  const coreCompleted = [
+    Boolean(sections?.case_summary && sections?.owner_goals?.length),
+    episodeCount > 0,
+    Boolean(grooming?.grooming_context || grooming?.noise_reaction || grooming?.noise_sources?.length),
+  ].filter(Boolean).length;
+
+  return {
+    coreCompleted,
+    episodeCount,
+    caseSummary: sections?.case_summary || '아직 저장된 핵심 고민이 없어요.',
+    goals: sections?.owner_goals ?? [],
+    handling: [
+      ...(grooming?.handling_sensitive_areas ?? []),
+      ...(grooming?.grooming_tools ?? []),
+    ].slice(0, 4),
+    noise: grooming?.noise_sources ?? [],
+    healthNote: typeof sections?.health_context?.healthNote === 'string'
+      ? sections.health_context.healthNote
+      : '',
+    status: intake?.status ?? 'draft',
+  };
+}
+
 function normalizeStringList(value: unknown): string[] {
   if (Array.isArray(value)) {
     return value.filter((item): item is string => typeof item === 'string');
@@ -76,6 +103,8 @@ function DogProfilePage() {
   const displayDog = dog ?? activeDog;
   const updateDog = useUpdateDog();
   const deleteDogMutation = useDeleteDog();
+  const caseIntake = dogEnv?.onboarding_survey?.stage3_response?.case_intake;
+  const intakeSummary = summarizeCaseIntake(caseIntake);
 
   // Basic info
   const [name, setName] = useState('');
@@ -214,6 +243,14 @@ function DogProfilePage() {
     setTriggers((prev) => (prev.includes(t) ? prev.filter((x) => x !== t) : [...prev, t]));
   }, []);
 
+  const handleEditProIntake = useCallback(() => {
+    navigation.navigate('/onboarding/stage3-form', {
+      dogId: activeDog?.id ?? '',
+      dogName: displayDog?.name ?? activeDog?.name ?? '우리 강아지',
+      mode: 'edit',
+    });
+  }, [activeDog?.id, activeDog?.name, displayDog?.name, navigation]);
+
   if (!isReady) {
     return (
       <SafeAreaView style={styles.safe}>
@@ -276,6 +313,33 @@ function DogProfilePage() {
         </View>
 
         <View style={styles.divider} />
+
+        <View style={styles.proCard}>
+          <View style={styles.proCardHeader}>
+            <View>
+              <Text style={styles.proTitle}>Pro 상담지 요약</Text>
+              <Text style={styles.proMeta}>
+                완성도 {intakeSummary.coreCompleted}/3 · 에피소드 {intakeSummary.episodeCount}개 · {intakeSummary.status === 'submitted' ? '제출됨' : '초안'}
+              </Text>
+            </View>
+            <TouchableOpacity style={styles.proEditButton} onPress={handleEditProIntake} activeOpacity={0.7}>
+              <Text style={styles.proEditText}>수정</Text>
+            </TouchableOpacity>
+          </View>
+          <Text style={styles.proSummaryText}>{intakeSummary.caseSummary}</Text>
+          {intakeSummary.goals.length ? (
+            <SummaryLine label="목표" value={intakeSummary.goals.slice(0, 2).join(' / ')} />
+          ) : null}
+          {intakeSummary.handling.length ? (
+            <SummaryLine label="핸들링" value={intakeSummary.handling.join(' / ')} />
+          ) : null}
+          {intakeSummary.noise.length ? (
+            <SummaryLine label="소리" value={intakeSummary.noise.join(' / ')} />
+          ) : null}
+          {intakeSummary.healthNote ? (
+            <SummaryLine label="건강" value={intakeSummary.healthNote} />
+          ) : null}
+        </View>
 
         {/* 환경 정보 */}
         <Accordion title="환경 정보">
@@ -405,6 +469,15 @@ function LabeledInput({
   );
 }
 
+function SummaryLine({ label, value }: { label: string; value: string }) {
+  return (
+    <View style={styles.summaryLine}>
+      <Text style={styles.summaryLabel}>{label}</Text>
+      <Text style={styles.summaryValue} numberOfLines={2}>{value}</Text>
+    </View>
+  );
+}
+
 // ──────────────────────────────────────
 // Styles
 // ──────────────────────────────────────
@@ -466,6 +539,41 @@ const styles = StyleSheet.create({
   switchLabel: { ...typography.label, color: colors.grey950 },
 
   divider: { height: 1, backgroundColor: colors.surfaceTertiary, marginVertical: 8 },
+
+  proCard: {
+    borderWidth: 1,
+    borderColor: colors.primaryBlueLight,
+    borderRadius: spacing.md,
+    padding: spacing.lg,
+    backgroundColor: colors.backgroundSecondary,
+    marginVertical: spacing.lg,
+  },
+  proCardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: spacing.md,
+    gap: spacing.md,
+  },
+  proTitle: { ...typography.body, color: colors.grey950, fontWeight: '700' },
+  proMeta: { ...typography.caption, color: colors.textSecondary, marginTop: spacing.xs },
+  proEditButton: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.primaryBlue,
+  },
+  proEditText: { ...typography.bodySmall, color: colors.primaryBlue, fontWeight: '700' },
+  proSummaryText: { ...typography.bodySmall, color: colors.textPrimary, marginBottom: spacing.sm },
+  summaryLine: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.sm,
+    marginTop: spacing.xs,
+  },
+  summaryLabel: { ...typography.caption, color: colors.textSecondary, width: 48, fontWeight: '700' },
+  summaryValue: { ...typography.caption, color: colors.textPrimary, flex: 1 },
 
   // Living type chips
   livingTypeRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 16 },

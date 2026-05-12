@@ -39,6 +39,7 @@ export function useSubmitStage2() {
     mutationFn: ({ dogId, data }) => dogApi.submitSurveyStage2(dogId, data),
     onSuccess: (result) => {
       void qc.invalidateQueries({ queryKey: queryKeys.survey.status(result.dog_id) });
+      void qc.invalidateQueries({ queryKey: queryKeys.dogs.env(result.dog_id) });
     },
   });
 }
@@ -49,6 +50,7 @@ export function useSubmitStage3() {
     mutationFn: ({ dogId, data }) => dogApi.submitSurveyStage3(dogId, data),
     onSuccess: (result) => {
       void qc.invalidateQueries({ queryKey: queryKeys.survey.status(result.dog_id) });
+      void qc.invalidateQueries({ queryKey: queryKeys.dogs.env(result.dog_id) });
     },
   });
 }
@@ -63,6 +65,7 @@ export function usePatchSurveyStage() {
     mutationFn: ({ dogId, stage, data }) => dogApi.patchSurveyStage(dogId, stage, data),
     onSuccess: (result) => {
       void qc.invalidateQueries({ queryKey: queryKeys.survey.status(result.dog_id) });
+      void qc.invalidateQueries({ queryKey: queryKeys.dogs.env(result.dog_id) });
     },
   });
 }

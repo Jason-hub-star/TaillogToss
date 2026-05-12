@@ -19,7 +19,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import BadRequestException, NotFoundException
 from app.features.onboarding import schemas
-from app.shared.models import BehaviorLog, Dog, DogEnv, User
+from app.shared.models import BehaviorLog, CaseIntake, Dog, DogEnv, User
 
 
 async def create_dog_with_env(
@@ -181,6 +181,18 @@ async def update_dog_with_stage3(
     existing_activity.update(data.activity_meta.model_dump(mode="json", exclude_none=True))
     dog_env.activity_meta = existing_activity
     dog_env.rewards_meta = data.rewards_meta.model_dump(mode="json")
+    if data.case_intake:
+        intake_dump = data.case_intake.model_dump(mode="json", exclude_none=True)
+        db.add(CaseIntake(
+            dog_id=dog_id,
+            author_user_id=user_id,
+            author_role="user",
+            source_context=intake_dump.get("source_context", "pro_intake"),
+            status=intake_dump.get("status", "submitted"),
+            sections=intake_dump.get("sections") or {},
+            behavior_episodes=intake_dump.get("behavior_episodes") or [],
+        ))
+        _sync_case_intake_summary(dog_env, intake_dump)
     await db.commit()
 
 
@@ -259,8 +271,64 @@ async def patch_survey_stage(
             dog_env.activity_meta = data["activity_meta"]
         if "rewards_meta" in data:
             dog_env.rewards_meta = data["rewards_meta"]
+        if "case_intake" in data:
+            _sync_case_intake_summary(dog_env, data["case_intake"])
 
     await db.commit()
+
+
+def _truthy_text(value: Any) -> bool:
+    return isinstance(value, str) and bool(value.strip())
+
+
+def _sync_case_intake_summary(dog_env: DogEnv, case_intake: dict[str, Any]) -> None:
+    """긴 상담지는 case_intakes에 보존하고 dog_env에는 최신 AI/프로필 요약만 둔다."""
+    sections = case_intake.get("sections") or {}
+    episodes = case_intake.get("behavior_episodes") or []
+    grooming = sections.get("grooming_handling") or {}
+    owner_goals = [g for g in sections.get("owner_goals", []) if _truthy_text(g)]
+    priority_concerns = [c for c in sections.get("priority_concerns", []) if _truthy_text(c)]
+    protective_factors = [p for p in sections.get("protective_factors", []) if _truthy_text(p)]
+
+    current_temperament = dict(dog_env.temperament or {})
+    current_temperament.update({
+        "case_summary": sections.get("case_summary"),
+        "owner_goals": owner_goals,
+        "priority_concerns": priority_concerns,
+        "protective_factors": protective_factors,
+        "episode_count": len(episodes),
+        "grooming_handling": grooming,
+        "noise_sensitivity": {
+            "sources": grooming.get("noise_sources", []),
+            "reaction": grooming.get("noise_reaction"),
+            "recovery_pattern": grooming.get("recovery_pattern"),
+        },
+    })
+    dog_env.temperament = current_temperament
+
+    current_issues = dict(dog_env.chronic_issues or {})
+    if priority_concerns:
+        current_issues["top_issues"] = priority_concerns[:3]
+    if sections.get("case_summary"):
+        current_issues["other_text"] = sections.get("case_summary")
+    dog_env.chronic_issues = current_issues
+
+    trigger_candidates = [
+        item
+        for episode in episodes
+        for item in [episode.get("situation"), episode.get("antecedent")]
+        if _truthy_text(item)
+    ]
+    if grooming.get("noise_sources"):
+        trigger_candidates.extend(grooming.get("noise_sources"))
+    if trigger_candidates:
+        dog_env.triggers = {"ids": [], "other_text": " / ".join(trigger_candidates[:6])}
+
+    health_context = sections.get("health_context")
+    if isinstance(health_context, dict) and any(health_context.values()):
+        current_health = dict(dog_env.health_meta or {})
+        current_health["case_intake"] = health_context
+        dog_env.health_meta = current_health
 
 
 async def _get_dog_env_owned(

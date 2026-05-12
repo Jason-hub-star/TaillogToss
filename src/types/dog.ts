@@ -38,10 +38,19 @@ export interface DogEnv {
   health_meta: HealthMeta;
   triggers: string[];
   past_attempts: string[];
-  temperament: string | null;
+  temperament: Record<string, unknown> | string | null;
   activity_meta: ActivityMeta;
   chronic_issues?: ChronicIssues | null; // 설문 step3 행동 문제 (DB 영구 저장)
   rewards_meta?: Record<string, unknown> | null;
+  onboarding_survey?: {
+    completion_stage?: number;
+    stage1_completed_at?: string;
+    stage2_completed_at?: string;
+    stage3_completed_at?: string;
+    stage1_response?: Record<string, unknown>;
+    stage2_response?: Record<string, unknown>;
+    stage3_response?: SurveyStage3Request;
+  } | null;
   created_at: string;
   updated_at: string;
 }
@@ -202,7 +211,69 @@ export interface SurveyStage2Request {
   rewards_meta?: { ids: string[] };
 }
 
-/** Stage 3 — 기질/건강 */
+export type CaseIntakeStatus = 'draft' | 'submitted';
+export type CaseIntakeSourceContext = 'pro_intake' | 'profile_edit' | 'trainer_intake';
+
+export interface BehaviorEpisode {
+  id?: string;
+  title?: string;
+  situation?: string;
+  antecedent?: string;
+  behavior?: string;
+  consequence?: string;
+  duration?: string;
+  intensity?: number;
+  recovery?: string;
+  owner_response?: string;
+}
+
+export interface GroomingHandlingProfile {
+  grooming_context?: string;
+  handling_sensitive_areas?: string[];
+  grooming_tools?: string[];
+  handling_notes?: string;
+  noise_sources?: string[];
+  noise_reaction?: string;
+  recovery_pattern?: string;
+}
+
+export interface CaseIntakeSections {
+  case_summary?: string;
+  owner_goals?: string[];
+  priority_concerns?: string[];
+  protective_factors?: string[];
+  grooming_handling?: GroomingHandlingProfile;
+  health_context?: Record<string, unknown>;
+  adoption_socialization?: Record<string, unknown>;
+  nutrition?: Record<string, unknown>;
+  walk_play_elimination?: Record<string, unknown>;
+  training_history?: Record<string, unknown>;
+  temperament_detail?: Record<string, unknown>;
+  trainer_notes?: string;
+}
+
+export interface CaseIntakePayload {
+  status?: CaseIntakeStatus;
+  source_context?: CaseIntakeSourceContext;
+  sections: CaseIntakeSections;
+  behavior_episodes: BehaviorEpisode[];
+}
+
+export interface CaseIntake {
+  id: string;
+  dog_id: string;
+  author_user_id?: string | null;
+  author_role?: string | null;
+  source_context: CaseIntakeSourceContext;
+  status: CaseIntakeStatus;
+  version: number;
+  sections: CaseIntakeSections;
+  behavior_episodes: BehaviorEpisode[];
+  created_at: string;
+  updated_at: string;
+}
+
+/** Stage 3 — Pro 풀 개인화 상담지 */
 export interface SurveyStage3Request {
   temperament: {
     sensitivity_score?: number;
@@ -216,6 +287,7 @@ export interface SurveyStage3Request {
   health_meta: { chronic_issues: string[]; medications: string[]; vet_notes?: string };
   activity_meta: { daily_walk_minutes: number; exercise_level?: string };
   rewards_meta: { ids: string[] };
+  case_intake?: CaseIntakePayload;
 }
 
 /** 설문 완성도 응답 */

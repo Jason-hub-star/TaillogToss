@@ -446,7 +446,7 @@ function Stage3FormPage() {
       title={`${displayDogName} Pro 상담지`}
       onBack={() => navigation.goBack()}
       bottomCTA={{
-        label: submitStage3.isPending ? '저장 중...' : '상담지 저장',
+        label: submitStage3.isPending ? '저장 중...' : params.mode === 'edit' ? '저장하기' : '상담지 저장',
         onPress: handleSubmit,
         disabled: submitStage3.isPending,
       }}

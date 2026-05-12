@@ -45,3 +45,5 @@
 - 2026-05-12: `python3 scripts/pro_intake_fixture_report.py`로 우디 + 5 합성 fixture 병렬 추천 비교표 생성.
 - 2026-05-12: `Backend/.env`의 `OPENAI_API_KEY`를 사용해 실제 OpenAI 병렬 호출 성공. 6케이스 합산 비용 약 `$0.004838`, 입력/출력 토큰 범위 `1028~1136 / 992~1154`, latency `15.1~17.5s`.
 - 2026-05-12: ADB reverse `tcp:8081`, `tcp:8765` 설정 후 `viva.republica.toss.test` 실행. `GraniteActivity` resumed, `/onboarding/stage3-form` 및 `/dog/profile` 스크린샷 검증 완료.
+- 2026-05-12: AI 프롬프트에 기법/심리원리/도구/환경/단계/성공기준/중단기준/상담지근거 라벨과 humane technique search space 추가. 우디 실제 호출에서 탈감작·안전 신호·도구·환경·10초 기준까지 반영 확인.
+- 2026-05-12: Pro 상담지 edit mode CTA를 `저장하기`로 변경.

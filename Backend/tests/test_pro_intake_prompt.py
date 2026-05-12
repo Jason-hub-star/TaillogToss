@@ -69,6 +69,23 @@ def test_pro_intake_context_is_included_in_prompt():
     assert "윗집 발소리" in prompt
 
 
+def test_system_prompt_requires_specific_technique_tool_environment_search():
+    system_prompt = prompts.SYSTEM_PROMPT_6BLOCK
+
+    assert "Technique Search Space" in system_prompt
+    assert "[기법]" in system_prompt
+    assert "[심리원리]" in system_prompt
+    assert "[도구]" in system_prompt
+    assert "[환경]" in system_prompt
+    assert "[성공기준]" in system_prompt
+    assert "desensitization" in system_prompt
+    assert "counterconditioning" in system_prompt
+    assert "threshold management" in system_prompt
+    assert "below the dog's current threshold" in system_prompt
+    assert "Internally compare 2-3 suitable techniques" in system_prompt
+    assert "Never recommend aversive tools" in system_prompt
+
+
 def test_pro_intake_prompt_handles_multiple_fixture_shapes():
     fixture_markers = [
         ("어린 강아지 배변 실수와 흥분 점프", "방문객에게 점프하고 배변 실수", "청소기에는 금방 회복"),

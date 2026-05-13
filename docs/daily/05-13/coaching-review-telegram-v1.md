@@ -31,3 +31,4 @@ Status: InProgress
 - Current behavior-group matching is inferred from reference ids and keywords; 50-decision review should judge whether a dedicated DB field is needed.
 - Self-review result: no blocking code issue found for v1. Remaining gaps are operational: bot env setup, dry-run preview, real send, and callback scenario validation.
 - Real-send note: multiple button taps arrived before processing; the latest valid callback plus rejection comment was treated as the owner intent for this manual test.
+- Decision: same `review_id` multiple unprocessed callbacks must use latest Telegram `update_id` as the owner intent; older callbacks are ignored while offset still advances.

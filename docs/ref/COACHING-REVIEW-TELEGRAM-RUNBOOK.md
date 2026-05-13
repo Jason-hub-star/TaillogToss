@@ -178,6 +178,16 @@ The automation must ignore:
 - callback data with invalid HMAC signature
 - duplicate callbacks for already finalized queue records
 
+If several unprocessed callbacks arrive for the same `review_id`, the automation must process only the callback with the largest Telegram `update_id`.
+
+Example:
+- `approve` arrives as `update_id=10`
+- `reject` arrives as `update_id=11`
+- process `reject`
+- ignore `approve`
+- advance the offset past both updates
+- keep one final queue transition for that candidate
+
 ## Self-Review Notes
 
 Good:
@@ -193,7 +203,7 @@ Weak:
 Verification gap:
 - Run one dry-run preview.
 - Run one real Telegram send.
-- Test approve, reject-with-comment, hold, invalid chat id, invalid signature, and duplicate callback.
+- Test approve, reject-with-comment, hold, invalid chat id, invalid signature, duplicate callback, and latest-callback-wins.
 
 ## Promotion Rule
 

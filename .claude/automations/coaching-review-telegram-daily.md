@@ -86,10 +86,13 @@ Content-Type: application/json
 - `action`은 `approve`, `reject`, `hold`만 허용한다.
 - `sig`는 `review_id + ":" + action`을 `TAILLOG_TELEGRAM_CALLBACK_SECRET`로 HMAC-SHA256 처리한 뒤 앞 16자를 사용한다.
 - 서명이 틀리면 Telegram `answerCallbackQuery`로 "서명이 맞지 않아 처리하지 않았어요"라고 응답하고 queue는 바꾸지 않는다.
+- 같은 `review_id`에 대해 여러 미처리 callback이 한 번에 수거되면 `update_id`가 가장 큰 최신 callback만 처리한다.
+- 최신 callback을 제외한 같은 `review_id`의 이전 callback은 DB/API/queue 변경 없이 무시하고, offset만 함께 전진시킨다.
 
 ### 2. 버튼 처리
 
 queue에서 `review_id`를 찾는다.
+callback 처리 전 같은 실행 배치의 유효 callback을 `review_id`별로 묶고, 각 그룹에서 가장 큰 `update_id` 1개만 남긴다.
 
 승인:
 ```bash
@@ -126,6 +129,7 @@ X-Admin-Key: ${ADMIN_API_KEY}
 중복 클릭:
 - queue 상태가 이미 `approved`, `rejected`, `held`, `error`면 DB/API를 다시 호출하지 않는다.
 - Telegram에는 "이미 처리된 후보예요"라고 응답한다.
+- queue가 아직 `pending` 또는 `rejected_waiting_comment`이면 동일 실행에서 선택된 최신 callback의 action을 현재 주인님 의도로 본다.
 
 ### 3. 반려 코멘트 연결
 

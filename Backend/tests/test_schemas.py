@@ -9,8 +9,10 @@ from pydantic import ValidationError
 
 from app.features.auth.schemas import UserResponse
 from app.features.coaching.schemas import (
+    ActionItem,
     CoachingBlocks,
     CoachingRequest,
+    DayPlan,
     FeedbackRequest,
 )
 from app.features.dogs.schemas import DogCreateRequest
@@ -69,6 +71,36 @@ class TestCoachingSchemas:
         assert blocks.action_plan.items == []
         assert blocks.dog_voice.emotion == "hopeful"
         assert blocks.risk_signals.overall_risk == "low"
+
+    def test_deep_coaching_fields_are_optional_and_serializable(self):
+        action = ActionItem(
+            id="a1",
+            description="문 손잡이 단서부터 3초 연습",
+            technique="desensitization",
+            psychological_principle="threshold management",
+            tools=["treat", "video log"],
+            environment_setup="현관에서 시작",
+            steps=["문 손잡이를 만지고 보상", "3초 이탈 후 조용히 복귀"],
+            success_criteria="3회 연속 짖음 없이 회복",
+            stop_criteria="짖음 또는 문 긁기",
+            plan_b="1초로 낮추기",
+            plan_c="문 손잡이 보기만 보상",
+            evidence_from_intake="보호자 일시 이탈 시 짖음",
+            reference_curriculum_ids=["separation_anxiety"],
+        )
+        day = DayPlan(
+            day_number=1,
+            focus="이탈 단서 낮추기",
+            tasks=["문 손잡이 3회"],
+            session_duration_minutes=3,
+            environment="현관",
+            tools=["간식"],
+            progression_rule="성공 3회 후 1초 증가",
+            reference_curriculum_ids=["separation_anxiety"],
+        )
+
+        assert action.model_dump()["technique"] == "desensitization"
+        assert day.model_dump()["reference_curriculum_ids"] == ["separation_anxiety"]
 
 
 class TestDogSchemas:

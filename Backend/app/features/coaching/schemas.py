@@ -23,6 +23,17 @@ class ActionItem(BaseModel):
     description: str = ""
     priority: str = "medium"  # high | medium | low
     is_completed: bool = False
+    technique: Optional[str] = None
+    psychological_principle: Optional[str] = None
+    tools: Optional[List[str]] = None
+    environment_setup: Optional[str] = None
+    steps: Optional[List[str]] = None
+    success_criteria: Optional[str] = None
+    stop_criteria: Optional[str] = None
+    plan_b: Optional[str] = None
+    plan_c: Optional[str] = None
+    evidence_from_intake: Optional[str] = None
+    reference_curriculum_ids: Optional[List[str]] = None
 
 
 class ActionPlanBlock(BaseModel):
@@ -39,6 +50,11 @@ class DayPlan(BaseModel):
     day_number: int = 1
     focus: str = ""
     tasks: List[str] = []
+    session_duration_minutes: Optional[int] = None
+    environment: Optional[str] = None
+    tools: Optional[List[str]] = None
+    progression_rule: Optional[str] = None
+    reference_curriculum_ids: Optional[List[str]] = None
 
 
 class Next7DaysBlock(BaseModel):

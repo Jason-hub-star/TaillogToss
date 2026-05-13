@@ -6,7 +6,7 @@
  */
 import React from 'react';
 import { View, Text, Image, StyleSheet, ScrollView } from 'react-native';
-import type { Next7DaysBlock, RiskSignalsBlock, ConsultationQuestionsBlock } from 'types/coaching';
+import type { Next7DaysBlock, RiskSignalsBlock, ConsultationQuestionsBlock, DayPlan } from 'types/coaching';
 import { colors, typography, spacing } from 'styles/tokens';
 import { ICONS } from 'lib/data/iconSources';
 
@@ -111,10 +111,33 @@ export function Next7DaysView({
                 <Text style={styles.dayTask} numberOfLines={2}>{task}</Text>
               </View>
             ))}
+            <DayPlanMeta day={day} />
           </View>
         );
       })}
     </ScrollView>
+  );
+}
+
+function DayPlanMeta({ day }: { day: DayPlan }) {
+  const rows: Array<{ label: string; value: string }> = [];
+  if (day.session_duration_minutes) rows.push({ label: '시간', value: `${day.session_duration_minutes}분` });
+  if (day.environment) rows.push({ label: '장소', value: day.environment });
+  if (day.tools?.length) rows.push({ label: '준비물', value: day.tools.join(', ') });
+  if (day.progression_rule) rows.push({ label: '다음 기준', value: day.progression_rule });
+  if (day.reference_curriculum_ids?.length) rows.push({ label: '참고 훈련', value: day.reference_curriculum_ids.join(', ') });
+
+  if (rows.length === 0) return null;
+
+  return (
+    <View style={styles.dayMetaBox}>
+      {rows.map((row) => (
+        <View key={row.label} style={styles.dayMetaRow}>
+          <Text style={styles.dayMetaLabel}>{row.label}</Text>
+          <Text style={styles.dayMetaText} numberOfLines={2}>{row.value}</Text>
+        </View>
+      ))}
+    </View>
   );
 }
 
@@ -360,6 +383,29 @@ const styles = StyleSheet.create({
     lineHeight: 18,
     color: colors.grey600,
     flex: 1,
+  },
+  dayMetaBox: {
+    marginTop: spacing.sm,
+    paddingTop: spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    gap: 2,
+  },
+  dayMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.xs,
+  },
+  dayMetaLabel: {
+    ...typography.caption,
+    width: 52,
+    color: colors.primaryBlue,
+    fontWeight: '700',
+  },
+  dayMetaText: {
+    ...typography.caption,
+    flex: 1,
+    color: colors.grey700,
   },
   // ── 위험 게이지 ──
   gaugeContainer: {

@@ -4,6 +4,11 @@ DogCoach coach/prompts.py + ai_recommendations/prompts.py 통합
 Parity: AI-001
 """
 
+from app.features.coaching.training_references import (
+    format_training_references_for_prompt,
+    retrieve_training_references,
+)
+
 SYSTEM_PROMPT_6BLOCK = """당신은 반려견 행동 전문 코치입니다. 따뜻하고 전문적인 시각으로 보호자와 반려견을 함께 지원합니다.
 
 페르소나:
@@ -11,6 +16,7 @@ SYSTEM_PROMPT_6BLOCK = """당신은 반려견 행동 전문 코치입니다. 따
 - 과학적 근거(행동 분석, ABC 모델)를 바탕으로 하되, 전문 용어 대신 쉬운 표현을 사용합니다
 - 부정적 평가 대신 개선 가능성과 긍정적 변화를 강조합니다
 - 한국어 존댓말(요체)을 사용합니다
+- 사용자에게 보이는 문장은 토스 UX Writing 톤을 따릅니다: 해요체, 능동형, 긍정형, 짧은 문장, 어려운 한자어/전문어 최소화, 한 문장에 한 가지 행동.
 
 Output a JSON object with exactly these 6 blocks:
 1. "insight": Behavior analysis with key patterns and trend
@@ -23,15 +29,16 @@ Output a JSON object with exactly these 6 blocks:
 JSON Schema:
 {
   "insight": {"title": str, "summary": str, "key_patterns": [str], "trend": "improving"|"stable"|"worsening"},
-  "action_plan": {"title": str, "items": [{"id": str, "description": str, "priority": "high"|"medium"|"low", "is_completed": false}]},
+  "action_plan": {"title": str, "items": [{"id": str, "description": str, "priority": "high"|"medium"|"low", "is_completed": false, "technique": str, "psychological_principle": str, "tools": [str], "environment_setup": str, "steps": [str], "success_criteria": str, "stop_criteria": str, "plan_b": str, "plan_c": str, "evidence_from_intake": str, "reference_curriculum_ids": [str]}]},
   "dog_voice": {"message": str, "emotion": "happy"|"anxious"|"confused"|"hopeful"|"tired"},
-  "next_7_days": {"days": [{"day_number": int, "focus": str, "tasks": [str]}]},
+  "next_7_days": {"days": [{"day_number": int, "focus": str, "tasks": [str], "session_duration_minutes": int, "environment": str, "tools": [str], "progression_rule": str, "reference_curriculum_ids": [str]}]},
   "risk_signals": {"signals": [{"type": str, "description": str, "severity": "low"|"medium"|"high", "recommendation": str}], "overall_risk": "low"|"medium"|"high"|"critical"},
   "consultation_questions": {"questions": [str], "recommended_specialist": "behaviorist"|"trainer"|"vet"|null}
 }
 
 Important:
 - Write all text in Korean (존댓말, 요체)
+- Keep user-facing text Toss-style: easy, active, positive, concise. Prefer "3초만 기다려요" over "분리불안 둔감화를 실시합니다". If a technical term is useful, put it after the easy phrase in parentheses.
 - Provide exactly 3-5 action items
 - Provide a 7-day plan with 2-3 tasks per day
 - The dog_voice message should be empathetic and in first person from the dog's POV
@@ -39,8 +46,12 @@ Important:
 - Return ONLY valid JSON, no markdown
 - Do not give generic advice. Every action must be specific to the dog's intake, episodes, triggers, recovery pattern, rewards, handling sensitivity, health risk, and home/walk environment.
 - Internally compare 2-3 suitable techniques from the Technique Search Space, then output the best-fit technique for the case. Do not mention the comparison process.
-- For every action_plan.items[].description, include these labeled parts in one readable Korean sentence or paragraph:
-  [기법] training technique, [심리원리] psychological/learning principle, [도구] required tools, [환경] setup/location/distance/noise level, [단계] exact first step with duration/count/distance, [성공기준] measurable success criteria, [중단기준] stop/regress criteria, [상담지근거] short evidence from intake.
+- For every action_plan.items[].description, write 1-2 short Toss-style Korean sentences for the owner. Do NOT include bracket labels such as [기법], [도구], [성공기준] in description. Put those details in structured fields instead.
+- Also fill every available structured field in action_plan.items[]: technique, psychological_principle, tools, environment_setup, steps, success_criteria, stop_criteria, plan_b, plan_c, evidence_from_intake, reference_curriculum_ids. Keep description readable for free users; use structured fields for Pro depth. Structured text should still be easy for owners to read.
+- For next_7_days.days[], fill session_duration_minutes, environment, tools, progression_rule, and reference_curriculum_ids whenever a retrieved reference applies.
+- reference_curriculum_ids must contain only curriculum IDs from Retrieved Training References. If no reference applies, return an empty array.
+- If Retrieved Training References lists IDs and the action or day addresses the same behavior, reference_curriculum_ids must include at least one listed ID. Do not leave it empty for the main problem behavior.
+- Retrieved Training References are examples of curriculum principles, not answer text. Do not copy them verbatim; recombine them with the dog's intake, episodes, triggers, protective factors, and health/handling context.
 - The first step must be below the dog's current threshold. For separation anxiety, sound sensitivity, grooming/handling fear, stranger fear, or dog reactivity, start with seconds, lowest volume, larger distance, or minimal touch. Never start with a duration/intensity that already caused barking, freezing, growling, escape, or panic in the intake.
 - For next_7_days.days[].tasks, include concrete technique/tool/environment instructions. Avoid tasks such as "practice training" without duration, criteria, or context.
 - For risk_signals.signals[].recommendation, include what to avoid and when to consult a vet/trainer/behaviorist.
@@ -83,6 +94,7 @@ def build_user_prompt(
     """
     onboarding_section = _build_onboarding_section(onboarding_context)
     persona_section = _build_ai_persona_section(ai_persona)
+    training_reference_section = _build_training_reference_section(issues, triggers, onboarding_context)
 
     prev_section = ""
     if previous_coaching_summary:
@@ -99,6 +111,7 @@ Reference previous trends and note improvements or regressions.
 - Age: {age_months} months
 - Primary Issues: {', '.join(issues) if issues else 'None specified'}
 - Known Triggers: {', '.join(triggers) if triggers else 'None specified'}
+{training_reference_section}
 
 Report Type: {report_type}
 
@@ -131,6 +144,15 @@ AI Coaching Preference:
 
 Apply these preferences across summaries, action plans, and dog_voice while preserving safety rules.
 """
+
+
+def _build_training_reference_section(
+    issues: list[str],
+    triggers: list[str],
+    onboarding_context: dict | None,
+) -> str:
+    references = retrieve_training_references(issues, triggers, onboarding_context, limit=3)
+    return format_training_references_for_prompt(references)
 
 
 def _build_onboarding_section(ctx: dict | None) -> str:

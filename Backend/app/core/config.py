@@ -56,8 +56,8 @@ class Settings(BaseSettings):
     AI_MAX_RETRIES: int = 1
     AI_TEMPERATURE: float = 0.2
     AI_TOP_P: float = 1.0
-    AI_MAX_INPUT_TOKENS: int = 1200
-    AI_MAX_OUTPUT_TOKENS: int = 1800
+    AI_MAX_INPUT_TOKENS: int = 6000
+    AI_MAX_OUTPUT_TOKENS: int = 3200
 
     @property
     def is_production(self) -> bool:

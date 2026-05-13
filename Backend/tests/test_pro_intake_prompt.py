@@ -65,6 +65,12 @@ def test_pro_intake_context_is_included_in_prompt():
     assert "noise_sensitivity" in prompt
     assert "owner_goals" in prompt
     assert "protective_factors" in prompt
+    assert "Retrieved Training References" in prompt
+    assert "separation_anxiety" in prompt
+    assert "reactivity_management" in prompt
+    assert "fear_desensitization" in prompt
+    assert "reference_curriculum_ids" in prompt
+    assert "Do not copy steps verbatim" in prompt
     assert "보호자 일시 이탈" in prompt
     assert "윗집 발소리" in prompt
 
@@ -73,17 +79,21 @@ def test_system_prompt_requires_specific_technique_tool_environment_search():
     system_prompt = prompts.SYSTEM_PROMPT_6BLOCK
 
     assert "Technique Search Space" in system_prompt
-    assert "[기법]" in system_prompt
-    assert "[심리원리]" in system_prompt
-    assert "[도구]" in system_prompt
-    assert "[환경]" in system_prompt
-    assert "[성공기준]" in system_prompt
+    assert "Do NOT include bracket labels" in system_prompt
+    assert "structured fields" in system_prompt
     assert "desensitization" in system_prompt
     assert "counterconditioning" in system_prompt
     assert "threshold management" in system_prompt
     assert "below the dog's current threshold" in system_prompt
     assert "Internally compare 2-3 suitable techniques" in system_prompt
     assert "Never recommend aversive tools" in system_prompt
+    assert "reference_curriculum_ids" in system_prompt
+    assert "Do not leave it empty for the main problem behavior" in system_prompt
+    assert "environment_setup" in system_prompt
+    assert "success_criteria" in system_prompt
+    assert "stop_criteria" in system_prompt
+    assert "Toss-style" in system_prompt
+    assert "easy, active, positive, concise" in system_prompt
 
 
 def test_pro_intake_prompt_handles_multiple_fixture_shapes():

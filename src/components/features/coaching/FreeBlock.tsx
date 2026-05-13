@@ -5,7 +5,7 @@
  */
 import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, Image, StyleSheet, TouchableOpacity, Animated } from 'react-native';
-import type { InsightBlock, ActionPlanBlock, DogVoiceBlock } from 'types/coaching';
+import type { InsightBlock, ActionPlanBlock, DogVoiceBlock, ActionItem } from 'types/coaching';
 import { SpeechBubble } from 'components/tds-ext/SpeechBubble';
 import { colors, typography, spacing } from 'styles/tokens';
 import { ICONS } from 'lib/data/iconSources';
@@ -88,17 +88,18 @@ const PRIORITY_LABEL: Record<string, string> = {
 };
 
 function CheckboxItem({
-  description,
-  priority,
-  isCompleted,
+  item,
   onToggle,
+  isPro,
 }: {
-  description: string;
-  priority: string;
-  isCompleted: boolean;
+  item: ActionItem;
   onToggle?: () => void;
+  isPro?: boolean;
 }) {
   const scaleAnim = useRef(new Animated.Value(1)).current;
+  const [isExpanded, setIsExpanded] = useState(false);
+  const detailRows = buildActionDetailRows(item);
+  const hasDeepDetails = isPro && detailRows.length > 0;
 
   const handlePress = () => {
     // scale bounce 애니메이션
@@ -119,37 +120,93 @@ function CheckboxItem({
 
   return (
     <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
-      <TouchableOpacity
+      <View
         style={styles.actionItem}
-        onPress={handlePress}
-        activeOpacity={0.7}
       >
-        <View style={[styles.checkboxOuter, isCompleted && styles.checkboxChecked]}>
-          {isCompleted && <Text style={styles.checkmark}>✓</Text>}
-        </View>
-        <View style={styles.actionContent}>
-          <Text style={[styles.actionText, isCompleted && styles.completed]}>
-            {description}
-          </Text>
-          <View style={[styles.priorityBadge, { backgroundColor: PRIORITY_COLOR[priority] + '1A' }]}>
-            <Text style={[styles.priorityText, { color: PRIORITY_COLOR[priority] }]}>
-              {PRIORITY_LABEL[priority]}
-            </Text>
+        <TouchableOpacity
+          style={styles.actionTapRow}
+          onPress={handlePress}
+          activeOpacity={0.7}
+        >
+          <View style={[styles.checkboxOuter, item.is_completed && styles.checkboxChecked]}>
+            {item.is_completed && <Text style={styles.checkmark}>✓</Text>}
           </View>
-        </View>
-      </TouchableOpacity>
+          <View style={styles.actionContent}>
+            <Text style={[styles.actionText, item.is_completed && styles.completed]}>
+              {item.description}
+            </Text>
+            <View style={[styles.priorityBadge, { backgroundColor: PRIORITY_COLOR[item.priority] + '1A' }]}>
+              <Text style={[styles.priorityText, { color: PRIORITY_COLOR[item.priority] }]}>
+                {PRIORITY_LABEL[item.priority]}
+              </Text>
+            </View>
+          </View>
+        </TouchableOpacity>
+
+        {hasDeepDetails && (
+          <View style={styles.deepSection}>
+            <TouchableOpacity
+              style={styles.deepToggle}
+              onPress={() => setIsExpanded((prev) => !prev)}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.deepToggleText}>
+                {isExpanded ? '자세히 접기' : '자세히 보기'}
+              </Text>
+            </TouchableOpacity>
+            {isExpanded && (
+              <View style={styles.deepDetailBox}>
+                {detailRows.map((row) => (
+                  <View key={row.label} style={styles.deepDetailRow}>
+                    <Text style={styles.deepDetailLabel}>{row.label}</Text>
+                    <Text style={styles.deepDetailText}>{row.value}</Text>
+                  </View>
+                ))}
+              </View>
+            )}
+          </View>
+        )}
+      </View>
     </Animated.View>
   );
+}
+
+function buildActionDetailRows(item: ActionItem): Array<{ label: string; value: string }> {
+  const rows: Array<{ label: string; value: string }> = [];
+  const append = (label: string, value?: string | string[]) => {
+    if (Array.isArray(value)) {
+      const compact = value.filter(Boolean).join(', ');
+      if (compact) rows.push({ label, value: compact });
+      return;
+    }
+    if (value) rows.push({ label, value });
+  };
+
+  append('방법', item.technique);
+  append('이유', item.psychological_principle);
+  append('준비물', item.tools);
+  append('장소', item.environment_setup);
+  append('순서', item.steps?.map((step, idx) => `${idx + 1}. ${step}`).join('\n'));
+  append('잘 된 기준', item.success_criteria);
+  append('멈출 신호', item.stop_criteria);
+  append('다른 방법', item.plan_b);
+  append('더 쉽게', item.plan_c);
+  append('상담지 근거', item.evidence_from_intake);
+  append('참고 훈련', item.reference_curriculum_ids);
+
+  return rows;
 }
 
 export function ActionPlanBlockView({
   data,
   onToggleItem,
   onNavigateToTraining,
+  isPro,
 }: {
   data: ActionPlanBlock;
   onToggleItem?: (itemId: string) => void;
   onNavigateToTraining?: () => void;
+  isPro?: boolean;
 }) {
   const completedCount = data.items.filter((i) => i.is_completed).length;
   const totalCount = data.items.length;
@@ -181,9 +238,8 @@ export function ActionPlanBlockView({
       {data.items.map((item) => (
         <CheckboxItem
           key={item.id}
-          description={item.description}
-          priority={item.priority}
-          isCompleted={item.is_completed}
+          item={item}
+          isPro={isPro}
           onToggle={() => onToggleItem?.(item.id)}
         />
       ))}
@@ -371,11 +427,13 @@ const styles = StyleSheet.create({
     borderRadius: 2,
   },
   actionItem: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
     paddingVertical: 10,
     borderBottomWidth: 1,
     borderBottomColor: colors.divider,
+  },
+  actionTapRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
   },
   checkboxOuter: {
     width: 22,
@@ -418,6 +476,47 @@ const styles = StyleSheet.create({
   priorityText: {
     fontSize: 11,
     fontWeight: '600',
+  },
+  deepSection: {
+    marginLeft: 22 + spacing.md,
+    marginTop: spacing.sm,
+  },
+  deepToggle: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 4,
+    borderRadius: 8,
+    backgroundColor: colors.blue50,
+  },
+  deepToggleText: {
+    ...typography.caption,
+    color: colors.primaryBlue,
+    fontWeight: '700',
+  },
+  deepDetailBox: {
+    marginTop: spacing.sm,
+    padding: spacing.md,
+    borderRadius: 10,
+    backgroundColor: colors.surfaceSecondary,
+    borderWidth: 1,
+    borderColor: colors.border,
+    gap: spacing.xs,
+  },
+  deepDetailRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.sm,
+  },
+  deepDetailLabel: {
+    ...typography.caption,
+    width: 68,
+    color: colors.textSecondary,
+    fontWeight: '700',
+  },
+  deepDetailText: {
+    ...typography.caption,
+    flex: 1,
+    color: colors.grey700,
   },
   // Dog voice
   dogVoiceHeader: {

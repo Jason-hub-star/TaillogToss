@@ -32,7 +32,12 @@ export function CoachingBlockList({ blocks, onToggleActionItem, onNavigateToTrai
       <InsightBlockView data={blocks.insight} />
 
       {/* Block ② 실행 계획 */}
-      <ActionPlanBlockView data={blocks.action_plan} onToggleItem={onToggleActionItem} onNavigateToTraining={onNavigateToTraining} />
+      <ActionPlanBlockView
+        data={blocks.action_plan}
+        isPro={isPro}
+        onToggleItem={onToggleActionItem}
+        onNavigateToTraining={onNavigateToTraining}
+      />
 
       {/* Block ③ 강아지 시점 메시지 */}
       <DogVoiceBlockView data={blocks.dog_voice} dogName={dogName} dogImageUrl={dogImageUrl} />

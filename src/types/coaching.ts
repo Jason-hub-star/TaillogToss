@@ -61,6 +61,17 @@ export interface ActionItem {
   description: string;
   priority: 'high' | 'medium' | 'low';
   is_completed: boolean;
+  technique?: string;
+  psychological_principle?: string;
+  tools?: string[];
+  environment_setup?: string;
+  steps?: string[];
+  success_criteria?: string;
+  stop_criteria?: string;
+  plan_b?: string;
+  plan_c?: string;
+  evidence_from_intake?: string;
+  reference_curriculum_ids?: string[];
 }
 
 /** Block 3: 강아지 시점 메시지 (SpeechBubble) */
@@ -78,6 +89,11 @@ export interface DayPlan {
   day_number: number; // 1-7
   focus: string;
   tasks: string[];
+  session_duration_minutes?: number;
+  environment?: string;
+  tools?: string[];
+  progression_rule?: string;
+  reference_curriculum_ids?: string[];
 }
 
 /** Block 5: 위험 신호 분석 (PRO) */

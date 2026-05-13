@@ -198,3 +198,18 @@ class TrainingCandidateReviewResponse(BaseModel):
     training_approved_at: Optional[datetime] = None
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class TrainingCandidateSummaryResponse(BaseModel):
+    id: UUID
+    is_synthetic: bool
+    behavior_group: str
+    training_quality_score: int
+    risk_level: str = "unknown"
+    reference_curriculum_ids: List[str] = []
+    telegram_preview: str
+    created_at: Optional[datetime] = None
+
+
+class TrainingCandidatePayloadResponse(BaseModel):
+    payload: Dict[str, Any]

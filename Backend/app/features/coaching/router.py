@@ -196,6 +196,43 @@ async def export_jsonl(
     return {"count": count, "batch_name": batch_name, "content": content}
 
 
+@router.get("/admin/training-candidates", response_model=List[schemas.TrainingCandidateSummaryResponse])
+async def list_training_candidates(
+    source: str = "synthetic",
+    behavior_group: Optional[str] = None,
+    limit: int = 20,
+    _: None = Depends(verify_admin_key),
+    db: AsyncSession = Depends(get_db),
+):
+    """텔레그램 검수 자동화용 훈련데이터 후보 목록."""
+    from app.features.coaching.training import list_training_candidates as list_candidates
+
+    return await list_candidates(
+        db,
+        source=source,
+        behavior_group=behavior_group,
+        limit=max(1, min(limit, 50)),
+    )
+
+
+@router.get(
+    "/admin/training-candidates/{coaching_id}/candidate-payload",
+    response_model=schemas.TrainingCandidatePayloadResponse,
+)
+async def get_training_candidate_payload(
+    coaching_id: UUID,
+    _: None = Depends(verify_admin_key),
+    db: AsyncSession = Depends(get_db),
+):
+    """승인된 후보를 src/lib/data/candidates/ai-coaching 저장용 JSON으로 반환."""
+    from app.features.coaching.training import build_candidate_payload, get_training_candidate
+
+    coaching = await get_training_candidate(db, coaching_id)
+    if coaching is None:
+        raise HTTPException(status_code=404, detail="coaching_not_found")
+    return {"payload": build_candidate_payload(coaching)}
+
+
 @router.post(
     "/admin/training-candidates/{coaching_id}/review",
     response_model=schemas.TrainingCandidateReviewResponse,

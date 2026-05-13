@@ -86,6 +86,19 @@
     ]
   },
   {
+    "name": "coaching-review-telegram-daily",
+    "file": "coaching-review-telegram-daily.md",
+    "task_id": "coaching-review-telegram-daily",
+    "schedule_kr": "매일 09:00 (Asia/Seoul)",
+    "lock": null,
+    "freshness_hours": 26,
+    "artifacts": [
+      "docs/status/coaching-review-queue.jsonl",
+      "docs/status/coaching-review-telegram-offset.json",
+      "docs/status/TRAINING-DATA-LOG.md"
+    ]
+  },
+  {
     "name": "weekly-coaching-finetune-review",
     "file": "weekly-coaching-finetune-review.md",
     "task_id": "weekly-coaching-finetune-review",

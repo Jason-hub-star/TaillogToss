@@ -52,6 +52,7 @@
 | approved JSONL export | ✅ 구현 | `POST /api/v1/coaching/admin/export-jsonl` |
 | 합성 코칭 생성 엔드포인트 | ✅ 코드 존재 | `POST /api/v1/coaching/admin/generate-synthetic` |
 | 커리큘럼 reference 기반 추천 | ✅ 구현 | `reference_curriculum_ids` + backend `training_references.py` |
+| 텔레그램 검수 재료 수집 | ✅ v1 골격 | `coaching-review-telegram-daily.md` + queue/feedback/offset 상태 파일 + 후보 목록/payload admin API |
 | 자동 커리큘럼 수정 | ❌ 미구현 | `src/lib/data` approved/published pipeline과 `ai_coaching` export가 연결되지 않음 |
 | 전문가 승인 API | ✅ 구현 | `POST /api/v1/coaching/admin/training-candidates/{coaching_id}/review` 승인/반려 |
 | 전문가 승인 UI | ❌ 미구현 | FE Ops 화면은 아직 없음 |
@@ -61,7 +62,7 @@
 ### 정합성 판단
 
 - `PROJECT-STATUS.md`의 AI-TRAIN-001 요약은 "자동화 2개"가 동작 중처럼 읽힐 수 있으나, 실제 자동화 상태 문서는 둘 다 `UNSCHEDULED`로 기록한다.
-- 현재 프로젝트에는 "AI 추천 결과를 내 훈련데이터 개선 후보로 수집/태깅/export"하는 골격은 있다.
+- 현재 프로젝트에는 "AI 추천 결과를 내 훈련데이터 개선 후보로 수집/태깅/export"하고, 합성 후보를 텔레그램 검수 재료로 보내는 v1 골격이 있다.
 - 현재 프로젝트에는 "AI 추천 결과가 자동으로 `src/lib/data/approved` 또는 `published/runtime.ts`를 개선"하는 기능은 없다.
 - 현재 품질점수는 2026-05-13에 추가된 구조화 필드를 반영하도록 보강됐다. 다음 단계는 action별 behavior matching 품질을 점수에 더 세밀하게 반영하는 것이다.
 - `coaching_synthetic_log.coaching_ids` ORM 타입은 migration의 `UUID[]`와 정렬됐다. 다음 단계는 실제 `daily-coaching-synthetic-gen` 재실행으로 persistence를 확인하는 것이다.
@@ -69,11 +70,11 @@
 ### 개선 우선순위
 
 1. 실제 `daily-coaching-synthetic-gen`을 재실행해 `coaching_synthetic_log` 1건 + `ai_coaching` 3건 persistence를 확인한다.
-2. 전문가/운영자용 승인 UI를 추가해 새 review API를 사람이 안전하게 쓰게 한다.
-3. approved JSONL에 placeholder prompt 대신 실제 상담지 요약/행동 episode/reference IDs를 포함한다.
-4. `src/lib/data/candidates/ai-coaching` 후보 생성 파이프라인과 `export-jsonl` 결과를 연결하되, 자동 publish는 하지 않고 human review를 필수로 둔다.
+2. `coaching-review-telegram-daily.md`를 `DRY_RUN=true`로 실행해 실제 텔레그램 메시지 preview를 확인한다.
+3. 새 Taillog 텔레그램 봇 토큰/채팅 ID를 등록하고 합성 후보 1건 실발송을 검증한다.
+4. approved JSONL에 placeholder prompt 대신 실제 상담지 요약/행동 episode/reference IDs를 포함한다.
 5. action별 behavior matching을 고도화해 reference id 보정과 품질점수 평가를 더 정교하게 만든다.
-6. `daily-coaching-synthetic-gen`, `weekly-coaching-finetune-review` 자동화를 실제 실행 환경에 등록하거나 문서에서 `UNSCHEDULED` 상태를 명시 유지한다.
+6. 50건마다 개선 리포트를 만들고, 실제 프롬프트/품질점수/reference matching 수정은 별도 승인 후 진행한다.
 
 ---
 

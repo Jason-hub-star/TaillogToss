@@ -3,7 +3,14 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from app.features.coaching.training import calculate_quality_score, review_training_candidate
+from app.features.coaching.training import (
+    build_candidate_payload,
+    build_telegram_review_preview,
+    calculate_quality_score,
+    infer_behavior_group,
+    list_training_candidates,
+    review_training_candidate,
+)
 from app.shared.models import AICoaching, ReportType
 
 
@@ -39,6 +46,89 @@ def test_quality_score_counts_structured_pro_action_fields():
     )
 
     assert calculate_quality_score(coaching) == 100
+
+
+def test_training_candidate_payload_is_candidate_only_material():
+    coaching = AICoaching(
+        id=uuid4(),
+        dog_id=uuid4(),
+        report_type=ReportType.DAILY,
+        blocks=_structured_blocks(),
+        is_synthetic=True,
+    )
+
+    payload = build_candidate_payload(coaching)
+
+    assert payload["source"] == "ai_coaching_synthetic"
+    assert payload["status"] == "pending_curriculum_review"
+    assert payload["behavior_group"] == "separation_anxiety"
+    assert payload["reference_curriculum_ids"] == ["separation_anxiety"]
+    assert "published" not in payload
+    assert "runtime" not in payload
+
+
+def test_telegram_preview_explains_no_app_curriculum_publish():
+    coaching = AICoaching(
+        id=uuid4(),
+        report_type=ReportType.DAILY,
+        blocks=_structured_blocks(),
+        is_synthetic=True,
+    )
+
+    preview = build_telegram_review_preview(coaching)
+
+    assert "AI 훈련데이터 후보" in preview
+    assert "separation_anxiety" in preview
+    assert "앱 커리큘럼에는 아직 반영되지 않아요" in preview
+
+
+def test_infer_behavior_group_uses_keywords_when_reference_is_missing():
+    blocks = {
+        "action_plan": {
+            "items": [
+                {
+                    "description": "실내 배변 실수가 줄도록 패드 주변 성공을 다시 쌓아요.",
+                }
+            ]
+        }
+    }
+
+    assert infer_behavior_group(blocks) == "house_soiling"
+
+
+@pytest.mark.asyncio
+async def test_list_training_candidates_filters_behavior_group_after_summary():
+    selected = AICoaching(
+        id=uuid4(),
+        report_type=ReportType.DAILY,
+        blocks=_structured_blocks(),
+        training_candidate=True,
+        training_approved=False,
+        is_synthetic=True,
+    )
+    other = AICoaching(
+        id=uuid4(),
+        report_type=ReportType.DAILY,
+        blocks={"action_plan": {"items": [{"description": "실내 배변 실수를 줄여요."}]}},
+        training_candidate=True,
+        training_approved=False,
+        is_synthetic=True,
+    )
+    result = MagicMock()
+    result.scalars.return_value.all.return_value = [selected, other]
+    db = AsyncMock()
+    db.execute = AsyncMock(return_value=result)
+
+    candidates = await list_training_candidates(
+        db,
+        source="synthetic",
+        behavior_group="separation_anxiety",
+        limit=1,
+    )
+
+    assert len(candidates) == 1
+    assert candidates[0]["id"] == selected.id
+    assert candidates[0]["behavior_group"] == "separation_anxiety"
 
 
 @pytest.mark.asyncio

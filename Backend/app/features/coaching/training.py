@@ -8,7 +8,7 @@ import logging
 from datetime import datetime, timezone
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.features.coaching.prompts import SYSTEM_PROMPT_6BLOCK
@@ -36,6 +36,33 @@ SENSORY_KEYWORDS = [
 ]
 
 VALID_RISK_LEVELS = {"low", "medium", "high", "critical"}
+
+BEHAVIOR_GROUP_ROTATION = [
+    "separation_anxiety",
+    "fear_desensitization",
+    "reactivity_management",
+    "impulse_control",
+    "house_soiling",
+    "jumping",
+    "barking",
+]
+
+BEHAVIOR_GROUP_KEYWORDS = {
+    "separation_anxiety": ["분리", "이탈", "혼자", "외출", "separation", "alone"],
+    "fear_desensitization": ["소리", "둔감", "공포", "무서", "놀라", "클리퍼", "noise", "fear"],
+    "reactivity_management": ["반응성", "다른 개", "낯선", "산책", "reactivity", "other dog"],
+    "impulse_control": ["자원", "식사", "기다려", "흥분", "resource", "impulse"],
+    "house_soiling": ["배변", "마킹", "소변", "실수", "house", "marking"],
+    "jumping": ["점프", "뛰어오", "달려들", "jump"],
+    "barking": ["짖", "吠", "bark"],
+}
+
+CURRICULUM_TO_BEHAVIOR_GROUP = {
+    "separation_anxiety": "separation_anxiety",
+    "fear_desensitization": "fear_desensitization",
+    "reactivity_management": "reactivity_management",
+    "impulse_control": "impulse_control",
+}
 
 STRUCTURED_ACTION_FIELDS = [
     "technique",
@@ -80,6 +107,132 @@ def _has_concrete_action_signal(item: dict) -> bool:
         ]
     )
     return any(kw in searchable_text for kw in TRAINING_METHOD_KEYWORDS)
+
+
+def _collect_reference_curriculum_ids(blocks: dict) -> list[str]:
+    refs: list[str] = []
+    for item in blocks.get("action_plan", {}).get("items", []) or []:
+        if isinstance(item, dict):
+            refs.extend(item.get("reference_curriculum_ids") or [])
+    for day in blocks.get("next_7_days", {}).get("days", []) or []:
+        if isinstance(day, dict):
+            refs.extend(day.get("reference_curriculum_ids") or [])
+    deduped: list[str] = []
+    for ref in refs:
+        if isinstance(ref, str) and ref not in deduped:
+            deduped.append(ref)
+    return deduped
+
+
+def _collect_training_text(blocks: dict) -> str:
+    parts: list[str] = []
+    for key in ["insight", "dog_voice", "risk_signals", "consultation_questions"]:
+        value = blocks.get(key)
+        if value:
+            parts.append(json.dumps(value, ensure_ascii=False))
+    for item in blocks.get("action_plan", {}).get("items", []) or []:
+        if isinstance(item, dict):
+            parts.append(json.dumps(item, ensure_ascii=False))
+    return " ".join(parts).lower()
+
+
+def infer_behavior_group(blocks: dict) -> str:
+    """텔레그램 검수 큐의 행동군 순환 기준을 추정한다."""
+    refs = _collect_reference_curriculum_ids(blocks)
+    for ref in refs:
+        mapped = CURRICULUM_TO_BEHAVIOR_GROUP.get(ref)
+        if mapped:
+            return mapped
+
+    text = _collect_training_text(blocks)
+    for group in BEHAVIOR_GROUP_ROTATION:
+        if any(keyword.lower() in text for keyword in BEHAVIOR_GROUP_KEYWORDS[group]):
+            return group
+    return "barking"
+
+
+def _first_action_items(blocks: dict, limit: int = 3) -> list[dict]:
+    items = blocks.get("action_plan", {}).get("items", []) or []
+    return [item for item in items if isinstance(item, dict)][:limit]
+
+
+def _telegram_lines_for_candidate(coaching: AICoaching) -> list[str]:
+    blocks = coaching.blocks or {}
+    actions = _first_action_items(blocks)
+    insight = blocks.get("insight", {}) if isinstance(blocks.get("insight"), dict) else {}
+    risk = blocks.get("risk_signals", {}) if isinstance(blocks.get("risk_signals"), dict) else {}
+    first_action = actions[0] if actions else {}
+
+    summary_lines = [
+        str(item.get("description") or "").strip()
+        for item in actions
+        if str(item.get("description") or "").strip()
+    ][:3]
+    if not summary_lines and insight.get("summary"):
+        summary_lines = [str(insight["summary"]).strip()]
+
+    return [
+        "AI 훈련데이터 후보가 생겼어요",
+        "",
+        f"후보 ID: {str(coaching.id)[:8]}...",
+        f"유형: 합성 케이스 · {infer_behavior_group(blocks)}",
+        f"품질점수: {coaching.training_quality_score or calculate_quality_score(coaching)}점",
+        "",
+        "추천 요약",
+        *[f"{index + 1}. {line}" for index, line in enumerate(summary_lines[:3])],
+        "",
+        f"기법: {first_action.get('technique') or '미기재'}",
+        f"도구: {', '.join(first_action.get('tools') or []) if first_action.get('tools') else '미기재'}",
+        f"성공 기준: {first_action.get('success_criteria') or '미기재'}",
+        f"멈출 기준: {first_action.get('stop_criteria') or '미기재'}",
+        f"위험도: {risk.get('overall_risk') or 'unknown'}",
+        "",
+        "승인해도 앱 커리큘럼에는 아직 반영되지 않아요.",
+        "승인 시 후보 파일로만 저장돼요.",
+    ]
+
+
+def build_telegram_review_preview(coaching: AICoaching) -> str:
+    """텔레그램에 보낼 짧은 검수 메시지."""
+    return "\n".join(line for line in _telegram_lines_for_candidate(coaching) if line is not None).strip()
+
+
+def build_candidate_payload(coaching: AICoaching) -> dict:
+    """승인된 AI 코칭을 src/lib/data/candidates/ai-coaching 저장용 JSON으로 변환한다."""
+    blocks = coaching.blocks or {}
+    return {
+        "source": "ai_coaching_synthetic" if coaching.is_synthetic else "ai_coaching_real_user",
+        "status": "pending_curriculum_review",
+        "coaching_id": str(coaching.id),
+        "dog_id": str(coaching.dog_id) if coaching.dog_id else None,
+        "behavior_group": infer_behavior_group(blocks),
+        "training_quality_score": coaching.training_quality_score or calculate_quality_score(coaching),
+        "created_at": coaching.created_at.isoformat() if coaching.created_at else None,
+        "reference_curriculum_ids": _collect_reference_curriculum_ids(blocks),
+        "action_plan": blocks.get("action_plan", {}),
+        "next_7_days": blocks.get("next_7_days", {}),
+        "risk_signals": blocks.get("risk_signals", {}),
+        "evidence_from_intake": [
+            item.get("evidence_from_intake")
+            for item in _first_action_items(blocks, limit=10)
+            if item.get("evidence_from_intake")
+        ],
+    }
+
+
+def to_training_candidate_summary(coaching: AICoaching) -> dict:
+    blocks = coaching.blocks or {}
+    risk = blocks.get("risk_signals", {}) if isinstance(blocks.get("risk_signals"), dict) else {}
+    return {
+        "id": coaching.id,
+        "is_synthetic": bool(coaching.is_synthetic),
+        "behavior_group": infer_behavior_group(blocks),
+        "training_quality_score": coaching.training_quality_score or calculate_quality_score(coaching),
+        "risk_level": risk.get("overall_risk") or "unknown",
+        "reference_curriculum_ids": _collect_reference_curriculum_ids(blocks),
+        "telegram_preview": build_telegram_review_preview(coaching),
+        "created_at": coaching.created_at,
+    }
 
 
 def calculate_quality_score(coaching: AICoaching) -> int:
@@ -165,6 +318,40 @@ async def tag_unscored_candidates(
     await db.commit()
     logger.info("tagged %d unscored coaching records", len(records))
     return len(records)
+
+
+async def list_training_candidates(
+    db: AsyncSession,
+    source: str = "synthetic",
+    behavior_group: str | None = None,
+    limit: int = 20,
+) -> list[dict]:
+    """텔레그램 자동화가 검수 후보를 고를 수 있게 후보 목록을 반환한다."""
+    fetch_limit = max(1, min(limit * 5, 100))
+    q = (
+        select(AICoaching)
+        .where(
+            AICoaching.training_candidate == True,
+            AICoaching.training_approved == False,
+        )
+        .order_by(desc(AICoaching.training_quality_score), desc(AICoaching.created_at))
+        .limit(fetch_limit)
+    )
+    if source == "synthetic":
+        q = q.where(AICoaching.is_synthetic == True)
+    elif source == "real_user":
+        q = q.where(AICoaching.is_synthetic == False)
+
+    records = (await db.execute(q)).scalars().all()
+    summaries = [to_training_candidate_summary(record) for record in records]
+    if behavior_group:
+        summaries = [item for item in summaries if item["behavior_group"] == behavior_group]
+    return summaries[:limit]
+
+
+async def get_training_candidate(db: AsyncSession, coaching_id: UUID) -> AICoaching | None:
+    q = select(AICoaching).where(AICoaching.id == coaching_id)
+    return (await db.execute(q)).scalar_one_or_none()
 
 
 async def review_training_candidate(

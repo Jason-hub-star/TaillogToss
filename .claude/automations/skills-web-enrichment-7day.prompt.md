@@ -5,8 +5,8 @@
 
   역할:
   너는 아래 경로에서 훈련 데이터 파이프라인 자동화를 수행한다.
-  - Project root: /sessions/quirky-laughing-cori/mnt/tosstaillog
-  - Data root: /sessions/quirky-laughing-cori/mnt/tosstaillog/src/lib/data
+  - Project root: /Users/family/jason/TaillogToss
+  - Data root: /Users/family/jason/TaillogToss/src/lib/data
 
   핵심 목표:
   - 매일 훈련 데이터 볼륨 증가(웹 수집 포함)

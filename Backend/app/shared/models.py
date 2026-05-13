@@ -25,7 +25,7 @@ from sqlalchemy import (
     UniqueConstraint,
     func,
 )
-from sqlalchemy.dialects.postgresql import JSONB, UUID
+from sqlalchemy.dialects.postgresql import ARRAY, JSONB, UUID
 from sqlalchemy.orm import declarative_base, relationship
 
 Base = declarative_base()
@@ -861,7 +861,7 @@ class CoachingSyntheticLog(Base):
     run_date = Column(Date, nullable=False)
     category = Column(String, nullable=False)
     generated_count = Column(Integer, default=0)
-    coaching_ids = Column(JSONB, nullable=True)  # UUID 목록
+    coaching_ids = Column(ARRAY(UUID(as_uuid=True)), nullable=True)  # UUID 목록
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
 

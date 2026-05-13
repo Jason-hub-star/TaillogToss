@@ -179,3 +179,22 @@ class CostStatusResponse(BaseModel):
     monthly_cost_usd: float = 0.0
     monthly_budget_usd: float = 30.0
     budget_mode: str = "normal"  # normal | saving_mode | rule_only
+
+
+# 훈련 데이터 플라이휠 관리자 검수
+
+class TrainingCandidateReviewRequest(BaseModel):
+    approved: bool
+    training_version: Optional[str] = Field(None, max_length=64)
+    quality_score: Optional[int] = Field(None, ge=0, le=100)
+
+
+class TrainingCandidateReviewResponse(BaseModel):
+    id: UUID
+    training_candidate: bool
+    training_approved: bool
+    training_quality_score: Optional[int] = None
+    training_version: Optional[str] = None
+    training_approved_at: Optional[datetime] = None
+
+    model_config = ConfigDict(from_attributes=True)

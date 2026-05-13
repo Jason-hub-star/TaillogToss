@@ -12,8 +12,8 @@ Hooks: 1개 | Commands: 4개 | MCP: 2개
 | code-doc-align | 매일 03:30 | ✅ HEALTHY | LOCK_RELEASED | 03-02 03:06 | |
 | skills-web-enrichment-7day | 매일 03:00 | ✅ HEALTHY | LOCK_RELEASED | 03-02 08:21 | 수동 lock 해제 (pid 20494 dead 확인) |
 | architecture-diagrams-sync | 매일 04:00 | ✅ HEALTHY | LOCK_RELEASED | 03-02 19:22 | 최초 실행 완료, arch-06 Last-Verified 갱신 |
-| daily-coaching-synthetic-gen | 매일 08:00 | ⚠️ UNSCHEDULED | — | 미실행 | FastAPI admin API 호출 방식. Supabase Edge Function 포팅 후 pg_cron 등록 예정 |
-| weekly-coaching-finetune-review | 매주 일 09:00 | ⚠️ UNSCHEDULED | — | 미실행 | 주간 훈련 데이터 검수 리포트. pg_cron 등록 예정 |
+| daily-coaching-synthetic-gen | 매일 08:00 | ⚠️ UNSCHEDULED | — | 미실행 | FastAPI admin API 호출 방식(`BACKEND_BASE_URL` 기본 8765). Supabase Edge Function 포팅 후 pg_cron 등록 예정 |
+| weekly-coaching-finetune-review | 매주 금 10:00 | ⚠️ UNSCHEDULED | — | 미실행 | weekly orchestrator TASK 2로 정렬. 관리자 review API 기준 검수 |
 
 ## Hooks & Commands (2026-04-02 신규)
 

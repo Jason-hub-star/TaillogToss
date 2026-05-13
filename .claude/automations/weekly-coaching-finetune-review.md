@@ -1,6 +1,6 @@
 # TaillogToss 주간 훈련 데이터 검수 + Fine-tuning 준비
 
-스케줄: 매주 일요일 09:00 (Asia/Seoul)
+스케줄: 매주 금요일 10:00 (Asia/Seoul, weekly orchestrator TASK 2)
 
 ## 목적
 
@@ -106,25 +106,22 @@ approved >= 50건이면:
 
 ## 운영자 검수 방법
 
-검수 후 승인 (Supabase MCP 또는 직접 SQL):
-```sql
-UPDATE ai_coaching
-SET
-  training_approved = TRUE,
-  training_approved_at = NOW(),
-  training_version = '2026-04-W{week}'
-WHERE id IN (
-  'uuid1',
-  'uuid2'
-  -- 검수 목록에서 복사
-);
+검수 후 승인 (관리자 API):
+```http
+POST /api/v1/coaching/admin/training-candidates/{coaching_id}/review
+X-Admin-Key: {ADMIN_API_KEY 환경변수 값}
+Content-Type: application/json
+
+{"approved":true,"training_version":"2026-04-W{week}"}
 ```
 
 반려 (낮은 품질):
-```sql
-UPDATE ai_coaching
-SET training_candidate = FALSE
-WHERE id = 'uuid-반려할-id';
+```http
+POST /api/v1/coaching/admin/training-candidates/{coaching_id}/review
+X-Admin-Key: {ADMIN_API_KEY 환경변수 값}
+Content-Type: application/json
+
+{"approved":false,"quality_score":45}
 ```
 
 ## 비용 절감 타임라인 참조

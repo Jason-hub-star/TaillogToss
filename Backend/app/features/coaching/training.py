@@ -5,6 +5,7 @@ Parity: AI-TRAIN-001
 """
 import json
 import logging
+from datetime import datetime, timezone
 from uuid import UUID
 
 from sqlalchemy import select
@@ -36,6 +37,50 @@ SENSORY_KEYWORDS = [
 
 VALID_RISK_LEVELS = {"low", "medium", "high", "critical"}
 
+STRUCTURED_ACTION_FIELDS = [
+    "technique",
+    "psychological_principle",
+    "tools",
+    "environment_setup",
+    "steps",
+    "success_criteria",
+    "stop_criteria",
+    "plan_b",
+    "plan_c",
+    "evidence_from_intake",
+    "reference_curriculum_ids",
+]
+
+
+def _has_value(value) -> bool:
+    if value is None:
+        return False
+    if isinstance(value, str):
+        return bool(value.strip())
+    if isinstance(value, list):
+        return bool([item for item in value if str(item).strip()])
+    return bool(value)
+
+
+def _has_concrete_action_signal(item: dict) -> bool:
+    """Pro 심화 필드나 기존 방법론 키워드가 있으면 구체적 액션으로 판단한다."""
+    structured_count = sum(1 for field in STRUCTURED_ACTION_FIELDS if _has_value(item.get(field)))
+    if structured_count >= 3:
+        return True
+
+    searchable_text = " ".join(
+        str(item.get(field, ""))
+        for field in [
+            "description",
+            "technique",
+            "psychological_principle",
+            "environment_setup",
+            "success_criteria",
+            "stop_criteria",
+        ]
+    )
+    return any(kw in searchable_text for kw in TRAINING_METHOD_KEYWORDS)
+
 
 def calculate_quality_score(coaching: AICoaching) -> int:
     """
@@ -53,10 +98,10 @@ def calculate_quality_score(coaching: AICoaching) -> int:
         elif coaching.feedback_score >= 3:
             score += 20
 
-    # ② ActionPlan 훈련방법론 키워드 포함 여부
+    # ② ActionPlan 훈련방법론 또는 Pro 심화 구조 필드 포함 여부
     action_items = blocks.get("action_plan", {}).get("items", [])
     if isinstance(action_items, list) and action_items and any(
-        any(kw in item.get("description", "") for kw in TRAINING_METHOD_KEYWORDS)
+        _has_concrete_action_signal(item)
         for item in action_items
         if isinstance(item, dict)
     ):
@@ -120,6 +165,42 @@ async def tag_unscored_candidates(
     await db.commit()
     logger.info("tagged %d unscored coaching records", len(records))
     return len(records)
+
+
+async def review_training_candidate(
+    db: AsyncSession,
+    coaching_id: UUID,
+    approved: bool,
+    training_version: str | None = None,
+    quality_score: int | None = None,
+) -> AICoaching | None:
+    """
+    관리자 검수 결과를 training_approved에 반영한다.
+    승인 시 후보 플래그를 유지하고, 반려 시 후보/승인 상태를 함께 해제한다.
+    """
+    q = select(AICoaching).where(AICoaching.id == coaching_id)
+    coaching = (await db.execute(q)).scalar_one_or_none()
+    if coaching is None:
+        return None
+
+    coaching.training_quality_score = (
+        quality_score if quality_score is not None else calculate_quality_score(coaching)
+    )
+
+    if approved:
+        coaching.training_candidate = True
+        coaching.training_approved = True
+        coaching.training_approved_at = datetime.now(timezone.utc)
+        if training_version:
+            coaching.training_version = training_version
+    else:
+        coaching.training_candidate = False
+        coaching.training_approved = False
+        coaching.training_approved_at = None
+
+    await db.commit()
+    await db.refresh(coaching)
+    return coaching
 
 
 def _build_user_prompt_for_record(coaching: AICoaching) -> str:

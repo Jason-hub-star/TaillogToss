@@ -24,7 +24,7 @@
 
 ---
 
-## [AI 코칭 Fine-tuning] 현황 요약 (마지막 업데이트: 2026-04-27, 본선 DB psql 직접 측정)
+## [AI 코칭 Fine-tuning] 현황 요약 (마지막 업데이트: 2026-05-13, 코드/문서 정합성 기준)
 
 | 항목 | 수치 |
 |------|------|
@@ -35,9 +35,9 @@
 | 전체 ai_coaching 행 | 3건 (오늘 0건 추가, 어제 0건) |
 | `coaching_synthetic_log` | 0건 (테이블 비어 있음 — 단 한 번도 성공 INSERT 없음) |
 | Fine-tuning 상태 | 준비 부족 (< 50건, 측정 확정) |
-| 실제 Blocker (재진단) | ❌ ORM-DB 스키마 드리프트: `app/shared/models.py:830` `coaching_ids = Column(JSONB)` ↔ 본선 DB `coaching_ids UUID[]` (migration `20260420200000_coaching_training_flywheel.sql:57`) → asyncpg `DatatypeMismatchError` |
+| 실제 Blocker (재진단) | ✅ 코드 수정 완료: `Backend/app/shared/models.py` `coaching_ids = Column(ARRAY(UUID(as_uuid=True)))` ↔ 본선 DB `coaching_ids UUID[]` 정렬. 실제 일일 생성 재실행은 별도 운영 검증 필요 |
 | 이전 "Blocker 해소" 주장 검증 | ⚠️ `AI_LLM_TIMEOUT_SEC` 환경변수 부재(.env/process env 어디에도 없음) · MCP 프로젝트 정렬 미완(MCP는 여전히 TailLog+vibe만, `gxvtgrcqkbdibkyeqyil` 미연결) · uvicorn 단일화는 ✅ 확인(PID 27770, 1h49m) — 단일화 덕분에 traceback 가시화되어 진짜 원인 식별 |
-| 잔여 조건 | (1) ORM 모델 수정 `Column(ARRAY(UUID(as_uuid=True)))`로 정렬 또는 migration으로 컬럼 JSONB 변환 (2) 수정 후 재실행 시 일일 3건 정상 persistence (3) MCP 본선 정렬은 측정 편의를 위해 여전히 권장 |
+| 잔여 조건 | (1) 수정 후 재실행 시 일일 3건 정상 persistence 확인 (2) MCP 본선 정렬은 측정 편의를 위해 여전히 권장 (3) 자동화 scheduler 등록 상태 확정 |
 
 ## [AI 코칭 → 훈련데이터 개선 루프] 2026-05-13 코드/문서 정합성 감사
 
@@ -47,32 +47,33 @@
 |------|-----------|------|
 | AI 코칭 저장 | ✅ 구현 | `ai_coaching.blocks`, `feedback_score`, `ai_tokens_used` 저장 |
 | 사용자 피드백 반영 | ✅ 부분 구현 | `feedback_score >= 4`면 품질점수 +40, `>=3`이면 +20 |
-| 품질 후보 태깅 | ✅ 구현 | `calculate_quality_score()` + `tag_training_candidate()` |
+| 품질 후보 태깅 | ✅ 보강 | `calculate_quality_score()`가 `technique`, `steps`, `success_criteria`, `stop_criteria`, `reference_curriculum_ids` 등 Pro 심화 필드도 평가 |
 | 관리자 후보 재태깅 | ✅ 구현 | `POST /api/v1/coaching/admin/tag-candidates` |
 | approved JSONL export | ✅ 구현 | `POST /api/v1/coaching/admin/export-jsonl` |
 | 합성 코칭 생성 엔드포인트 | ✅ 코드 존재 | `POST /api/v1/coaching/admin/generate-synthetic` |
 | 커리큘럼 reference 기반 추천 | ✅ 구현 | `reference_curriculum_ids` + backend `training_references.py` |
 | 자동 커리큘럼 수정 | ❌ 미구현 | `src/lib/data` approved/published pipeline과 `ai_coaching` export가 연결되지 않음 |
-| 전문가 승인 UI | ❌ 미구현 | `training_approved`를 바꾸는 FE/BE API 없음 |
+| 전문가 승인 API | ✅ 구현 | `POST /api/v1/coaching/admin/training-candidates/{coaching_id}/review` 승인/반려 |
+| 전문가 승인 UI | ❌ 미구현 | FE Ops 화면은 아직 없음 |
 | Fine-tune job 생성/모델 배포 | ❌ 미구현 | JSONL export까지만 있고 OpenAI fine-tune 호출/배포 반영 없음 |
-| 자동화 스케줄 | ⚠️ 미스케줄 | `AUTOMATION-HEALTH.md` 기준 `daily-coaching-synthetic-gen`, `weekly-coaching-finetune-review` 모두 UNSCHEDULED |
+| 자동화 스케줄 | ⚠️ 등록 미확인 | 문서 스케줄은 08:00/금요일 10:00으로 정렬. 실제 scheduler 등록은 아직 `UNSCHEDULED` |
 
 ### 정합성 판단
 
 - `PROJECT-STATUS.md`의 AI-TRAIN-001 요약은 "자동화 2개"가 동작 중처럼 읽힐 수 있으나, 실제 자동화 상태 문서는 둘 다 `UNSCHEDULED`로 기록한다.
 - 현재 프로젝트에는 "AI 추천 결과를 내 훈련데이터 개선 후보로 수집/태깅/export"하는 골격은 있다.
 - 현재 프로젝트에는 "AI 추천 결과가 자동으로 `src/lib/data/approved` 또는 `published/runtime.ts`를 개선"하는 기능은 없다.
-- 현재 품질점수는 `description` 키워드 중심이라, 2026-05-13에 추가된 구조화 필드(`technique`, `success_criteria`, `reference_curriculum_ids`)를 충분히 활용하지 못한다.
-- `coaching_synthetic_log.coaching_ids`는 migration에서 `UUID[]`, ORM에서 `JSONB`로 남아 있어 합성 생성 persistence 실패 리스크가 계속 존재한다.
+- 현재 품질점수는 2026-05-13에 추가된 구조화 필드를 반영하도록 보강됐다. 다음 단계는 action별 behavior matching 품질을 점수에 더 세밀하게 반영하는 것이다.
+- `coaching_synthetic_log.coaching_ids` ORM 타입은 migration의 `UUID[]`와 정렬됐다. 다음 단계는 실제 `daily-coaching-synthetic-gen` 재실행으로 persistence를 확인하는 것이다.
 
 ### 개선 우선순위
 
-1. 품질점수 기준을 구조화 필드 기반으로 갱신한다: `technique`, `steps`, `success_criteria`, `stop_criteria`, `evidence_from_intake`, `reference_curriculum_ids` 존재/품질을 점수화.
-2. `training_approved` 승인/거절 admin API와 간단한 Ops UI를 추가한다.
+1. 실제 `daily-coaching-synthetic-gen`을 재실행해 `coaching_synthetic_log` 1건 + `ai_coaching` 3건 persistence를 확인한다.
+2. 전문가/운영자용 승인 UI를 추가해 새 review API를 사람이 안전하게 쓰게 한다.
 3. approved JSONL에 placeholder prompt 대신 실제 상담지 요약/행동 episode/reference IDs를 포함한다.
-4. `src/lib/data` 후보 생성 파이프라인과 `export-jsonl` 결과를 연결하되, 자동 publish는 하지 않고 human review를 필수로 둔다.
-5. `coaching_synthetic_log.coaching_ids` ORM↔DB 타입을 정렬한다.
-6. `daily-coaching-synthetic-gen`, `weekly-coaching-finetune-review` 자동화를 실제 실행 환경에 등록하거나 문서에서 "미스케줄" 상태를 명시 유지한다.
+4. `src/lib/data/candidates/ai-coaching` 후보 생성 파이프라인과 `export-jsonl` 결과를 연결하되, 자동 publish는 하지 않고 human review를 필수로 둔다.
+5. action별 behavior matching을 고도화해 reference id 보정과 품질점수 평가를 더 정교하게 만든다.
+6. `daily-coaching-synthetic-gen`, `weekly-coaching-finetune-review` 자동화를 실제 실행 환경에 등록하거나 문서에서 `UNSCHEDULED` 상태를 명시 유지한다.
 
 ---
 

@@ -6,7 +6,7 @@
 토큰을 최소화하기 위해 2단계 스캔만 수행한다.
 
 프로젝트 루트:
-- /mnt/c/Users/gmdqn/tosstaillog
+- /Users/family/jason/TaillogToss
 
 진실원본 정책:
 - 전체 라우트 진실원본: src/pages/**

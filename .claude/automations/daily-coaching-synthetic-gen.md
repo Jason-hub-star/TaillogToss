@@ -30,7 +30,7 @@ FastAPI가 내부적으로 coaching_synthetic_log.run_date = CURRENT_DATE 체크
 ### 1. 합성 코칭 생성 (FastAPI 호출)
 
 ```
-POST http://localhost:8000/api/v1/coaching/admin/generate-synthetic
+POST ${BACKEND_BASE_URL:-http://localhost:8765}/api/v1/coaching/admin/generate-synthetic
 X-Admin-Key: {ADMIN_API_KEY 환경변수 값}
 ```
 
@@ -51,7 +51,7 @@ X-Admin-Key: {ADMIN_API_KEY 환경변수 값}
 
 이전 실패분이 있을 경우 보정:
 ```
-POST http://localhost:8000/api/v1/coaching/admin/tag-candidates
+POST ${BACKEND_BASE_URL:-http://localhost:8765}/api/v1/coaching/admin/tag-candidates
 X-Admin-Key: {ADMIN_API_KEY 환경변수 값}
 ```
 
@@ -72,7 +72,7 @@ X-Admin-Key: {ADMIN_API_KEY 환경변수 값}
 - `skipped: true` 응답 → "오늘 이미 실행됨" 기록 후 종료
 - FastAPI 오류 → 오류 내용 TRAINING-DATA-LOG.md에 기록 후 종료 (파이프라인 중단 금지)
 - 자동 적용 범위: TRAINING-DATA-LOG.md 업데이트만
-- 주인님 승인 필요: training_approved 변경, fine-tuning 실행
+- 주인님 승인 필요: `POST /api/v1/coaching/admin/training-candidates/{coaching_id}/review`, fine-tuning 실행
 
 ## 검증 쿼리
 

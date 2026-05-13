@@ -6,7 +6,7 @@
 변경이 없으면 "변경 없음"을 출력한다.
 
 프로젝트 루트:
-- /mnt/c/Users/gmdqn/tosstaillog
+- /Users/family/jason/TaillogToss
 
 대상 문서:
 - docs/ref/ARCHITECTURE-DIAGRAMS.md

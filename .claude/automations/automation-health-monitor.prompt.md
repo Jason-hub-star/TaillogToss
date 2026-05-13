@@ -2,12 +2,12 @@
 스케줄: 매일 09:30 (Asia/Seoul)
 
 역할:
-.claude/automations/ 디렉터리의 모든 *.prompt.md 파일을 스캔하고,
+.claude/automations/ 디렉터리의 모든 *.prompt.md 파일과 레지스트리에 등록된 *.md 자동화를 스캔하고,
 각 자동화의 실행 건강 상태를 점검하여 이상 여부를 보고한다.
 새 자동화가 추가되면 레지스트리에 항목을 추가하고 자동으로 감시 범위에 포함시킨다.
 
 프로젝트 루트:
-- /mnt/c/Users/gmdqn/tosstaillog
+- /Users/family/jason/TaillogToss
 
 출력:
 - docs/status/AUTOMATION-HEALTH.md  (최신 상태 보고서, 매 실행마다 덮어쓰기)
@@ -22,7 +22,7 @@
 
 ## 자동화 레지스트리 (MUST)
 
-⚠️ 새 자동화(.prompt.md) 추가 시 반드시 이 JSON 레지스트리에도 항목 추가.
+⚠️ 새 자동화(.prompt.md 또는 운영용 .md) 추가 시 반드시 이 JSON 레지스트리에도 항목 추가.
    미등록 파일은 UNREGISTERED 경고로 보고됨.
 
 항목 필드 설명:
@@ -78,9 +78,20 @@
     "name": "daily-coaching-synthetic-gen",
     "file": "daily-coaching-synthetic-gen.md",
     "task_id": "daily-coaching-synthetic-gen",
-    "schedule_kr": "매일 15:00 (Asia/Seoul)",
+    "schedule_kr": "매일 08:00 (Asia/Seoul)",
     "lock": null,
     "freshness_hours": 26,
+    "artifacts": [
+      "docs/status/TRAINING-DATA-LOG.md"
+    ]
+  },
+  {
+    "name": "weekly-coaching-finetune-review",
+    "file": "weekly-coaching-finetune-review.md",
+    "task_id": "weekly-coaching-finetune-review",
+    "schedule_kr": "매주 금요일 10:00 (Asia/Seoul, weekly orchestrator TASK 2)",
+    "lock": null,
+    "freshness_hours": 170,
     "artifacts": [
       "docs/status/TRAINING-DATA-LOG.md"
     ]
@@ -94,11 +105,12 @@
 
 ### 0) 사전 준비
 - 현재 시각(Asia/Seoul) 기록: YYYY-MM-DD HH:mm
-- 프로젝트 루트 확인: /mnt/c/Users/gmdqn/tosstaillog
+- 프로젝트 루트 확인: /Users/family/jason/TaillogToss
 - docs/status/ 디렉터리 없으면 생성
 
 ### 1) 자동화 파일 스캔
 - .claude/automations/*.prompt.md 파일 목록 수집
+- 레지스트리에 등록된 운영용 .md 파일 목록을 추가 수집
 - 이 감시 파일(automation-health-monitor.prompt.md) 자체는 목록에서 제외
 - 실제 파일 목록 vs 레지스트리 파일 목록 비교:
   - 레지스트리에 있지만 파일 없음 → FILE_MISSING 경고
@@ -131,7 +143,7 @@
   - STALE     : lock 정상이지만 artifact STALE (실행은 됐으나 오래됨)
   - MISSING   : 핵심 artifact가 하나 이상 ARTIFACT_MISSING
   - STUCK     : lock LOCK_STUCK (비정상 잠금)
-  - FILE_MISSING : .prompt.md 파일 자체 없음
+  - FILE_MISSING : 자동화 파일 자체 없음
 
 ### 3) 보고서 작성
 

@@ -56,6 +56,7 @@ def test_openapi_paths():
     assert "/api/v1/auth/me" in paths
     assert "/api/v1/dogs/" in paths
     assert "/api/v1/settings/" in paths
+    assert "/api/v1/coaching/admin/training-candidates/{coaching_id}/review" in paths
 
 
 def test_tags():

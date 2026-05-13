@@ -11,6 +11,7 @@ from app.shared.models import (
     Base,
     BehaviorLog,
     CaseIntake,
+    CoachingSyntheticLog,
     DailyReport,
     Dog,
     DogAssignment,
@@ -34,6 +35,7 @@ from app.shared.models import (
     UserTrainingStatus,
     AiCostUsageOrg,
 )
+from sqlalchemy.dialects.postgresql import ARRAY, UUID
 
 
 def test_table_count():
@@ -101,6 +103,13 @@ def test_case_intake_model_fields():
         "status", "version", "sections", "behavior_episodes", "created_at", "updated_at",
     }
     assert expected.issubset(columns), f"Missing CaseIntake fields: {expected - columns}"
+
+
+def test_coaching_synthetic_log_ids_match_uuid_array_migration():
+    """coaching_synthetic_log.coaching_ids는 DB migration의 UUID[]와 일치해야 한다."""
+    column_type = CoachingSyntheticLog.__table__.columns["coaching_ids"].type
+    assert isinstance(column_type, ARRAY)
+    assert isinstance(column_type.item_type, UUID)
 
 
 def test_daily_report_xor_constraint():

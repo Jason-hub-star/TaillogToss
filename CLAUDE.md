@@ -32,7 +32,7 @@ This file only keeps execution rules, priorities, and pointers.
 | **morning orchestrator** | daily 02:00 (Asia/Seoul) | `.claude/automations/taillog-morning-orchestrator.prompt.md` |
 | **nightly orchestrator** | daily 22:00 (Asia/Seoul) | `.claude/automations/taillog-nightly-orchestrator.prompt.md` |
 | **weekly orchestrator** | weekly Friday 10:00 (Asia/Seoul) | `.claude/automations/taillog-weekly-orchestrator.prompt.md` |
-| coaching synthetic gen | daily 15:00 (Asia/Seoul) | `.claude/automations/daily-coaching-synthetic-gen.md` |
+| coaching synthetic gen | daily 08:00 (Asia/Seoul) | `.claude/automations/daily-coaching-synthetic-gen.md` |
 
 ## Next Automation (MUST)
 

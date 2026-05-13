@@ -196,6 +196,34 @@ async def export_jsonl(
     return {"count": count, "batch_name": batch_name, "content": content}
 
 
+@router.post(
+    "/admin/training-candidates/{coaching_id}/review",
+    response_model=schemas.TrainingCandidateReviewResponse,
+)
+async def review_training_candidate(
+    coaching_id: UUID,
+    data: schemas.TrainingCandidateReviewRequest,
+    _: None = Depends(verify_admin_key),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    훈련데이터 후보 승인/반려.
+    주인님 또는 전문가 검수 후 JSONL export 대상 여부를 확정한다.
+    """
+    from app.features.coaching.training import review_training_candidate as review_candidate
+
+    coaching = await review_candidate(
+        db,
+        coaching_id,
+        approved=data.approved,
+        training_version=data.training_version,
+        quality_score=data.quality_score,
+    )
+    if coaching is None:
+        raise HTTPException(status_code=404, detail="coaching_not_found")
+    return coaching
+
+
 @router.post("/{dog_id}/ask-coach", response_model=schemas.CoachingQuestionResponse)
 async def ask_coach(
     dog_id: UUID,

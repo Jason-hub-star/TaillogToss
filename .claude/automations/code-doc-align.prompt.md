@@ -1,5 +1,5 @@
 작업명: TaillogToss code-doc align (managed routes)
-스케줄: 매일 03:30 (Asia/Seoul)
+스케줄: taillog-morning-orchestrator TASK 2 (단독 실행 가능)
 
 역할:
 코드를 기준으로(Managed Routes) 문서/스킬 참조 정합성을 자동 점검·보정한다.

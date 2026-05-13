@@ -1,14 +1,14 @@
 작업명: TaillogToss docs nightly organizer
-  스케줄: 매일 22:00 (Asia/Seoul)
+  스케줄: taillog-nightly-orchestrator TASK 1
 
   역할:
   너는 아래 경로에서 docs 정리 자동화를 수행한다.
 
   프로젝트 루트:
-  - /sessions/epic-intelligent-davinci/mnt/tosstaillog
+  - /Users/family/jason/TaillogToss
 
   docs 경로:
-  - /sessions/epic-intelligent-davinci/mnt/tosstaillog/docs
+  - /Users/family/jason/TaillogToss/docs
 
   목표:
   - docs를 ref/status/daily/weekly 구조로 유지
@@ -93,7 +93,7 @@
 
   6) CLAUDE.md 갱신
   대상 파일:
-  - /sessions/epic-intelligent-davinci/mnt/tosstaillog/CLAUDE.md
+  - /Users/family/jason/TaillogToss/CLAUDE.md
 
   수정 범위 제한:
   - "## 상세 상태/기록 문서" 섹션(표) 내부만 수정

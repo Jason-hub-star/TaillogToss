@@ -1,7 +1,7 @@
 # TaillogToss Training Data Nightly Pipeline (v3)
 
-  작업명: TaillogToss training data nightly pipeline
-  스케줄: 매일 03:00 (Asia/Seoul)
+  작업명: TaillogToss training data enrichment pipeline
+  스케줄: 수동 실행 전용 (기존 매일 03:00 비활성)
 
   역할:
   너는 아래 경로에서 훈련 데이터 파이프라인 자동화를 수행한다.
@@ -29,6 +29,11 @@
   환경 변수:
   - DRY_RUN=true 이면 파일 생성/수정/삭제 금지
   - MIN_CREDIBILITY=40, MAX_PER_DOMAIN=2, TOP_K_PER_QUERY=10
+
+  운영 상태:
+  - 기본 오케스트레이터에서 실행하지 않는다.
+  - `DRY_RUN=true`로 계획과 변경 범위를 먼저 확인한 뒤, 주인님 승인 시에만 단독 실행한다.
+  - 앱 런타임 데이터(`published/runtime.ts`, `curriculum.ts`)를 바꿀 수 있으므로 Telegram 검수 루프와 분리한다.
 
   안전 원칙 (MUST):
   - lock 파일 내용이 {"status":"released",...}면 이전 run 정상 종료 → 덮어쓰고 진행

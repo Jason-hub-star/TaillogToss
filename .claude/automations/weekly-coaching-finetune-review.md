@@ -1,6 +1,6 @@
 # TaillogToss 주간 훈련 데이터 검수 + Fine-tuning 준비
 
-스케줄: 매주 금요일 10:00 (Asia/Seoul, weekly orchestrator TASK 2)
+스케줄: taillog-weekly-orchestrator TASK 2
 
 ## 목적
 

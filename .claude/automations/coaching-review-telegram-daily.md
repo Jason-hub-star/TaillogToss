@@ -1,6 +1,6 @@
 # TaillogToss 텔레그램 훈련데이터 검수 재료 수집
 
-스케줄: 매일 09:00 (Asia/Seoul)
+스케줄: taillog-ai-data-orchestrator TASK 2
 Parity: AI-TRAIN-001
 
 ## 목적

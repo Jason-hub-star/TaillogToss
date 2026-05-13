@@ -8,8 +8,7 @@
 각 TASK는 독립 실행이며, 하나가 실패해도 다음 TASK는 반드시 계속 진행한다.
 
 프로젝트 루트:
-- /sessions/<current-session>/mnt/TaillogToss
-  (실행 시점에 마운트된 실제 경로로 대체)
+- /Users/family/jason/TaillogToss
 
 lock: docs/status/.weekly-orchestrator.lock
 

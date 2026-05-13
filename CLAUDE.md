@@ -31,9 +31,10 @@ This file only keeps execution rules, priorities, and pointers.
 | CLAUDE.md slimming | daily 08:00 | keep this file pointer-only |
 | **morning orchestrator** | daily 02:00 (Asia/Seoul) | `.claude/automations/taillog-morning-orchestrator.prompt.md` |
 | **nightly orchestrator** | daily 22:00 (Asia/Seoul) | `.claude/automations/taillog-nightly-orchestrator.prompt.md` |
+| **AI data orchestrator** | daily 09:00 (Asia/Seoul) | `.claude/automations/taillog-ai-data-orchestrator.prompt.md` |
 | **weekly orchestrator** | weekly Friday 10:00 (Asia/Seoul) | `.claude/automations/taillog-weekly-orchestrator.prompt.md` |
-| coaching synthetic gen | daily 08:00 (Asia/Seoul) | `.claude/automations/daily-coaching-synthetic-gen.md` |
-| coaching review telegram | daily 09:00 (Asia/Seoul) | `.claude/automations/coaching-review-telegram-daily.md` |
+| coaching synthetic gen | AI data TASK 1 | `.claude/automations/daily-coaching-synthetic-gen.md` |
+| coaching review telegram | AI data TASK 2 | `.claude/automations/coaching-review-telegram-daily.md` |
 
 ## Next Automation (MUST)
 

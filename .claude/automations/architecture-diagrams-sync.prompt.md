@@ -1,5 +1,5 @@
 작업명: TaillogToss architecture diagrams sync
-스케줄: 매일 04:00 (Asia/Seoul)
+스케줄: taillog-morning-orchestrator TASK 3 (단독 실행 가능)
 
 역할:
 토스 인앱 아키텍처 다이어그램 문서 세트를 코드/문서 진실원본과 동기화한다.

@@ -8,8 +8,7 @@
 각 TASK는 독립 실행이며, 하나가 실패해도 다음 TASK는 반드시 계속 진행한다.
 
 프로젝트 루트:
-- /sessions/<current-session>/mnt/TaillogToss
-  (실행 시점에 마운트된 실제 경로로 대체)
+- /Users/family/jason/TaillogToss
 
 lock: docs/status/.morning-orchestrator.lock
 
@@ -72,20 +71,15 @@ lock: docs/status/.morning-orchestrator.lock
 
 ---
 
-### TASK 4: training-data-pipeline (skills-web-enrichment-7day)
-
-프롬프트 파일: `.claude/automations/skills-web-enrichment-7day.prompt.md`
-실행: 해당 파일을 Read로 읽고 지침 그대로 실행
-
-주의: 이 TASK는 자체 lock(src/lib/data/.pipeline.lock)을 가짐.
-      lock 충돌 시 "TASK 4: 스킵 (파이프라인 실행 중)" 기록 후 TASK 5로 진행.
-
----
-
-### TASK 5: automation-health-monitor
+### TASK 4: automation-health-monitor
 
 프롬프트 파일: `.claude/automations/automation-health-monitor.prompt.md`
 실행: 해당 파일을 Read로 읽고 지침 그대로 실행 (항상 마지막에 실행)
+
+---
+제외된 TASK:
+- `skills-web-enrichment-7day.prompt.md`는 앱 커리큘럼/published 데이터까지 건드릴 수 있으므로 모닝 기본 실행에서 제외한다.
+- 해당 파이프라인은 `DRY_RUN=true` 수동 점검 후 주인님 승인 시에만 실행한다.
 
 ---
 
@@ -98,8 +92,7 @@ lock: docs/status/.morning-orchestrator.lock
 - TASK 1 drift-guard:   <결과 한 줄>
 - TASK 2 code-doc-align: <결과 한 줄>
 - TASK 3 arch-sync:      <결과 한 줄>
-- TASK 4 data-pipeline:  <결과 한 줄>
-- TASK 5 health-monitor: <결과 한 줄>
+- TASK 4 health-monitor: <결과 한 줄>
 이슈: <없음 | N건 — 상세: docs/status/AUTOMATION-HEALTH.md>
 ```
 
@@ -116,6 +109,5 @@ docs/status/MORNING-ORCHESTRATOR-LOG.md 에 append:
 | drift-guard    | 변경 없음 / drift N건 | |
 | code-doc-align | 변경 없음 / fix N건   | |
 | arch-sync      | 변경 없음 / changed N | |
-| data-pipeline  | 변경 없음 / published vXXX | |
 | health-monitor | N개 정상 / 이슈 N건   | |
 ```

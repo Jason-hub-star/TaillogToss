@@ -1,6 +1,6 @@
 # TaillogToss 매일 합성 코칭 훈련 데이터 생성
 
-스케줄: 매일 08:00 (Asia/Seoul)
+스케줄: taillog-ai-data-orchestrator TASK 1
 
 ## 목적
 

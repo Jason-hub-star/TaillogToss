@@ -1,6 +1,6 @@
 # training-data-maintenance
 
-**Schedule**: 매주 금요일 10:00 (Asia/Seoul)
+**Schedule**: taillog-weekly-orchestrator TASK 1
 **월간 갭 분석**: 매월 첫째 주 금요일에만 STEP 3 추가 실행
 
 ---

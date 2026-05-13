@@ -1,5 +1,5 @@
 작업명: TaillogToss 자동화 상태 감시 (Automation Health Monitor)
-스케줄: 매일 09:30 (Asia/Seoul)
+스케줄: taillog-morning-orchestrator TASK 4 (단독 실행 가능)
 
 역할:
 .claude/automations/ 디렉터리의 모든 *.prompt.md 파일과 레지스트리에 등록된 *.md 자동화를 스캔하고,
@@ -14,7 +14,8 @@
 - docs/status/AUTOMATION-HEALTH-HISTORY.ndjson  (이력 누적 append)
 
 안전 원칙:
-- 이 감시 스크립트는 읽기 전용 점검만 수행한다 (파일 수정 금지)
+- 이 감시 스크립트는 코드/운영 데이터는 수정하지 않고 health report만 갱신한다.
+- 허용 쓰기 범위는 `docs/status/AUTOMATION-HEALTH.md`와 `docs/status/AUTOMATION-HEALTH-HISTORY.ndjson`뿐이다.
 - lock 파일은 상태 확인만 하고 절대 수정·삭제하지 않는다
 - DRY_RUN=true면 파일 쓰기 없이 콘솔 출력만 한다
 
@@ -48,7 +49,7 @@
       "docs/status/MORNING-ORCHESTRATOR-LOG.md",
       "docs/status/INTEGRITY-REPORT.md",
       "docs/status/ARCHITECTURE-DIAGRAM-SYNC-LOG.md",
-      "src/lib/data/CHANGELOG.ndjson"
+      "docs/status/AUTOMATION-HEALTH.md"
     ]
   },
   {
@@ -59,8 +60,20 @@
     "lock": "docs/status/.nightly-orchestrator.lock",
     "freshness_hours": 26,
     "artifacts": [
-      "docs/status/NIGHTLY-RUN-LOG.md",
-      "docs/status/VISION-LABEL-LOG.md"
+      "docs/status/NIGHTLY-RUN-LOG.md"
+    ]
+  },
+  {
+    "name": "taillog-ai-data-orchestrator",
+    "file": "taillog-ai-data-orchestrator.prompt.md",
+    "task_id": "taillog-ai-data-orchestrator",
+    "schedule_kr": "매일 09:00 (Asia/Seoul)",
+    "lock": "docs/status/.ai-data-orchestrator.lock",
+    "freshness_hours": 26,
+    "artifacts": [
+      "docs/status/TRAINING-DATA-LOG.md",
+      "docs/status/coaching-review-queue.jsonl",
+      "docs/status/coaching-review-telegram-offset.json"
     ]
   },
   {
@@ -77,8 +90,8 @@
   {
     "name": "daily-coaching-synthetic-gen",
     "file": "daily-coaching-synthetic-gen.md",
-    "task_id": "daily-coaching-synthetic-gen",
-    "schedule_kr": "매일 08:00 (Asia/Seoul)",
+    "task_id": null,
+    "schedule_kr": "taillog-ai-data-orchestrator TASK 1",
     "lock": null,
     "freshness_hours": 26,
     "artifacts": [
@@ -88,8 +101,8 @@
   {
     "name": "coaching-review-telegram-daily",
     "file": "coaching-review-telegram-daily.md",
-    "task_id": "coaching-review-telegram-daily",
-    "schedule_kr": "매일 09:00 (Asia/Seoul)",
+    "task_id": null,
+    "schedule_kr": "taillog-ai-data-orchestrator TASK 2",
     "lock": null,
     "freshness_hours": 26,
     "artifacts": [
@@ -107,6 +120,76 @@
     "freshness_hours": 170,
     "artifacts": [
       "docs/status/TRAINING-DATA-LOG.md"
+    ]
+  },
+  {
+    "name": "code-doc-align",
+    "file": "code-doc-align.prompt.md",
+    "task_id": null,
+    "schedule_kr": "taillog-morning-orchestrator TASK 2",
+    "lock": "docs/status/.code-doc-align.lock",
+    "freshness_hours": 26,
+    "artifacts": [
+      "docs/status/INTEGRITY-REPORT.md",
+      "docs/status/INTEGRITY-HISTORY.ndjson"
+    ]
+  },
+  {
+    "name": "architecture-diagrams-sync",
+    "file": "architecture-diagrams-sync.prompt.md",
+    "task_id": null,
+    "schedule_kr": "taillog-morning-orchestrator TASK 3",
+    "lock": "docs/ref/.architecture-sync.lock",
+    "freshness_hours": 26,
+    "artifacts": [
+      "docs/status/ARCHITECTURE-DIAGRAM-SYNC-LOG.md",
+      "docs/status/ARCHITECTURE-DIAGRAM-SYNC-HISTORY.ndjson"
+    ]
+  },
+  {
+    "name": "automation-health-monitor",
+    "file": "automation-health-monitor.prompt.md",
+    "task_id": null,
+    "schedule_kr": "taillog-morning-orchestrator TASK 4",
+    "lock": null,
+    "freshness_hours": 26,
+    "artifacts": [
+      "docs/status/AUTOMATION-HEALTH.md",
+      "docs/status/AUTOMATION-HEALTH-HISTORY.ndjson"
+    ]
+  },
+  {
+    "name": "docs-nightly-organizer",
+    "file": "docs-nightly-organizer.prompt.md",
+    "task_id": null,
+    "schedule_kr": "taillog-nightly-orchestrator TASK 1",
+    "lock": "docs/.docs-nightly.lock",
+    "freshness_hours": 26,
+    "artifacts": [
+      "docs/status/NIGHTLY-RUN-LOG.md"
+    ]
+  },
+  {
+    "name": "training-data-maintenance",
+    "file": "training-data-maintenance.prompt.md",
+    "task_id": null,
+    "schedule_kr": "taillog-weekly-orchestrator TASK 1",
+    "lock": null,
+    "freshness_hours": 170,
+    "artifacts": [
+      "docs/status/TRAINING-DATA-LOG.md"
+    ]
+  },
+  {
+    "name": "skills-web-enrichment-7day",
+    "file": "skills-web-enrichment-7day.prompt.md",
+    "task_id": null,
+    "schedule_kr": "수동 실행 전용, DRY_RUN 우선",
+    "lock": "src/lib/data/.pipeline.lock",
+    "freshness_hours": 720,
+    "artifacts": [
+      "src/lib/data/CHANGELOG.ndjson",
+      "src/lib/data/catalog.json"
     ]
   }
 ]

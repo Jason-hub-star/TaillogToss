@@ -16,6 +16,10 @@ Status: InProgress
 ## Validation
 - [x] Backend targeted tests PASS — `test_training_pipeline.py`, `test_routers.py`
 - [x] Backend full test suite PASS — 74 tests
+- [x] Self-review runbook added — `docs/ref/COACHING-REVIEW-TELEGRAM-RUNBOOK.md`
+- [x] Frontend typecheck PASS — `npm run typecheck`
+- [x] App Jest PASS — `npm run test:app -- --runInBand --passWithNoTests` (16 suites / 103 tests)
+- [x] Safety checks PASS — queue/feedback/offset parse + no diff in runtime curriculum paths
 - [ ] `DRY_RUN=true` message preview
 - [ ] Telegram one-candidate real send
 
@@ -23,3 +27,5 @@ Status: InProgress
 - This is a material collection loop, not automatic curriculum publishing.
 - Rejected items require a `반려 코멘트:` Telegram message before they become improvement feedback.
 - The first real operation should be dry-run preview, then one synthetic candidate send.
+- Current behavior-group matching is inferred from reference ids and keywords; 50-decision review should judge whether a dedicated DB field is needed.
+- Self-review result: no blocking code issue found for v1. Remaining gaps are operational: bot env setup, dry-run preview, real send, and callback scenario validation.

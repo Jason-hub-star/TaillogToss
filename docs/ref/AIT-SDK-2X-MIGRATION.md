@@ -1,8 +1,8 @@
 # 앱인토스(Apps in Toss) SDK 1.x → 2.x 마이그레이션 레퍼런스
 
 > 작성일: 2026-04-02
-> 기준 버전: SDK 2.4.0 (최신 안정)
-> 현재 프로젝트 버전: `@apps-in-toss/framework ^1.3.0` → 마이그레이션 필요
+> 기준 버전: SDK 2.4.0 (당시 안정)
+> 현재 프로젝트 버전: `@apps-in-toss/framework 2.4.1` / npm latest `2.5.1` (2026-05-14 확인)
 > 출처: 앱인토스 개발자센터, 커뮤니티 공지, 릴리즈 노트
 
 ---
@@ -14,7 +14,7 @@
 | 변경 원인 | 토스앱의 React Native **0.84** 업데이트 (2026-03-30 배포) |
 | 1.x 업로드 제한 | **2026-03-23 이후** SDK 1.x 빌드 번들 콘솔 업로드 불가 |
 | 미완료 시 결과 | 신규 배포·업데이트 불가 → 별도 안내 후 서비스 운영 중단 |
-| 권장 최소 버전 | **SDK 2.0.5** (안정화 완료), 신규 개발은 **2.4.0** 사용 |
+| 권장 최소 버전 | **SDK 2.0.5** 이상. 현재 프로젝트는 2.x 필수 조건을 충족하지만 npm latest는 2.5.1 |
 
 ---
 
@@ -44,6 +44,7 @@
 | **2.2.0** | 2026-03-30 | Feature | `getSubscriptionInfo()` API 추가 (구독 주문 상태 조회) |
 | **2.3.0** | 2026-03-30 | Enhancement | `ait` CLI help 문서 개선. `deploy` 커맨드에 `-m` 옵션 추가 (릴리즈 노트) |
 | **2.4.0** | 2026-04-01 | Feature | `requestReview()` API 추가 (최적 시점 앱 리뷰 요청) |
+| **2.5.1** | 2026-05-14 확인 | Maintenance | npm latest. QR 실패 원인으로 특정할 증거는 없으며, 업그레이드는 별도 브랜치에서 AIT build/ADB/IAP 회귀 후 적용 |
 
 ---
 
@@ -257,8 +258,30 @@ ait build
 | API | 추가 버전 | 설명 | 최소 토스앱 버전 |
 |---|---|---|---|
 | `getSubscriptionInfo()` | 2.2.0 | 구독 주문 상태 조회 | Android 5.253.0+ / iOS 5.253.0+ |
+| `createSubscriptionPurchaseOrder()` | 2.x | 정기 결제 주문 생성 | Android 5.248.0+ / iOS 5.249.0+ |
 | `requestReview()` | 2.4.0 | 최적 시점 앱 리뷰 요청 | - |
 | `ait deploy -m` | 2.3.0 | CLI 배포 시 릴리즈 노트 첨부 옵션 | - |
+
+## 7-1. 2026-05-14 버전/QR 판정
+
+| 항목 | 확인값 | 판단 |
+|---|---|---|
+| 로컬 `@apps-in-toss/framework` | `2.4.1` | 최신은 아니지만 SDK 2.x 조건 충족 |
+| npm latest | `2.5.1` | 배포 직전 즉시 교체보다는 별도 회귀 필요 |
+| 로컬 `@granite-js/react-native` | `1.0.4` | 현행 AIT build/ADB 증적은 있음 |
+| npm latest | `1.0.26` | SDK 업그레이드와 함께 별도 검증 권장 |
+| 연결 기기 실제 토스 앱 | Android `v5.259.0` | 구독 API 최소 버전(Android 5.253.0+) 충족 |
+| Metro 상태 | `localhost:8081` connection refused | 현재 테스트는 Metro 의존 상태 아님 |
+
+QR 실패 원인을 "미니앱 SDK가 낡아서"로 보기 어려운 이유:
+- 공식 테스트 문서상 QR 테스트/검토 활성화는 토스앱 로그인, 워크스페이스 멤버, 만 19세 이상, 테스트 1회 완료가 핵심 조건이다.
+- 현재 SDK는 1.x가 아니라 2.4.1이므로 업로드 차단 대상이 아니다.
+- 같은 deploymentId가 production Toss direct launch에서는 `Running "shared"` / bundle load PASS했고, QR 실패는 `viva.republica.toss.test`에서 JS marker 없이 host error로 발생했다.
+- 최소 smoke AIT도 같은 sandbox host error를 냈으므로 앱 번들 복잡도나 최신 기능 미도입보다는 QR/test host, resolver, workspace entitlement, console test context 쪽 가능성이 높다.
+
+조치:
+- v1 배포 전에는 SDK 업그레이드보다 콘솔 QR을 authenticated Toss Business 세션에서 다시 실행하고, production Toss 앱으로 열리는지 확인한다.
+- SDK `2.5.1` / Granite `1.0.26` 업그레이드는 배포 전 핫픽스가 아니라 별도 브랜치에서 `npm run typecheck`, `npm run test:app`, `ait build`, ADB launch, IAP 성공 회귀까지 통과한 뒤 적용한다.
 
 ---
 

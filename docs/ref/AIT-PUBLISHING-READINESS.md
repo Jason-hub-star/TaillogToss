@@ -167,7 +167,7 @@ NFT/디지털 자산 거래, 도박, 대출/보험/증권, 투자 조언, 현금
 - [x] 사업자등록 완료
 - [x] 앱 배포 완료 (2026-02-27)
 - [ ] 사업자 업종 ↔ 미니앱 서비스 업종 일치 확인
-- [x] SDK 2.x 적용 (`@apps-in-toss/framework ^2.4.1`)
+- [x] SDK 2.x 적용 (`@apps-in-toss/framework 2.4.1`). 2026-05-14 npm latest는 `2.5.1`이나, 현재 QR 실패의 직접 원인으로 볼 증거는 없음. 업그레이드는 별도 회귀 브랜치에서 진행.
 - [x] mTLS 인증서 발급 + 서버 통합 (IAP, Smart Message, 포인트 전체) — 2026-04-21
 - [ ] mTLS 인증서 만료일 캘린더 등록 (만료일: 2027-04-25)
 - [x] 번들 크기 100MB 미만 확인 — 15MB (2026-05-07 측정)
@@ -193,6 +193,7 @@ NFT/디지털 자산 거래, 도박, 대출/보험/증권, 투자 조언, 현금
 
 ### IAP 테스트
 
+- [⏸] IAP 정기 결제는 v1 배포 범위에서 보류. 2026-05-14 업데이트로 정기 결제(`createSubscriptionPurchaseOrder`, `getSubscriptionInfo`)가 공개됐지만 샌드박스 테스트 미지원 안내가 있어 출시 직전 전환하지 않음.
 - [ ] IAP 샌드박스 테스트 3종 완료 (구매 성공 / 서버 실패 / 에러 처리)
 - [ ] 기기 변경 후 구매내역 보존 구현 확인
 - [x] `completeProductGrant()` 구현 확인 — `src/lib/api/iap.ts` 서버 grant 성공 후 SDK 호출
@@ -214,6 +215,14 @@ NFT/디지털 자산 거래, 도박, 대출/보험/증권, 투자 조언, 현금
 
 - [ ] QR 테스트 최소 1회 완료 (검토 요청 버튼 활성화 조건)
 - [ ] 심사 중 버전 1개만 제출 (중복 제출 불가 확인)
+
+### 2026-05-14 QR / 버전 판정
+
+- 실제 토스 앱: Android `v5.259.0` 확인. 공식 정기 결제 최소 버전(Android `v5.253.0`)보다 높으므로 토스 앱 구버전 문제 가능성은 낮음.
+- 로컬 SDK: `@apps-in-toss/framework 2.4.1`, `@apps-in-toss/native-modules 2.4.1`; npm latest는 `2.5.1`.
+- SDK는 최신은 아니지만 2.x 업로드/실행 조건은 충족한다.
+- 최신 QR 실패는 `viva.republica.toss.test` sandbox host에서 JS marker 없이 발생했고, 같은 deploymentId는 production Toss direct launch에서 bundle load PASS했다.
+- 따라서 현재 QR blocker의 1순위는 미니앱 코드/SDK 노후가 아니라 콘솔 QR/test host resolver, workspace member entitlement, authenticated console test context 확인이다.
 
 ## Sources
 

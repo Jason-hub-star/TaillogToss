@@ -130,9 +130,42 @@ Body: { "orderId": "uuid-v7" }
 | `NETWORK_ERROR` | 네트워크 오류 |
 | `TOSS_SERVER_VERIFICATION_FAILED` | 서버 검증 실패 |
 
-### 1-5. 구독 API
+### 1-5. 정기 결제 / 구독 API
 
-별도 구독 전용 API 공개 명세 없음. 콘솔에서 SKU 등록 시 상품 유형(소모성/비소모성/구독) 구분. 동일 `createOneTimePurchaseOrder` 플로우 사용.
+> 2026-05-14 앱인토스 업데이트 반영: IAP 정기 결제가 공개됨. 테일로그 v1 배포 범위에서는 정기 결제를 **보류**하고, 기존 단건 IAP(비소모품/소모품) 검증 경로를 유지한다.
+
+현재 SDK 2.4.1에도 구독 상품 타입과 구독 주문 API가 포함되어 있다.
+
+```typescript
+type SubscriptionProductListItem = {
+  type: 'SUBSCRIPTION';
+  renewalCycle: 'WEEKLY' | 'MONTHLY' | 'YEARLY';
+  offers?: {
+    type: 'FREE_TRIAL' | 'NEW_SUBSCRIPTION' | 'RETURNING';
+    offerId: string;
+    period: string;
+    displayAmount: string;
+  }[];
+};
+
+IAP.createSubscriptionPurchaseOrder({
+  options: {
+    sku,
+    offerId,
+    processProductGrant: ({ orderId, subscriptionId }) => true,
+  },
+  onEvent,
+  onError,
+});
+
+IAP.getSubscriptionInfo({ params: { orderId } });
+```
+
+운영 판단:
+- 정기 결제는 월간/주간/연간 자동 갱신, 무료 체험, 신규/재구독 할인, 상태 변경 URL까지 포함하는 별도 수익화 플로우다.
+- 공식 업데이트 기준 샌드박스 테스트는 아직 지원하지 않으므로, 출시 직전 v1에 넣으면 검증 난도가 올라간다.
+- `PRO_MONTHLY`는 현재 코드상 `non_consumable` 단건 IAP로 유지한다.
+- 정기 결제 전환은 배포 후 별도 브랜치에서 `createSubscriptionPurchaseOrder`, `getSubscriptionInfo`, 갱신/해지 webhook, 권한 만료 정책까지 함께 설계한다.
 
 ### 1-6. 복원 플로우
 

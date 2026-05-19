@@ -35,7 +35,7 @@ from app.shared.models import (
     UserTrainingStatus,
     AiCostUsageOrg,
 )
-from sqlalchemy.dialects.postgresql import ARRAY, UUID
+from sqlalchemy.dialects.postgresql import ARRAY, JSONB, UUID
 
 
 def test_table_count():
@@ -124,6 +124,15 @@ def test_org_subscription_xor_constraint():
     constraints = OrgSubscription.__table__.constraints
     check_names = [c.name for c in constraints if hasattr(c, "name") and c.name]
     assert "ck_org_subscription_xor" in check_names
+
+
+def test_behavior_log_daily_activity_is_jsonb():
+    """daily_activity 컬럼이 JSONB 타입인지 확인 — String(50) 회귀 방지 (Wave3-Bug fix)"""
+    col = BehaviorLog.__table__.columns["daily_activity"]
+    assert isinstance(col.type, JSONB), (
+        f"daily_activity must be JSONB, got {type(col.type).__name__}. "
+        "String(50)으로 되돌리면 DB DatatypeMismatchError 발생함."
+    )
 
 
 def test_enums_count():

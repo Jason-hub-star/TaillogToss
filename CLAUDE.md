@@ -1,5 +1,8 @@
 TaillogToss global operating index. Keep this file slim.
 
+## Live Project Context (auto-generated nightly at 22:00 KST)
+@docs/html/project-structure.json
+
 # TaillogToss Orchestration Index (Slim)
 
 DogCoach (Next.js PWA) -> Toss mini-app (React Native) migration.
@@ -65,6 +68,11 @@ This file only keeps execution rules, priorities, and pointers.
 
 | Command | Purpose | When to use |
 |---|---|---|
+| `/intake` | 요청 분류 + parity/skill 고정 | 구현 전에 작업 성격과 범위를 먼저 정할 때 |
+| `/impact-map` | 영향 범위 + 검증 매트릭스 정리 | cross-cutting 변경이나 문서 동기화가 예상될 때 |
+| `/evidence-review` | 완료 근거와 리스크 점검 | 구현/조사 후 완료 선언 전에 |
+| `/handoff` | 다음 세션 재진입 캡슐 작성 | blocker나 미결정이 남았을 때 |
+| `/profile-recommend` | 작업 프로필 선택 | FE/BE/Edge/Runtime/Docs 중 시작 레이어가 헷갈릴 때 |
 | `/learn` | 교정 사항 → feedback memory 저장 | 교정 후 규칙으로 학습시킬 때 |
 | `/doc-update` | 코드 변경 후 문서 자동 갱신 | 구현 완료 후 문서 동기화 |
 | `/self-review` | working tree 전체 자기 리뷰 | 커밋 전 품질 점검 |
@@ -112,6 +120,7 @@ Page/feature skill root: `.claude/skills/page-skills/`
 - `Skill("toss-iap-proxy-ops")` — IAP 404→FastAPI proxy, service role JWT 감지, mTLS mock, subscriptions 활성화 E2E
 - `Skill("toss-mock-auth-ops")` — Mock stable userKey, survey 루프 진단, adb 트러블슈팅
 - `Skill("toss-ait-build-ops")` — .ait 빌드/배포 성공 패턴, supabase url 에러 해결, env var 인라인
+- `Skill("toss-backend-model-ops")` — SQLAlchemy 모델-DB 타입 불일치 방지, async cascade, Pydantic enum 검증 4대 규칙
 
 ### Page hardening skills
 - Source of truth: `docs/status/PAGE-UPGRADE-BOARD.md`

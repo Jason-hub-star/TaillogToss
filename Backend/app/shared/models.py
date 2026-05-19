@@ -254,10 +254,10 @@ class Dog(Base):
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
     user = relationship("User", back_populates="dogs")
-    env = relationship("DogEnv", back_populates="dog", uselist=False, cascade="all, delete-orphan")
-    logs = relationship("BehaviorLog", back_populates="dog", cascade="all, delete-orphan")
-    case_intakes = relationship("CaseIntake", back_populates="dog", cascade="all, delete-orphan")
-    coaching_reports = relationship("AICoaching", back_populates="dog", cascade="all, delete-orphan")
+    env = relationship("DogEnv", back_populates="dog", uselist=False, cascade="all, delete-orphan", passive_deletes=True)
+    logs = relationship("BehaviorLog", back_populates="dog", cascade="all, delete-orphan", passive_deletes=True)
+    case_intakes = relationship("CaseIntake", back_populates="dog", cascade="all, delete-orphan", passive_deletes=True)
+    coaching_reports = relationship("AICoaching", back_populates="dog", cascade="all, delete-orphan", passive_deletes=True)
 
 
 class DogEnv(Base):
@@ -293,7 +293,7 @@ class BehaviorLog(Base):
     dog_id = Column(UUID(as_uuid=True), ForeignKey("dogs.id", ondelete="CASCADE"), index=True)
     is_quick_log = Column(Boolean, default=False)
     quick_category = Column(String(50))  # FE QuickLogCategory
-    daily_activity = Column(String(50))  # FE DailyActivityCategory
+    daily_activity = Column(JSONB)  # FE DailyActivityCategory (jsonb in DB)
     type_id = Column(String(50))
     antecedent = Column(Text)
     behavior = Column(Text)
@@ -385,7 +385,7 @@ class AICoaching(Base):
     is_synthetic = Column(Boolean, default=False)
 
     dog = relationship("Dog", back_populates="coaching_reports", foreign_keys=[dog_id])
-    action_tracker = relationship("ActionTracker", back_populates="coaching", cascade="all, delete-orphan")
+    action_tracker = relationship("ActionTracker", back_populates="coaching", cascade="all, delete-orphan", passive_deletes=True)
 
 
 class ActionTracker(Base):
@@ -620,7 +620,7 @@ class Organization(Base):
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid4)
     name = Column(String(255), nullable=False)
-    type = Column(Enum(OrgType, name="org_type"), nullable=False)
+    type = Column(String, nullable=False)
     owner_user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     logo_url = Column(Text)
     business_number = Column(String(20), unique=True)
@@ -629,7 +629,7 @@ class Organization(Base):
     max_dogs = Column(Integer, default=30)
     max_staff = Column(Integer, default=5)
     settings = Column(JSONB, default={})
-    status = Column(Enum(OrgStatus, name="org_status"), default=OrgStatus.TRIAL)
+    status = Column(String, default=OrgStatus.TRIAL.value)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
@@ -644,8 +644,8 @@ class OrgMember(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid4)
     org_id = Column(UUID(as_uuid=True), ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False, index=True)
     user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
-    role = Column(Enum(OrgMemberRole, name="org_member_role"), nullable=False)
-    status = Column(Enum(OrgMemberStatus, name="org_member_status"), default=OrgMemberStatus.PENDING)
+    role = Column(String, nullable=False)
+    status = Column(String, default=OrgMemberStatus.PENDING.value)
     invited_at = Column(DateTime(timezone=True), server_default=func.now())
     accepted_at = Column(DateTime(timezone=True))
 
@@ -668,7 +668,7 @@ class OrgDog(Base):
     group_tag = Column(String(50), default="default")
     enrolled_at = Column(DateTime(timezone=True), server_default=func.now())
     discharged_at = Column(DateTime(timezone=True))
-    status = Column(Enum(OrgDogStatus, name="org_dog_status"), default=OrgDogStatus.ACTIVE)
+    status = Column(String, default=OrgDogStatus.ACTIVE.value)
 
     organization = relationship("Organization", back_populates="org_dogs")
 
@@ -681,10 +681,10 @@ class DogAssignment(Base):
     dog_id = Column(UUID(as_uuid=True), ForeignKey("dogs.id", ondelete="CASCADE"), nullable=False, index=True)
     org_id = Column(UUID(as_uuid=True), ForeignKey("organizations.id", ondelete="CASCADE"), nullable=True)
     trainer_user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
-    role = Column(Enum(DogAssignmentRole, name="dog_assignment_role"), default=DogAssignmentRole.PRIMARY)
+    role = Column(String, default=DogAssignmentRole.PRIMARY.value)
     assigned_at = Column(DateTime(timezone=True), server_default=func.now())
     ended_at = Column(DateTime(timezone=True))
-    status = Column(Enum(DogAssignmentStatus, name="dog_assignment_status"), default=DogAssignmentStatus.ACTIVE)
+    status = Column(String, default=DogAssignmentStatus.ACTIVE.value)
 
 
 class DailyReport(Base):
@@ -694,18 +694,18 @@ class DailyReport(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid4)
     dog_id = Column(UUID(as_uuid=True), ForeignKey("dogs.id", ondelete="CASCADE"), nullable=False, index=True)
     report_date = Column(Date, nullable=False)
-    template_type = Column(Enum(ReportTemplateType, name="report_template_type"), nullable=False)
+    template_type = Column(String, nullable=False)
     # Split FK (XOR — 정확히 하나만 non-null)
     created_by_org_id = Column(UUID(as_uuid=True), ForeignKey("organizations.id", ondelete="SET NULL"))
     created_by_trainer_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"))
     # AI 콘텐츠
-    behavior_summary = Column(Text)
+    behavior_summary = Column(JSONB)
     condition_notes = Column(Text)
     ai_coaching_oneliner = Column(Text)
     seven_day_comparison = Column(JSONB)
-    highlight_photo_urls = Column(JSONB, default=[])
+    highlight_photo_urls = Column(ARRAY(String), default=[])
     # 상태
-    generation_status = Column(Enum(DailyReportStatus, name="daily_report_status"), default=DailyReportStatus.PENDING)
+    generation_status = Column(String, default=DailyReportStatus.PENDING.value)
     ai_model = Column(String(50))
     ai_cost_usd = Column(Numeric(10, 6))
     generated_at = Column(DateTime(timezone=True))
@@ -736,7 +736,7 @@ class ParentInteraction(Base):
     report_id = Column(UUID(as_uuid=True), ForeignKey("daily_reports.id", ondelete="CASCADE"), nullable=False, index=True)
     parent_user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"))
     parent_identifier = Column(String(255))
-    interaction_type = Column(Enum(InteractionType, name="interaction_type"), nullable=False)
+    interaction_type = Column(String, nullable=False)
     content = Column(Text)
     linked_log_id = Column(UUID(as_uuid=True), ForeignKey("behavior_logs.id", ondelete="SET NULL"))
     staff_response = Column(Text)
@@ -778,7 +778,7 @@ class OrgSubscription(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid4)
     org_id = Column(UUID(as_uuid=True), ForeignKey("organizations.id", ondelete="CASCADE"), nullable=True)
     trainer_user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=True)
-    plan_type = Column(Enum(OrgPlanType, name="org_plan_type"), nullable=False)
+    plan_type = Column(String, nullable=False)
     toss_order_id = Column(String(255))
     price_krw = Column(Integer, nullable=False)
     max_dogs = Column(Integer, nullable=False)
@@ -790,7 +790,7 @@ class OrgSubscription(Base):
     refunded_at = Column(DateTime(timezone=True))
     suspend_reason = Column(Text)
     retry_count = Column(Integer, default=0)
-    status = Column(Enum(OrgSubscriptionStatus, name="org_subscription_status"), default=OrgSubscriptionStatus.TRIAL)
+    status = Column(String, default=OrgSubscriptionStatus.TRIAL.value)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     __table_args__ = (

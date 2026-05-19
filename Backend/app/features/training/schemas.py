@@ -6,7 +6,15 @@ from datetime import datetime
 from typing import Optional
 from uuid import UUID
 
+from enum import Enum
+
 from pydantic import BaseModel, ConfigDict
+
+
+class StepReaction(str, Enum):
+    enjoyed = "enjoyed"
+    neutral = "neutral"
+    sensitive = "sensitive"
 
 
 class TrainingStatusUpdate(BaseModel):
@@ -43,7 +51,7 @@ class StepFeedbackUpdate(BaseModel):
     curriculum_id: str
     stage_id: str
     step_number: int
-    reaction: str  # enjoyed | neutral | sensitive
+    reaction: StepReaction
     memo: Optional[str] = None
 
 

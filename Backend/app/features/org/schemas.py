@@ -21,7 +21,7 @@ class OrgResponse(BaseModel):
     address: Optional[str] = None
     max_dogs: int = 30
     max_staff: int = 5
-    settings: Dict[str, Any] = {}
+    settings: Optional[Dict[str, Any]] = None
     status: str
     created_at: datetime
     updated_at: datetime

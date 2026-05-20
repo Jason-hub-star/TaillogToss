@@ -31,6 +31,7 @@ export const queryKeys = {
     detail: (coachingId: string) => [...queryKeys.coaching.all, 'detail', coachingId] as const,
     latest: (dogId: string) => [...queryKeys.coaching.all, 'latest', dogId] as const,
     dailyUsage: (userId: string) => [...queryKeys.coaching.all, 'dailyUsage', userId] as const,
+    generationJob: (jobId: string) => [...queryKeys.coaching.all, 'generationJob', jobId] as const,
   },
   training: {
     all: ['training'] as const,

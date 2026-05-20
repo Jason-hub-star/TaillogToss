@@ -33,12 +33,12 @@ export function CoachingGenerationLoader({ dogName }: CoachingGenerationLoaderPr
   return (
     <View style={styles.container}>
       <LottieAnimation asset="perrito-corriendo" size={132} />
-      <Text style={styles.title}>{displayName}의 기록을 분석하고 있어요</Text>
+      <Text style={styles.title}>{displayName}의 코칭을 만들고 있어요</Text>
       <Text style={styles.subtitle}>
-        보통 10~30초 정도 걸려요. 결과가 나올 때까지 이 화면을 유지해주세요.
+        보통 30~60초 정도 걸려요. 화면을 나가도 생성 상태를 다시 확인할 수 있어요.
       </Text>
       <View style={styles.noticeBox}>
-        <Text style={styles.noticeText}>화면을 나가면 생성 완료를 보장하기 어려워요.</Text>
+        <Text style={styles.noticeText}>완료되면 최신 결과로 바로 보여드릴게요.</Text>
       </View>
 
       {/* 단계 표시 */}

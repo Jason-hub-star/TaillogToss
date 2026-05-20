@@ -12,7 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import settings
 from uuid import UUID
 
-from app.shared.models import AICoaching, AICostUsageDaily, AICostUsageMonthly, Dog
+from app.shared.models import AICoaching, AICostUsageDaily, AICostUsageMonthly, CoachingGenerationJob, Dog
 
 FREE_DAILY_COACHING_LIMIT = 1
 PRO_DAILY_COACHING_LIMIT = 10
@@ -72,7 +72,11 @@ async def check_user_burst_limit(db: AsyncSession, user_id: str) -> bool:
     return count < settings.AI_USER_BURST_LIMIT
 
 
-async def check_user_daily_limit(db: AsyncSession, user_id: str) -> tuple[bool, int, int]:
+async def check_user_daily_limit(
+    db: AsyncSession,
+    user_id: str,
+    include_active_generation_jobs: bool = False,
+) -> tuple[bool, int, int]:
     """사용자 일일 제한 확인 — 구독 차등 적용.
     Returns: (is_allowed, used_count, daily_limit)
     FREE: 1회/일 (토큰팩 잔여 시 추가 가능)
@@ -96,6 +100,14 @@ async def check_user_daily_limit(db: AsyncSession, user_id: str) -> tuple[bool, 
     )
     result = await db.execute(daily_q)
     count = result.scalar() or 0
+    if include_active_generation_jobs:
+        active_q = select(func.count()).where(
+            CoachingGenerationJob.user_id == UUID(user_id),
+            CoachingGenerationJob.status.in_(("pending", "generating")),
+            CoachingGenerationJob.created_at >= today_start,
+        )
+        active_count = (await db.execute(active_q)).scalar() or 0
+        count += active_count
 
     # 구독 상태 조회 → 제한 분기
     sub_q = select(Subscription).where(Subscription.user_id == user_id)

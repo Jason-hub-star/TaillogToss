@@ -10,10 +10,11 @@ from datetime import date, datetime, timedelta, timezone
 from typing import List, Optional
 from uuid import UUID
 
-from sqlalchemy import desc, func, select
+from sqlalchemy import desc, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
+from app.core.database import SessionLocal
 from app.core.exceptions import BadRequestException, NotFoundException
 from app.features.coaching import budget, prompts, rule_engine, schemas
 from app.features.coaching.training_references import (
@@ -22,10 +23,13 @@ from app.features.coaching.training_references import (
     sanitize_reference_curriculum_ids,
 )
 from app.shared.clients.openai_client import OpenAIError, openai_client
-from app.shared.models import AICoaching, BehaviorLog, Dog, DogEnv, UserSettings
+from app.shared.models import AICoaching, BehaviorLog, CoachingGenerationJob, Dog, DogEnv, UserSettings
 from app.shared.utils.ownership import verify_dog_ownership
 
 logger = logging.getLogger(__name__)
+
+ACTIVE_GENERATION_STATUSES = ("pending", "generating")
+STALE_GENERATION_AFTER = timedelta(minutes=10)
 
 
 async def generate_coaching(
@@ -196,6 +200,128 @@ async def get_latest_coaching(
     return _to_response(result)
 
 
+async def fail_stale_generation_jobs(db: AsyncSession) -> int:
+    """10분 이상 멈춘 pending/generating job을 실패 처리한다."""
+    cutoff = datetime.now(timezone.utc) - STALE_GENERATION_AFTER
+    q = select(CoachingGenerationJob).where(
+        CoachingGenerationJob.status.in_(ACTIVE_GENERATION_STATUSES),
+        or_(
+            CoachingGenerationJob.updated_at < cutoff,
+            CoachingGenerationJob.created_at < cutoff,
+        ),
+    )
+    jobs = (await db.execute(q)).scalars().all()
+    if not jobs:
+        return 0
+
+    now = datetime.now(timezone.utc)
+    for job in jobs:
+        job.status = "failed"
+        job.error_code = "stale_timeout"
+        job.error_message = "생성 작업이 10분 이상 응답하지 않아 다시 시도가 필요해요."
+        job.completed_at = now
+        job.updated_at = now
+    await db.commit()
+    return len(jobs)
+
+
+async def get_active_generation_job(
+    db: AsyncSession,
+    user_id: str,
+    dog_id: UUID,
+) -> Optional[CoachingGenerationJob]:
+    """동일 user/dog의 진행 중 job을 반환한다."""
+    q = (
+        select(CoachingGenerationJob)
+        .where(
+            CoachingGenerationJob.user_id == UUID(user_id),
+            CoachingGenerationJob.dog_id == dog_id,
+            CoachingGenerationJob.status.in_(ACTIVE_GENERATION_STATUSES),
+        )
+        .order_by(desc(CoachingGenerationJob.created_at))
+        .limit(1)
+    )
+    return (await db.execute(q)).scalar_one_or_none()
+
+
+async def create_generation_job(
+    db: AsyncSession,
+    request: schemas.CoachingRequest,
+    user_id: str,
+) -> CoachingGenerationJob:
+    """pending job을 생성하고 커밋한다."""
+    job = CoachingGenerationJob(
+        user_id=UUID(user_id),
+        dog_id=UUID(request.dog_id),
+        report_type=request.report_type,
+        user_context=request.user_context,
+        status="pending",
+    )
+    db.add(job)
+    await db.commit()
+    await db.refresh(job)
+    return job
+
+
+async def get_generation_job(
+    db: AsyncSession,
+    job_id: UUID,
+    user_id: str,
+) -> schemas.CoachingGenerationJobResponse:
+    """job 소유권을 확인하고 상태 응답을 반환한다."""
+    job = await db.get(CoachingGenerationJob, job_id)
+    if job is None or str(job.user_id) != user_id:
+        raise NotFoundException("Coaching generation job not found")
+    return await generation_job_to_response(db, job)
+
+
+async def run_generation_job(job_id: str) -> None:
+    """request DB 세션과 분리된 background runner."""
+    job_uuid = UUID(job_id)
+    async with SessionLocal() as db:
+        job = await db.get(CoachingGenerationJob, job_uuid)
+        if job is None or job.status not in ACTIVE_GENERATION_STATUSES:
+            return
+
+        now = datetime.now(timezone.utc)
+        job.status = "generating"
+        job.started_at = job.started_at or now
+        job.updated_at = now
+        await db.commit()
+
+        try:
+            report_type = job.report_type.value if hasattr(job.report_type, "value") else str(job.report_type)
+            response = await generate_coaching(
+                db,
+                schemas.CoachingRequest(
+                    dog_id=str(job.dog_id),
+                    report_type=report_type,
+                    user_context=job.user_context,
+                ),
+            )
+
+            completed_job = await db.get(CoachingGenerationJob, job_uuid)
+            if completed_job is None:
+                return
+            completed_job.status = "completed"
+            completed_job.coaching_id = response.id
+            completed_job.completed_at = datetime.now(timezone.utc)
+            completed_job.updated_at = completed_job.completed_at
+            await db.commit()
+        except Exception as exc:
+            logger.exception("coaching generation job failed: %s", job_id)
+            await db.rollback()
+            failed_job = await db.get(CoachingGenerationJob, job_uuid)
+            if failed_job is None:
+                return
+            failed_job.status = "failed"
+            failed_job.error_code = exc.__class__.__name__
+            failed_job.error_message = str(exc)[:500] or "코칭 생성에 실패했어요."
+            failed_job.completed_at = datetime.now(timezone.utc)
+            failed_job.updated_at = failed_job.completed_at
+            await db.commit()
+
+
 async def submit_feedback(
     db: AsyncSession, coaching_id: UUID, score: int, user_id: str,
 ) -> schemas.FeedbackResponse:
@@ -292,6 +418,33 @@ def _to_response(coaching: AICoaching) -> schemas.CoachingResponse:
         ai_tokens_used=coaching.ai_tokens_used or 0,
         created_at=coaching.created_at,
         analytics_metadata=None,
+    )
+
+
+async def generation_job_to_response(
+    db: AsyncSession,
+    job: CoachingGenerationJob,
+) -> schemas.CoachingGenerationJobResponse:
+    coaching = None
+    if job.coaching_id:
+        coaching_row = await db.get(AICoaching, job.coaching_id)
+        if coaching_row:
+            coaching = _to_response(coaching_row)
+
+    report_type = job.report_type.value if hasattr(job.report_type, "value") else str(job.report_type)
+    return schemas.CoachingGenerationJobResponse(
+        job_id=job.id,
+        status=job.status,
+        dog_id=job.dog_id,
+        report_type=report_type,
+        coaching_id=job.coaching_id,
+        coaching=coaching,
+        error_code=job.error_code,
+        error_message=job.error_message,
+        created_at=job.created_at,
+        started_at=job.started_at,
+        completed_at=job.completed_at,
+        updated_at=job.updated_at,
     )
 
 

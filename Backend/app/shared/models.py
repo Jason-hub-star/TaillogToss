@@ -390,6 +390,37 @@ class AICoaching(Base):
     action_tracker = relationship("ActionTracker", back_populates="coaching", cascade="all, delete-orphan", passive_deletes=True)
 
 
+class CoachingGenerationJob(Base):
+    """AI 코칭 비동기 생성 작업 — FE CoachingGenerationJob 미러"""
+    __tablename__ = "coaching_generation_jobs"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid4)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    dog_id = Column(UUID(as_uuid=True), ForeignKey("dogs.id", ondelete="CASCADE"), nullable=False, index=True)
+    report_type = Column(Enum(ReportType, name="report_type"), nullable=False, default=ReportType.DAILY)
+    user_context = Column(Text)
+    status = Column(String(20), nullable=False, default="pending", index=True)
+    coaching_id = Column(UUID(as_uuid=True), ForeignKey("ai_coaching.id", ondelete="SET NULL"), nullable=True, index=True)
+    error_code = Column(String(100))
+    error_message = Column(Text)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    started_at = Column(DateTime(timezone=True))
+    completed_at = Column(DateTime(timezone=True))
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+    dog = relationship("Dog", foreign_keys=[dog_id])
+    coaching = relationship("AICoaching", foreign_keys=[coaching_id])
+
+    __table_args__ = (
+        CheckConstraint(
+            "status in ('pending', 'generating', 'completed', 'failed')",
+            name="coaching_generation_jobs_status_check",
+        ),
+        Index("idx_coaching_generation_jobs_user_dog_status", "user_id", "dog_id", "status"),
+        Index("idx_coaching_generation_jobs_dog_created", "dog_id", "created_at"),
+    )
+
+
 class ActionTracker(Base):
     """코칭 액션 추적 — FE coaching.ts ActionTracker 미러"""
     __tablename__ = "action_tracker"

@@ -3,7 +3,7 @@ AI 코칭 Pydantic 스키마 — FE types/coaching.ts 6블록 구조 미러
 Parity: AI-001
 """
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Literal, Optional
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -107,6 +107,27 @@ class CoachingResponse(BaseModel):
     ai_tokens_used: int = 0
     created_at: datetime
     analytics_metadata: Optional[Dict[str, Any]] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+CoachingGenerationJobStatus = Literal["pending", "generating", "completed", "failed"]
+
+
+class CoachingGenerationJobResponse(BaseModel):
+    """비동기 코칭 생성 작업 상태"""
+    job_id: UUID
+    status: CoachingGenerationJobStatus
+    dog_id: UUID
+    report_type: str
+    coaching_id: Optional[UUID] = None
+    coaching: Optional[CoachingResponse] = None
+    error_code: Optional[str] = None
+    error_message: Optional[str] = None
+    created_at: datetime
+    started_at: Optional[datetime] = None
+    completed_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
 
     model_config = ConfigDict(from_attributes=True)
 

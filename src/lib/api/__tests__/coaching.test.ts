@@ -25,7 +25,9 @@ jest.mock('lib/api/supabase', () => ({
 
 import {
   generateCoaching,
+  getCoachingGenerationJob,
   parseCoachingError,
+  startCoachingGeneration,
   toggleActionItem,
   getDailyUsage,
   getCoachings,
@@ -38,6 +40,38 @@ beforeEach(() => {
   mockWithBackendFallback.mockImplementation(
     async (runBackend: () => Promise<unknown>) => runBackend(),
   );
+});
+
+// ── async generation jobs ──
+
+describe('coaching generation jobs', () => {
+  it('생성 job을 시작한다', async () => {
+    mockRequestBackend.mockResolvedValue({ job_id: 'job-1', status: 'pending' });
+
+    const result = await startCoachingGeneration('dog-1', 'DAILY', '오늘 산책 중 줄 당김 발생');
+
+    expect(mockRequestBackend).toHaveBeenCalledWith(
+      '/api/v1/coaching/generation-jobs',
+      {
+        method: 'POST',
+        body: {
+          dog_id: 'dog-1',
+          report_type: 'DAILY',
+          user_context: '오늘 산책 중 줄 당김 발생',
+        },
+      },
+    );
+    expect(result.job_id).toBe('job-1');
+  });
+
+  it('생성 job 상태를 조회한다', async () => {
+    mockRequestBackend.mockResolvedValue({ job_id: 'job-1', status: 'completed' });
+
+    const result = await getCoachingGenerationJob('job-1');
+
+    expect(mockRequestBackend).toHaveBeenCalledWith('/api/v1/coaching/generation-jobs/job-1');
+    expect(result.status).toBe('completed');
+  });
 });
 
 // ── generateCoaching ──

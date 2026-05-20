@@ -11,7 +11,9 @@ from app.features.auth.schemas import UserResponse
 from app.features.coaching.schemas import (
     ActionItem,
     CoachingBlocks,
+    CoachingGenerationJobResponse,
     CoachingRequest,
+    CoachingResponse,
     DailyUsageResponse,
     DayPlan,
     FeedbackRequest,
@@ -81,6 +83,39 @@ class TestCoachingSchemas:
         resp = DailyUsageResponse(used=1, limit=10)
         assert resp.used == 1
         assert resp.limit == 10
+
+    def test_generation_job_response_allows_pending(self):
+        resp = CoachingGenerationJobResponse(
+            job_id=uuid4(),
+            status="pending",
+            dog_id=uuid4(),
+            report_type="DAILY",
+            created_at=datetime.now(timezone.utc),
+        )
+        assert resp.status == "pending"
+        assert resp.coaching is None
+
+    def test_generation_job_response_allows_completed_with_coaching(self):
+        dog_id = uuid4()
+        coaching = CoachingResponse(
+            id=uuid4(),
+            dog_id=dog_id,
+            report_type="DAILY",
+            blocks=CoachingBlocks(),
+            created_at=datetime.now(timezone.utc),
+        )
+        resp = CoachingGenerationJobResponse(
+            job_id=uuid4(),
+            status="completed",
+            dog_id=dog_id,
+            report_type="DAILY",
+            coaching_id=coaching.id,
+            coaching=coaching,
+            created_at=datetime.now(timezone.utc),
+            completed_at=datetime.now(timezone.utc),
+        )
+        assert resp.coaching_id == coaching.id
+        assert resp.coaching.id == coaching.id
 
     def test_feedback_score_range(self):
         FeedbackRequest(score=1)

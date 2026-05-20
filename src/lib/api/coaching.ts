@@ -4,7 +4,12 @@
  */
 import { supabase } from './supabase';
 import { requestBackend, withBackendFallback, type BackendApiError } from './backend';
-import type { CoachingResult, ActionTracker, ReportType } from 'types/coaching';
+import type {
+  ActionTracker,
+  CoachingGenerationJob,
+  CoachingResult,
+  ReportType,
+} from 'types/coaching';
 
 // ── 코칭 생성 (백엔드 전용, Supabase fallback 없음) ──
 
@@ -32,6 +37,29 @@ export async function generateCoaching(
   return requestBackend<CoachingResult, GenerateCoachingRequest>(
     '/api/v1/coaching/generate',
     { method: 'POST', body },
+  );
+}
+
+/** AI 코칭 비동기 생성 job 시작 */
+export async function startCoachingGeneration(
+  dogId: string,
+  reportType: ReportType = 'DAILY',
+  userContext?: string,
+): Promise<CoachingGenerationJob> {
+  const body: GenerateCoachingRequest = { dog_id: dogId, report_type: reportType };
+  if (userContext?.trim()) body.user_context = userContext.trim();
+  return requestBackend<CoachingGenerationJob, GenerateCoachingRequest>(
+    '/api/v1/coaching/generation-jobs',
+    { method: 'POST', body },
+  );
+}
+
+/** AI 코칭 비동기 생성 job 상태 조회 */
+export async function getCoachingGenerationJob(
+  jobId: string,
+): Promise<CoachingGenerationJob> {
+  return requestBackend<CoachingGenerationJob>(
+    `/api/v1/coaching/generation-jobs/${jobId}`,
   );
 }
 

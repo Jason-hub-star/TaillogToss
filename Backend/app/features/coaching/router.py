@@ -6,7 +6,7 @@ Parity: AI-001
 from typing import List, Optional
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
@@ -39,7 +39,11 @@ async def generate_coaching(
         )
 
     # 일일 제한 (구독 차등)
-    daily_ok, used, limit = await budget.check_user_daily_limit(db, user_id)
+    daily_ok, used, limit = await budget.check_user_daily_limit(
+        db,
+        user_id,
+        include_active_generation_jobs=True,
+    )
     if not daily_ok:
         raise HTTPException(
             status_code=429,
@@ -53,6 +57,66 @@ async def generate_coaching(
         )
 
     return await service.generate_coaching(db, request)
+
+
+@router.post("/generation-jobs", response_model=schemas.CoachingGenerationJobResponse)
+async def start_generation_job(
+    request: schemas.CoachingRequest,
+    background_tasks: BackgroundTasks,
+    user_id: str = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db),
+):
+    """비동기 AI 코칭 생성 job 생성 — active job은 재사용한다."""
+    dog_id = UUID(request.dog_id)
+    await verify_dog_ownership(db, dog_id, user_id=user_id)
+    await service.fail_stale_generation_jobs(db)
+
+    active_job = await service.get_active_generation_job(db, user_id, dog_id)
+    if active_job:
+        return await service.generation_job_to_response(db, active_job)
+
+    burst_ok = await budget.check_user_burst_limit(db, user_id)
+    if not burst_ok:
+        raise HTTPException(
+            status_code=429,
+            detail={
+                "message": "잠시 후 다시 시도해 주세요",
+                "remaining": 0,
+                "retry_after_sec": 600,
+            },
+        )
+
+    daily_ok, used, limit = await budget.check_user_daily_limit(
+        db,
+        user_id,
+        include_active_generation_jobs=True,
+    )
+    if not daily_ok:
+        raise HTTPException(
+            status_code=429,
+            detail={
+                "message": "일일 코칭 한도에 도달했어요",
+                "remaining": 0,
+                "daily_used": used,
+                "daily_limit": limit,
+                "retry_after_sec": _seconds_until_midnight(),
+            },
+        )
+
+    job = await service.create_generation_job(db, request, user_id)
+    background_tasks.add_task(service.run_generation_job, str(job.id))
+    return await service.generation_job_to_response(db, job)
+
+
+@router.get("/generation-jobs/{job_id}", response_model=schemas.CoachingGenerationJobResponse)
+async def get_generation_job(
+    job_id: UUID,
+    user_id: str = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db),
+):
+    """비동기 AI 코칭 생성 job 상태 조회"""
+    await service.fail_stale_generation_jobs(db)
+    return await service.get_generation_job(db, job_id, user_id)
 
 
 @router.get("/usage/daily", response_model=schemas.DailyUsageResponse)

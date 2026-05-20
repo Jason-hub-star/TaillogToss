@@ -26,6 +26,23 @@ export interface CoachingResult {
   } | null;
 }
 
+export type CoachingGenerationStatus = 'pending' | 'generating' | 'completed' | 'failed';
+
+export interface CoachingGenerationJob {
+  job_id: string;
+  status: CoachingGenerationStatus;
+  dog_id: string;
+  report_type: ReportType;
+  coaching_id: string | null;
+  coaching: CoachingResult | null;
+  error_code: string | null;
+  error_message: string | null;
+  created_at: string;
+  started_at: string | null;
+  completed_at: string | null;
+  updated_at: string | null;
+}
+
 /** 코칭 6블록 구조 */
 export interface CoachingBlocks {
   /** Block 1 (무료): 행동 분석 인사이트 */

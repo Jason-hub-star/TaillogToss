@@ -6,7 +6,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from 'lib/api/queryKeys';
 import { queryPolicy } from 'lib/api/queryConfig';
 import * as coachingApi from 'lib/api/coaching';
-import type { CoachingResult, ReportType } from 'types/coaching';
+import type { CoachingGenerationJob, CoachingResult, ReportType } from 'types/coaching';
 
 export function useCoachingList(dogId: string | undefined) {
   return useQuery({
@@ -55,6 +55,35 @@ export function useGenerateCoaching() {
       // coaching.all prefix 무효화 — dailyUsage 포함
       void qc.invalidateQueries({ queryKey: queryKeys.coaching.all });
     },
+  });
+}
+
+/** AI 코칭 비동기 generation job 생성 mutation */
+export function useStartCoachingGeneration() {
+  return useMutation({
+    mutationFn: ({
+      dogId,
+      reportType,
+      userContext,
+    }: {
+      dogId: string;
+      reportType?: ReportType;
+      userContext?: string;
+    }) => coachingApi.startCoachingGeneration(dogId, reportType, userContext),
+  });
+}
+
+/** AI 코칭 비동기 generation job polling */
+export function useCoachingGenerationJob(jobId: string | null | undefined, enabled = true) {
+  return useQuery({
+    queryKey: queryKeys.coaching.generationJob(jobId ?? ''),
+    queryFn: () => coachingApi.getCoachingGenerationJob(jobId!),
+    enabled: !!jobId && enabled,
+    refetchInterval: (query) => {
+      const data = query.state.data as CoachingGenerationJob | undefined;
+      return data?.status === 'pending' || data?.status === 'generating' ? 2000 : false;
+    },
+    ...queryPolicy.default,
   });
 }
 

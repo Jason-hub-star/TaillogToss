@@ -5,6 +5,7 @@
  */
 import { createRoute, useNavigation } from '@granite-js/react-native';
 import { Storage } from '@apps-in-toss/framework';
+import { useQueryClient } from '@tanstack/react-query';
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Share, Image } from 'react-native';
 import { colors, typography, spacing } from 'styles/tokens';
@@ -19,10 +20,12 @@ import { CoachingDetailContent } from './CoachingDetailContent';
 import {
   useLatestCoaching,
   useSubmitFeedback,
-  useGenerateCoaching,
+  useStartCoachingGeneration,
+  useCoachingGenerationJob,
   useToggleActionItem,
   useDailyUsage,
 } from 'lib/hooks/useCoaching';
+import { queryKeys } from 'lib/api/queryKeys';
 import { parseCoachingError } from 'lib/api/coaching';
 import { buildCoachingShareText } from 'lib/charts/filters';
 import { useIsPro } from 'lib/hooks/useSubscription';
@@ -47,10 +50,11 @@ function CoachingResultPage() {
   const { activeDog } = useActiveDog();
   const isPro = useIsPro(user?.id);
   const navigation = useNavigation();
+  const queryClient = useQueryClient();
   const { isReady } = usePageGuard({ currentPath: '/coaching/result' });
   const { data: coaching, isLoading, isError, refetch } = useLatestCoaching(activeDog?.id);
   const submitFeedback = useSubmitFeedback();
-  const generateCoaching = useGenerateCoaching();
+  const startGeneration = useStartCoachingGeneration();
   const toggleAction = useToggleActionItem();
   const { data: usage } = useDailyUsage(user?.id);
 
@@ -62,10 +66,20 @@ function CoachingResultPage() {
   const [selectedScore, setSelectedScore] = useState<number>(0);
   const [feedbackSubmitted, setFeedbackSubmitted] = useState(false);
   const [generateError, setGenerateError] = useState<string | null>(null);
+  const [generationJobId, setGenerationJobId] = useState<string | null>(null);
   const [selectedSituations, setSelectedSituations] = useState<string[]>([]);
   const [userContext, setUserContext] = useState('');
   const trackedRequestRef = useRef(false);
   const trackedCoachingIdRef = useRef<string | null>(null);
+  const handledJobIdRef = useRef<string | null>(null);
+  const clearedJobIdRef = useRef<string | null>(null);
+  const generationJobStorageKey = user?.id && activeDog?.id
+    ? `coaching_generation_job_${user.id}_${activeDog.id}`
+    : null;
+  const generationJob = useCoachingGenerationJob(generationJobId, !!generationJobId);
+  const generationStatus = generationJob.data?.status;
+  const isGenerationActive = startGeneration.isPending
+    || (!!generationJobId && (generationJob.isLoading || generationStatus === 'pending' || generationStatus === 'generating'));
 
   const handleSituationToggle = useCallback((id: string) => {
     setSelectedSituations((prev) =>
@@ -124,19 +138,80 @@ function CoachingResultPage() {
     }
   }, [coaching]);
 
+  useEffect(() => {
+    if (!generationJobStorageKey || generationJobId) return;
+    let alive = true;
+    void Storage.getItem(generationJobStorageKey).then((storedJobId) => {
+      if (alive && storedJobId && storedJobId !== clearedJobIdRef.current) {
+        setGenerationJobId(storedJobId);
+        setGenerateError(null);
+      }
+    });
+    return () => {
+      alive = false;
+    };
+  }, [generationJobStorageKey, generationJobId]);
+
+  useEffect(() => {
+    const job = generationJob.data;
+    if (!job || handledJobIdRef.current === `${job.job_id}:${job.status}`) return;
+    handledJobIdRef.current = `${job.job_id}:${job.status}`;
+
+    if (job.status === 'completed') {
+      clearedJobIdRef.current = job.job_id;
+      if (job.coaching && activeDog?.id) {
+        queryClient.setQueryData(queryKeys.coaching.latest(activeDog.id), job.coaching);
+        void queryClient.invalidateQueries({ queryKey: queryKeys.coaching.list(activeDog.id) });
+      } else if (activeDog?.id) {
+        void refetch();
+      }
+      if (user?.id) {
+        void queryClient.invalidateQueries({ queryKey: queryKeys.coaching.dailyUsage(user.id) });
+      }
+      if (generationJobStorageKey) {
+        void Storage.removeItem(generationJobStorageKey);
+      }
+      setGenerationJobId(null);
+      setSelectedSituations([]);
+      setUserContext('');
+      setGenerateError(null);
+    }
+
+    if (job.status === 'failed') {
+      clearedJobIdRef.current = job.job_id;
+      if (generationJobStorageKey) {
+        void Storage.removeItem(generationJobStorageKey);
+      }
+      setGenerationJobId(null);
+      setGenerateError(job.error_message || '코칭 생성에 실패했어요');
+    }
+  }, [activeDog?.id, generationJob.data, generationJobStorageKey, queryClient, refetch, user?.id]);
+
+  useEffect(() => {
+    if (!generationJob.isError) return;
+    if (generationJobStorageKey) {
+      void Storage.removeItem(generationJobStorageKey);
+    }
+    setGenerationJobId(null);
+    setGenerateError(parseCoachingError(generationJob.error).message);
+  }, [generationJob.error, generationJob.isError, generationJobStorageKey]);
+
   const handleGenerate = useCallback(() => {
-    if (!activeDog?.id || generateCoaching.isPending) return;
+    if (!activeDog?.id || isGenerationActive) return;
     setGenerateError(null);
     setActiveTab('latest');
     setSelectedHistoryCoaching(null);
     const ctx = buildUserContext();
-    generateCoaching.mutate(
+    startGeneration.mutate(
       { dogId: activeDog.id, userContext: ctx },
       {
-        onSuccess: () => {
-          // 생성 후 인풋 초기화
-          setSelectedSituations([]);
-          setUserContext('');
+        onSuccess: (job) => {
+          clearedJobIdRef.current = null;
+          setGenerationJobId(job.job_id);
+          handledJobIdRef.current = null;
+          if (generationJobStorageKey) {
+            void Storage.setItem(generationJobStorageKey, job.job_id);
+          }
         },
         onError: (err) => {
           const parsed = parseCoachingError(err);
@@ -144,7 +219,7 @@ function CoachingResultPage() {
         },
       },
     );
-  }, [activeDog?.id, generateCoaching, buildUserContext]);
+  }, [activeDog?.id, buildUserContext, generationJobStorageKey, isGenerationActive, startGeneration]);
 
   const handleToggleActionItem = useCallback(
     (actionItemId: string) => {
@@ -249,7 +324,7 @@ function CoachingResultPage() {
     );
   }
 
-  if (generateCoaching.isPending) {
+  if (isGenerationActive) {
     return (
       <DetailLayout title="AI 행동 진단" onBack={handleBack}>
         <CoachingGenerationLoader dogName={activeDog?.name} />
@@ -367,7 +442,7 @@ function CoachingResultPage() {
             feedbackSubmitted={feedbackSubmitted}
             isSubmittingFeedback={submitFeedback.isPending}
             onGenerate={handleGenerate}
-            isGenerating={generateCoaching.isPending}
+            isGenerating={isGenerationActive}
             generateError={generateError}
             usage={usage}
             isLatestTab={activeTab === 'latest' && !selectedHistoryCoaching}

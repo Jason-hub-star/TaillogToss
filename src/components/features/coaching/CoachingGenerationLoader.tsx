@@ -1,22 +1,26 @@
 /**
  * CoachingGenerationLoader — 코칭 생성 전용 로딩 컴포넌트
- * 단계 표시: 로그 분석 → 패턴 추출 → 코칭 생성
- * Parity: AI-001
+ * 단계 표시: 기록 확인 → 패턴 탐색 → 코칭 작성
+ * Parity: AI-001, UIUX-005
  */
 import React, { useEffect, useState } from 'react';
-import { View, Text, Image, StyleSheet, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
+import { LottieAnimation } from 'components/shared/LottieAnimation';
 import { colors, typography, spacing } from 'styles/tokens';
-import { ICONS } from 'lib/data/iconSources';
 
-const STEPS: { label: string; icon: string }[] = [
-  { label: '로그 분석 중', icon: ICONS['ic-analysis']! },
-  { label: '패턴 추출 중', icon: ICONS['ic-search']! },
-  { label: '코칭 생성 중', icon: ICONS['ic-paw']! },
+const STEPS = [
+  '최근 기록 확인 중',
+  '반복 패턴 찾는 중',
+  '맞춤 코칭 작성 중',
 ];
-const FALLBACK_ICON = ICONS['ic-paw']!;
 
-export function CoachingGenerationLoader() {
+interface CoachingGenerationLoaderProps {
+  dogName?: string | null;
+}
+
+export function CoachingGenerationLoader({ dogName }: CoachingGenerationLoaderProps) {
   const [currentStep, setCurrentStep] = useState(0);
+  const displayName = dogName?.trim() || '우리 강아지';
 
   useEffect(() => {
     const timers = [
@@ -28,18 +32,18 @@ export function CoachingGenerationLoader() {
 
   return (
     <View style={styles.container}>
-      <Image source={{ uri: STEPS[currentStep]?.icon ?? FALLBACK_ICON }} style={styles.emojiImg} />
-      <ActivityIndicator
-        size="large"
-        color={colors.primaryBlue}
-        style={styles.spinner}
-      />
-      <Text style={styles.title}>AI가 행동 패턴을 분석하고 있어요</Text>
-      <Text style={styles.subtitle}>잠시만 기다려 주세요...</Text>
+      <LottieAnimation asset="perrito-corriendo" size={132} />
+      <Text style={styles.title}>{displayName}의 기록을 분석하고 있어요</Text>
+      <Text style={styles.subtitle}>
+        보통 10~30초 정도 걸려요. 결과가 나올 때까지 이 화면을 유지해주세요.
+      </Text>
+      <View style={styles.noticeBox}>
+        <Text style={styles.noticeText}>화면을 나가면 생성 완료를 보장하기 어려워요.</Text>
+      </View>
 
       {/* 단계 표시 */}
       <View style={styles.stepsContainer}>
-        {STEPS.map((step, idx) => (
+        {STEPS.map((label, idx) => (
           <View key={idx} style={styles.stepRow}>
             <View
               style={[
@@ -54,7 +58,7 @@ export function CoachingGenerationLoader() {
                 idx === currentStep && styles.stepLabelCurrent,
               ]}
             >
-              {step.label}
+              {label}
             </Text>
             {idx < currentStep && <Text style={styles.stepCheck}>✓</Text>}
           </View>
@@ -70,25 +74,35 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 80,
-  },
-  emojiImg: {
-    width: 56,
-    height: 56,
-    marginBottom: spacing.lg,
-  },
-  spinner: {
-    marginBottom: spacing.lg,
+    paddingHorizontal: spacing.xxxl,
   },
   title: {
     ...typography.body,
     fontWeight: '600',
     color: colors.textPrimary,
     marginBottom: spacing.sm,
+    marginTop: spacing.md,
+    textAlign: 'center',
   },
   subtitle: {
     ...typography.bodySmall,
     color: colors.textSecondary,
+    marginBottom: spacing.lg,
+    textAlign: 'center',
+    lineHeight: 22,
+  },
+  noticeBox: {
+    backgroundColor: colors.backgroundSecondary,
+    borderRadius: 12,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
     marginBottom: spacing.xxxl,
+  },
+  noticeText: {
+    ...typography.caption,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    lineHeight: 18,
   },
   stepsContainer: {
     gap: spacing.md,

@@ -13,7 +13,7 @@ export function SkeletonAcademy() {
     <View style={styles.container}>
       <View style={styles.lottieHeader}>
         <LottieAnimation asset="jackie" size={72} />
-        <Text style={styles.loadingText}>커리큘럼 준비 중...</Text>
+        <Text style={styles.loadingText}>커리큘럼을 준비하고 있어요</Text>
       </View>
 
       {/* AIPersonalizedHero placeholder */}

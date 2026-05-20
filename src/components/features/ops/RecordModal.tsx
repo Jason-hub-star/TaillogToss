@@ -2,9 +2,10 @@
  * RecordModal — 개별 기록 바텀시트 (프리셋 칩 + 메모 + "저장 & 다음")
  * Parity: B2B-001
  */
-import React, { useState, useCallback } from 'react';
-import { View, Text, TextInput, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
-import { colors, typography } from 'styles/tokens';
+import React, { useRef, useState, useCallback } from 'react';
+import { View, Text, TextInput, StyleSheet, TouchableOpacity, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
+import { SafeAreaProvider, useSafeAreaInsets } from '@granite-js/native/react-native-safe-area-context';
+import { colors, typography, spacing } from 'styles/tokens';
 import { PresetChipGrid } from './PresetChipGrid';
 import { StepAttemptHistory } from 'components/features/training/StepAttemptHistory';
 import type { PresetOption } from 'lib/data/presets';
@@ -23,6 +24,23 @@ interface RecordModalProps {
 }
 
 export function RecordModal({ item, onSave, onSaveAndNext, onClose, stepAttempts = [], isOrgPro = false }: RecordModalProps) {
+  return (
+    <SafeAreaProvider>
+      <RecordModalInner
+        item={item}
+        onSave={onSave}
+        onSaveAndNext={onSaveAndNext}
+        onClose={onClose}
+        stepAttempts={stepAttempts}
+        isOrgPro={isOrgPro}
+      />
+    </SafeAreaProvider>
+  );
+}
+
+function RecordModalInner({ item, onSave, onSaveAndNext, onClose, stepAttempts = [], isOrgPro = false }: RecordModalProps) {
+  const scrollRef = useRef<ScrollView>(null);
+  const insets = useSafeAreaInsets();
   const [selectedPreset, setSelectedPreset] = useState<PresetOption | null>(null);
   const [memo, setMemo] = useState('');
   const [activeTab, setActiveTab] = useState<ActiveTab>('record');
@@ -53,7 +71,11 @@ export function RecordModal({ item, onSave, onSaveAndNext, onClose, stepAttempts
   }, [buildPayload, onSaveAndNext]);
 
   return (
-    <View style={styles.container}>
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 12 : 0}
+    >
       <View style={styles.header}>
         <View style={styles.headerInfo}>
           <Text style={styles.dogName}>{item.dogName}</Text>
@@ -83,7 +105,13 @@ export function RecordModal({ item, onSave, onSaveAndNext, onClose, stepAttempts
       ) : null}
 
       {activeTab === 'record' ? (
-        <ScrollView style={styles.body} showsVerticalScrollIndicator={false}>
+        <ScrollView
+          ref={scrollRef}
+          style={styles.body}
+          contentContainerStyle={[styles.bodyContent, { paddingBottom: spacing.lg }]}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
           <PresetChipGrid onSelect={handlePresetSelect} selectedId={selectedPreset?.id} />
 
           <View style={styles.memoSection}>
@@ -96,17 +124,22 @@ export function RecordModal({ item, onSave, onSaveAndNext, onClose, stepAttempts
               placeholderTextColor={colors.textTertiary}
               multiline
               numberOfLines={3}
+              onFocus={() => setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 120)}
             />
           </View>
         </ScrollView>
       ) : (
-        <ScrollView style={styles.body} showsVerticalScrollIndicator={false}>
+        <ScrollView
+          style={styles.body}
+          contentContainerStyle={[styles.bodyContent, { paddingBottom: insets.bottom + spacing.lg }]}
+          showsVerticalScrollIndicator={false}
+        >
           <StepAttemptHistory attempts={stepAttempts} />
         </ScrollView>
       )}
 
       {activeTab === 'record' && (
-        <View style={styles.footer}>
+        <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, spacing.md) }]}>
           <TouchableOpacity
             style={[styles.saveBtn, !selectedPreset && styles.saveBtnDisabled]}
             onPress={handleSave}
@@ -125,7 +158,7 @@ export function RecordModal({ item, onSave, onSaveAndNext, onClose, stepAttempts
           </TouchableOpacity>
         </View>
       )}
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -163,6 +196,9 @@ const styles = StyleSheet.create({
   },
   body: {
     flex: 1,
+  },
+  bodyContent: {
+    flexGrow: 1,
   },
   memoSection: {
     paddingHorizontal: 16,

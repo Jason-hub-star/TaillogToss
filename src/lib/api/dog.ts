@@ -31,6 +31,50 @@ function getImageUploadMeta(fileUri: string): { extension: string; contentType: 
   return { extension: normalizedExtension, contentType };
 }
 
+function dataUriToArrayBuffer(fileUri: string): ArrayBuffer {
+  const base64 = fileUri.replace(/^data:[^;]+;base64,/, '');
+  const binary = atob(base64);
+  const buffer = new ArrayBuffer(binary.length);
+  const bytes = new Uint8Array(buffer);
+  for (let i = 0; i < binary.length; i += 1) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  return buffer;
+}
+
+function requestUriAsBlob(fileUri: string): Promise<Blob> {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        resolve(xhr.response as Blob);
+      } else {
+        reject(new Error(`Image request failed with status ${xhr.status}`));
+      }
+    };
+    xhr.onerror = () => reject(new Error('Image request failed'));
+    xhr.responseType = 'blob';
+    xhr.open('GET', fileUri);
+    xhr.send();
+  });
+}
+
+async function readImageBody(fileUri: string): Promise<Blob | ArrayBuffer> {
+  if (fileUri.startsWith('data:')) {
+    return dataUriToArrayBuffer(fileUri);
+  }
+
+  try {
+    const response = await fetch(fileUri);
+    return await response.blob();
+  } catch (fetchError) {
+    if (/^(content|file):\/\//.test(fileUri)) {
+      return requestUriAsBlob(fileUri);
+    }
+    throw fetchError;
+  }
+}
+
 /** 반려견 목록 조회 */
 export async function getDogs(userId: string): Promise<Dog[]> {
   const { data, error } = await supabase
@@ -62,18 +106,38 @@ export async function getDogEnv(dogId: string): Promise<DogEnv | null> {
   );
 }
 
+type DogEnvUpdate = Partial<
+  Pick<DogEnv, 'household_info' | 'health_meta' | 'triggers' | 'past_attempts' | 'temperament' | 'activity_meta' | 'rewards_meta'>
+>;
+
+/** 반려견 환경/맥락 수정 */
+export async function updateDogEnv(dogId: string, updates: DogEnvUpdate): Promise<DogEnv> {
+  const { data, error } = await supabase
+    .from('dog_env')
+    .upsert(
+      {
+        dog_id: dogId,
+        ...updates,
+      },
+      { onConflict: 'dog_id' },
+    )
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data as DogEnv;
+}
+
 /** 반려견 프로필 사진 업로드 */
 export async function uploadDogProfileImage(userId: string, dogId: string, fileUri: string): Promise<string> {
-  // react-native 환경에서 파일을 fetch하여 blob으로 변환
-  const response = await fetch(fileUri);
-  const blob = await response.blob();
   const { extension, contentType } = getImageUploadMeta(fileUri);
+  const imageBody = await readImageBody(fileUri);
   const fileName = `${userId}/${dogId}-${Date.now()}.${extension}`;
-  const filePath = `dog-profiles/${fileName}`;
+  const filePath = fileName;
 
   const { error: uploadError } = await supabase.storage
     .from('dog-profiles')
-    .upload(filePath, blob, {
+    .upload(filePath, imageBody, {
       contentType,
       upsert: true,
     });

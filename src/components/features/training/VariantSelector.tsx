@@ -17,9 +17,9 @@ interface VariantSelectorProps {
 }
 
 const VARIANTS: { key: PlanVariant; label: string; proOnly: boolean; iconSource: string }[] = [
-  { key: 'A', label: 'Plan A', proOnly: false, iconSource: ICONS['ic-target']! },
-  { key: 'B', label: 'Plan B', proOnly: true, iconSource: ICONS['ic-cat-play']! },
-  { key: 'C', label: 'Plan C', proOnly: true, iconSource: ICONS['ic-puzzle']! },
+  { key: 'A', label: '기본', proOnly: false, iconSource: ICONS['ic-target']! },
+  { key: 'B', label: '쉬운 방법', proOnly: true, iconSource: ICONS['ic-cat-play']! },
+  { key: 'C', label: '심화 방법', proOnly: true, iconSource: ICONS['ic-puzzle']! },
 ];
 
 const PHILOSOPHY_LABEL: Record<string, string> = {

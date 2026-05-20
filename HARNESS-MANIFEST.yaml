@@ -1,0 +1,57 @@
+version: 1
+name: taillogtoss-agent-layer
+generated_on: 2026-05-15
+
+entrypoints:
+  primary: AGENTS.md
+  secondary: CLAUDE.md
+  machine_readable: HARNESS-MANIFEST.yaml
+
+precedence:
+  - code-and-runtime-truth
+  - project-root-agents-md
+  - project-root-claude-md
+  - docs-status-project-status
+  - docs-status-decision-log
+  - docs-ref-project-plan
+  - docs-ref-stack-profiles
+  - docs-ops-agent-orchestration
+  - command-guides-and-scripts
+
+required_files:
+  - AGENTS.md
+  - CLAUDE.md
+  - HARNESS-MANIFEST.yaml
+  - docs/status/PROJECT-STATUS.md
+  - docs/status/11-FEATURE-PARITY-MATRIX.md
+  - docs/status/DECISION-LOG.md
+  - docs/ref/PROJECT-PLAN.md
+  - docs/ref/STACK-PROFILES.md
+  - docs/ops/agent-orchestration.md
+  - .claude/commands/intake.md
+  - .claude/commands/impact-map.md
+  - .claude/commands/evidence-review.md
+  - .claude/commands/handoff.md
+  - .claude/commands/profile-recommend.md
+  - scripts/check-agent-layer.sh
+  - scripts/check-doc-consistency.sh
+  - scripts/check-planning.sh
+  - scripts/check-harness.sh
+
+validation:
+  script: scripts/check-harness.sh
+  expectations:
+    - planning-contract-files-exist
+    - command-guides-exist
+    - doc-links-are-consistent
+    - parity-and-daily-sync-paths-are-declared
+
+project_focus:
+  - page-skill-first-delivery
+  - parity-id-tracking
+  - docs-sync-before-closeout
+  - toss-miniapp-runtime-qa
+
+notes:
+  - Keep this manifest pointer-oriented.
+  - Promote only reusable agent patterns here; keep route specifics in project docs.

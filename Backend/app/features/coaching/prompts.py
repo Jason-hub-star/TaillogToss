@@ -59,7 +59,7 @@ Important:
 Technique Search Space (select only humane, evidence-informed options that fit the case):
 - Training techniques: desensitization, counterconditioning, differential reinforcement (DRA/DRI/DRO), LAT/look-at-that, BAT-style distance control, mat/place training, stationing, recall/U-turn, hand target, pattern games, cooperative care/start-button behaviors, muzzle conditioning only when appropriate, management before training.
 - Psychological principles: threshold management, predictability, choice/control, safety signal, arousal regulation, recovery latency, frustration tolerance, attachment security, stimulus control, reinforcement history, generalization, trigger stacking.
-- Tools: high-value treats, treat pouch, marker word/clicker, front-clip harness, fixed leash/long line, mat/bed, baby gate/pen, visual barrier, white noise/sound file, lick mat/snuffle mat, grooming dummy tools, towel/non-slip mat, video log.
+- Tools: 좋아하는 간식, 간식 파우치, 표시어/클리커, 앞고리 하네스, 고정 리드줄/롱라인, 매트/침대, 안전문/펜스, 시야 차단막, 백색소음/소리 파일, 리킹매트/노즈워크 매트, 모형 미용 도구, 수건/미끄럼 방지 매트, 영상 기록.
 - Environment setup: quiet room, distance in meters, door/gate boundary, parallel walking path, visitor entry routine, separate feeding zones, grooming table/floor choice, sound volume steps, safe zone, escape route prevention without force.
 - Never recommend aversive tools or flooding: shock/prong/choke collars, leash jerks, scolding, forced restraint, forced exposure to loud sounds, taking food/items away by force, starvation, or intimidation.
 
@@ -196,12 +196,16 @@ def _build_onboarding_section(ctx: dict | None) -> str:
         if parts:
             lines.append(f"- 생활환경: {', '.join(parts)}")
 
-    if issues.get("top_issues"):
-        lines.append(f"- 주요 고민: {', '.join(issues['top_issues'][:3])}")
-    if triggers.get("ids"):
-        lines.append(f"- 주요 트리거: {', '.join(triggers['ids'][:5])}")
-    if past.get("ids"):
-        lines.append(f"- 과거 시도한 방법: {', '.join(past['ids'][:3])}")
+    issue_values = _extract_values(issues, "top_issues")
+    trigger_values = _extract_values(triggers, "ids")
+    past_values = _extract_values(past, "ids")
+
+    if issue_values:
+        lines.append(f"- 주요 고민: {', '.join(issue_values[:3])}")
+    if trigger_values:
+        lines.append(f"- 주요 트리거: {', '.join(trigger_values[:5])}")
+    if past_values:
+        lines.append(f"- 과거 시도한 방법: {', '.join(past_values[:3])}")
 
     # Stage 3: 기질/건강 추가
     if stage >= 3:
@@ -216,12 +220,14 @@ def _build_onboarding_section(ctx: dict | None) -> str:
                 f"- 기질: 민감도 {temperament.get('sensitivity_score', '?')}/5, "
                 f"에너지 {temperament.get('energy_level', '?')}/5"
             )
-        if health.get("chronic_issues"):
-            lines.append(f"- 건강 특이사항: {', '.join(health['chronic_issues'][:3])}")
+        health_issues = _extract_values(health, "chronic_issues")
+        reward_values = _extract_values(rewards, "ids")
+        if health_issues:
+            lines.append(f"- 건강 특이사항: {', '.join(health_issues[:3])}")
         if activity.get("daily_walk_minutes"):
             lines.append(f"- 일일 산책: {activity['daily_walk_minutes']}분")
-        if rewards.get("ids"):
-            lines.append(f"- 선호 보상: {', '.join(rewards['ids'][:2])}")
+        if reward_values:
+            lines.append(f"- 선호 보상: {', '.join(reward_values[:2])}")
         case_intake = s3.get("case_intake") or {}
         if case_intake:
             _append_case_intake_lines(lines, case_intake)
@@ -234,6 +240,19 @@ def _clip_text(value: object, limit: int = 240) -> str:
         return ""
     text = " ".join(value.split())
     return text if len(text) <= limit else text[:limit] + "..."
+
+
+def _extract_values(value: object, key: str) -> list[str]:
+    """Accept both current {"ids": [...]} survey fields and legacy list fields."""
+    if isinstance(value, dict):
+        raw = value.get(key) or value.get("ids") or []
+    else:
+        raw = value
+    if isinstance(raw, str):
+        return [raw] if raw else []
+    if isinstance(raw, list):
+        return [item for item in raw if isinstance(item, str) and item]
+    return []
 
 
 def _append_case_intake_lines(lines: list[str], case_intake: dict) -> None:

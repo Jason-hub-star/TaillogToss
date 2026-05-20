@@ -73,6 +73,6 @@ export function calculateSurveyResult(survey: SurveyData) {
     behavior_type_badge: priorityBehavior,
     risk_level: riskLevel,
     risk_score: maxScore * 20, // 1-5 단계를 0-100으로 치환
-    summary: `${priorityBehavior} 행동 교정을 위한 맞춤 커리큘럼이 준비되었습니다.`,
+    summary: `${priorityBehavior} 행동을 위한 맞춤 커리큘럼을 준비했어요.`,
   };
 }

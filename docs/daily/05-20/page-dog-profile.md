@@ -1,0 +1,13 @@
+# /dog/profile QA - 2026-05-20
+
+- [x] UIUX-006 profile save patch: `/dog/profile` now persists `birth_date` from age input plus `dog_env.household_info`, `health_meta.vet_notes`, and `triggers`.
+- [x] UIUX-006 photo picker patch: shared `DogPhotoPicker` now uses the official `@apps-in-toss/framework` wrapper, declares photos permission for AIT builds, prefixes base64 previews, and retries `fetchAlbumPhotos` with `maxCount: 2`.
+- [x] APP-001/DEV_LOCAL photo QA: `adb reverse tcp:8081`, `tcp:5173`, and `tcp:8765` restored development-mode entry. `viva.republica.toss.test` reached `/dog/profile`, opened Android Photo Picker, selected a real device image, and returned a visible preview.
+- [x] UIUX-006 storage fix: `uploadDogProfileImage()` now uploads object names under `{userId}/{dogId}-...` and handles `data:`/`content://` bodies without React Native Blob constructor failures. Live Supabase `dog-profiles` owner RLS policies were added/applied by `20260520000100_dog_profiles_storage_policies.sql`.
+- [x] UIUX-006 save QA: dev-mode QR photo save created `storage.objects` row `dog-profiles/0b74ada9-.../851e200a-...jpg` and updated `dogs.profile_image_url`; no `Network request failed`, Blob, or RLS upload errors remained. Direct-route `GO_BACK` warning is expected because the page was launched without a back stack.
+- [x] UIUX-006 age QA: changing age `3 -> 4` through `/dog/profile` saved `dogs.birth_date=2022-05-20`; test data was restored to `2023-03-15`.
+- [x] Validation: `npx tsc --noEmit` PASS; `npx jest src/components/features/dog/DogPhotoPicker.test.tsx --runInBand` PASS; touched-file `git diff --check` PASS.
+- [x] AIT build/upload: latest dev QA build `deploymentId=019e4409-85c4-7585-ae37-5de5f08384d2`, artifact `taillog-app-019e4409-85c4-7585-ae37-5de5f08384d2.ait`, private scheme `intoss-private://taillog-app?_deploymentId=019e4409-85c4-7585-ae37-5de5f08384d2`.
+- [x] Metro-off production Toss launch PASS: latest AIT `/dog/profile` rendered in `viva.republica.toss` with `Bundle loading completed successfully`, `Running "shared"`, and route `/dog/profile`; `localhost:8081/status` was offline during launch.
+- [x] Production Toss AIT photo select/save PASS: OS Photos permission sheet appeared, Android Photo Picker opened, a real device image returned to the avatar preview, save created `storage.objects` row `dog-profiles/2732a53d-.../1212be92-...jpg`, and `dogs.profile_image_url` updated to the public `dog-profiles` URL. Spouse-phone check remains useful as an account/device regression only, not the primary blocker.
+- Board Sync: `docs/status/PAGE-UPGRADE-BOARD.md` remains `/dog/profile` = `Done` as of 2026-05-20.

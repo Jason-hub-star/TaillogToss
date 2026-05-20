@@ -63,6 +63,8 @@ function mapRecentLogItem(log: BackendRecentLogItem, dogId: string): BehaviorLog
     behavior: log.behavior ?? null,
     consequence: log.consequence ?? null,
     intensity: Math.min(10, Math.max(1, log.intensity)) as BehaviorLog['intensity'],
+    occurrence_count: 1,
+    occurrence_count_is_minimum: false,
     duration_minutes: null,
     location: null,
     memo: null,

@@ -64,9 +64,9 @@ function InterceptSheet({
 
         <View style={styles.benefits}>
           {[
-            'AI 맞춤 6블록 코칭 활성화',
-            '고민·트리거 기반 정밀 분석',
-            '7일 훈련 플랜 자동 생성',
+            'AI 맞춤 기본 코칭 활성화',
+            '고민·트리거 기반 분석',
+            '바로 실천할 실행 계획 생성',
           ].map((item) => (
             <View key={item} style={styles.benefitRow}>
               <Image source={{ uri: ICONS['ic-target'] }} style={styles.benefitIcon} />

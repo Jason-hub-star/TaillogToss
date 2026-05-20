@@ -137,7 +137,7 @@ function Stage1FormPage() {
       title="우리 아이를 소개해줘요"
       onBack={() => navigation.navigate('/onboarding/welcome')}
       bottomCTA={{
-        label: submitStage1.isPending ? '저장 중...' : '다음',
+        label: submitStage1.isPending ? '저장하고 있어요' : '다음',
         onPress: handleSubmit,
         disabled: !isValid || submitStage1.isPending,
       }}
@@ -200,7 +200,7 @@ function Stage1FormPage() {
               style={styles.input}
               value={breed}
               onChangeText={setBreed}
-              placeholder="말티푸, 믹스견, 잘 모르겠어요..."
+              placeholder="말티푸, 믹스견, 잘 모르겠어요"
               placeholderTextColor={colors.textSecondary}
               maxLength={40}
             />

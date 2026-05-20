@@ -6,6 +6,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from 'lib/api/queryKeys';
 import { queryPolicy } from 'lib/api/queryConfig';
 import * as dogApi from 'lib/api/dog';
+import type { DashboardData } from 'lib/api/dashboard';
 import type { Dog, SurveyData } from 'types/dog';
 
 export function useDogList(userId: string | undefined) {
@@ -52,7 +53,37 @@ export function useUpdateDog() {
     mutationFn: ({ dogId, updates }: { dogId: string; updates: Partial<Dog> }) =>
       dogApi.updateDog(dogId, updates),
     onSuccess: (data) => {
-      void qc.invalidateQueries({ queryKey: queryKeys.dogs.detail(data.id) });
+      qc.setQueryData(queryKeys.dogs.detail(data.id), data);
+      qc.setQueriesData({ queryKey: queryKeys.dogs.all }, (old) => {
+        if (!Array.isArray(old)) return old;
+        return old.map((dog) => (dog?.id === data.id ? data : dog));
+      });
+      qc.setQueryData<DashboardData>(queryKeys.dashboard.detail(data.id), (old) => {
+        if (!old) return old;
+        return {
+          ...old,
+          dogProfile: {
+            ...old.dogProfile,
+            name: data.name,
+            breed: data.breed ?? old.dogProfile.breed,
+            weight_kg: data.weight_kg ?? old.dogProfile.weight_kg,
+            profile_image_url: data.profile_image_url ?? null,
+          },
+        };
+      });
+      void qc.invalidateQueries({ queryKey: queryKeys.dogs.all });
+      void qc.invalidateQueries({ queryKey: queryKeys.dashboard.detail(data.id) });
+    },
+  });
+}
+
+export function useUpdateDogEnv() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ dogId, updates }: { dogId: string; updates: Parameters<typeof dogApi.updateDogEnv>[1] }) =>
+      dogApi.updateDogEnv(dogId, updates),
+    onSuccess: (data) => {
+      void qc.invalidateQueries({ queryKey: queryKeys.dogs.env(data.dog_id) });
       void qc.invalidateQueries({ queryKey: queryKeys.dogs.all });
     },
   });

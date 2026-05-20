@@ -21,6 +21,7 @@ import { useOrgEntitlement, useOrgSubscription } from 'lib/hooks/useOrgSubscript
 import { MemberList } from 'components/features/ops/MemberList';
 import { InviteSheet } from 'components/features/ops/InviteSheet';
 import { OrgStatsSheet } from 'components/features/ops/OrgStatsSheet';
+import { BackButton, BackButtonSpacer } from 'components/shared/BackButton';
 import { PresetManager } from 'components/features/ops/PresetManager';
 import { OrgInfoEditForm } from 'components/features/ops/OrgInfoEditForm';
 import { DogQuotaCard } from 'components/features/ops/DogQuotaCard';
@@ -67,7 +68,7 @@ function OpsSettingsPage() {
           Alert.alert('초대 완료', '직원을 초대했어요.');
         },
         onError: (err) => {
-          Alert.alert('초대 실패', err instanceof Error ? err.message : '다시 시도해주세요.');
+          Alert.alert('초대하지 못했어요', err instanceof Error ? err.message : '다시 시도해주세요.');
         },
       },
     );
@@ -76,7 +77,7 @@ function OpsSettingsPage() {
   const handleOrgSave = useCallback((updates: Pick<Organization, 'name' | 'phone' | 'address'>) => {
     updateOrg.mutate(updates, {
       onError: () => {
-        Alert.alert('저장 실패', '센터 정보를 저장하지 못했어요. 다시 시도해주세요.');
+        Alert.alert('저장하지 못했어요', '센터 정보를 저장하지 못했어요. 다시 시도해주세요.');
       },
     });
   }, [updateOrg]);
@@ -165,11 +166,9 @@ function OpsSettingsPage() {
 function Navbar({ onBack }: { onBack: () => void }) {
   return (
     <View style={styles.navbar}>
-      <TouchableOpacity onPress={onBack} activeOpacity={0.7}>
-        <Text style={styles.backBtn}>{'\u2190'}</Text>
-      </TouchableOpacity>
+      <BackButton onPress={onBack} />
       <Text style={styles.navTitle}>운영 설정</Text>
-      <View style={styles.navSpacer} />
+      <BackButtonSpacer />
     </View>
   );
 }
@@ -183,9 +182,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
     borderBottomWidth: 1, borderBottomColor: colors.divider,
   },
-  backBtn: { ...typography.sectionTitle, color: colors.textPrimary, paddingRight: 8 },
   navTitle: { flex: 1, ...typography.subtitle, fontWeight: '600', color: colors.textPrimary, textAlign: 'center' },
-  navSpacer: { width: 30 },
   body: { flex: 1 },
   statsBtn: {
     marginHorizontal: spacing.screenHorizontal,

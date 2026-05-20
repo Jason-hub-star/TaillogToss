@@ -7,7 +7,20 @@ const mockInvoke = jest.fn();
 const mockSetSession = jest.fn();
 const mockGetUser = jest.fn();
 const mockSignOut = jest.fn();
+const mockUpdateUser = jest.fn();
+const mockRefreshSession = jest.fn();
+const mockStorageSetItem = jest.fn();
+const mockStorageGetItem = jest.fn();
+const mockStorageRemoveItem = jest.fn();
 const mockIsConfigured = jest.fn().mockReturnValue(true);
+
+jest.mock('@apps-in-toss/framework', () => ({
+  Storage: {
+    setItem: (...args: unknown[]) => mockStorageSetItem(...args),
+    getItem: (...args: unknown[]) => mockStorageGetItem(...args),
+    removeItem: (...args: unknown[]) => mockStorageRemoveItem(...args),
+  },
+}));
 
 jest.mock('lib/api/supabase', () => ({
   supabase: {
@@ -16,6 +29,8 @@ jest.mock('lib/api/supabase', () => ({
       setSession: (...args: unknown[]) => mockSetSession(...args),
       getUser: (...args: unknown[]) => mockGetUser(...args),
       signOut: (...args: unknown[]) => mockSignOut(...args),
+      updateUser: (...args: unknown[]) => mockUpdateUser(...args),
+      refreshSession: (...args: unknown[]) => mockRefreshSession(...args),
     },
   },
   isSupabaseConfigured: () => mockIsConfigured(),
@@ -28,6 +43,11 @@ beforeEach(() => {
   mockIsConfigured.mockReturnValue(true);
   mockGetUser.mockResolvedValue({ data: { user: { id: 'user-1' } }, error: null });
   mockSignOut.mockResolvedValue({ error: null });
+  mockUpdateUser.mockResolvedValue({ error: null });
+  mockRefreshSession.mockResolvedValue({ error: null });
+  mockStorageSetItem.mockResolvedValue(undefined);
+  mockStorageGetItem.mockResolvedValue(null);
+  mockStorageRemoveItem.mockResolvedValue(undefined);
 });
 
 describe('loginWithToss', () => {
@@ -78,6 +98,7 @@ describe('loginWithToss', () => {
       body: expect.objectContaining({
         authorizationCode: 'valid-code',
         referrer: 'SANDBOX',
+        flow: 'B2C',
       }),
     }));
   });
@@ -99,6 +120,29 @@ describe('loginWithToss', () => {
       body: expect.objectContaining({
         authorizationCode: 'valid-code',
         referrer: 'DEFAULT',
+        flow: 'B2C',
+      }),
+    }));
+  });
+
+  it('B2B 플로우를 명시하면 Edge body에 B2B로 전달', async () => {
+    const mockResponse = {
+      access_token: 'header.payload.signature',
+      refresh_token: 'header.payload.sig2',
+      user: { id: 'user-1' },
+      is_new_user: false,
+    };
+    mockInvoke.mockResolvedValue({
+      data: { ok: true, data: mockResponse },
+      error: null,
+    });
+
+    await loginWithToss('valid-code', 'SANDBOX', 'B2B');
+    expect(mockInvoke).toHaveBeenCalledWith('login-with-toss', expect.objectContaining({
+      body: expect.objectContaining({
+        authorizationCode: 'valid-code',
+        referrer: 'SANDBOX',
+        flow: 'B2B',
       }),
     }));
   });

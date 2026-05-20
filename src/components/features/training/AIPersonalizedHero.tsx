@@ -4,18 +4,19 @@
  * Parity: UI-001
  */
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, StyleSheet, Animated } from 'react-native';
+import { View, Text, StyleSheet, Animated, TouchableOpacity } from 'react-native';
 import { SkeletonBox } from 'components/tds-ext/SkeletonBox';
 import { colors, typography, spacing } from 'styles/tokens';
 
 interface Props {
   dogName: string;
   behaviorText: string;
+  onPress?: () => void;
 }
 
 let hasHeroAnimated = false;
 
-export function AIPersonalizedHero({ dogName, behaviorText }: Props) {
+export function AIPersonalizedHero({ dogName, behaviorText, onPress }: Props) {
   const [showContent, setShowContent] = useState(hasHeroAnimated);
   const fadeAnim = useRef(new Animated.Value(hasHeroAnimated ? 1 : 0)).current;
 
@@ -33,8 +34,8 @@ export function AIPersonalizedHero({ dogName, behaviorText }: Props) {
     return () => clearTimeout(timer);
   }, [fadeAnim]);
 
-  return (
-    <View style={styles.container}>
+  const content = (
+    <>
       <View style={styles.badge}>
         <Text style={styles.badgeText}>AI 맞춤 분석</Text>
       </View>
@@ -54,6 +55,21 @@ export function AIPersonalizedHero({ dogName, behaviorText }: Props) {
           <SkeletonBox width="60%" height={22} borderRadius={4} style={{ marginTop: 8 }} />
         </View>
       )}
+    </>
+  );
+
+  if (onPress) {
+    return (
+      <TouchableOpacity style={styles.container} onPress={onPress} activeOpacity={0.82}>
+        {content}
+        <Text style={styles.ctaText}>추천 훈련 보기</Text>
+      </TouchableOpacity>
+    );
+  }
+
+  return (
+    <View style={styles.container}>
+      {content}
     </View>
   );
 }
@@ -86,5 +102,11 @@ const styles = StyleSheet.create({
   },
   skeletonWrap: {
     marginTop: spacing.xs,
+  },
+  ctaText: {
+    ...typography.caption,
+    color: colors.primaryBlue,
+    fontWeight: '700',
+    marginTop: spacing.md,
   },
 });

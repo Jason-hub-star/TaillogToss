@@ -4,14 +4,15 @@
  */
 import type { BehaviorLog } from 'types/log';
 import type { RadarChartData, HeatmapData, BarChartData } from 'types/chart';
+import { getOccurrenceCount } from 'lib/logOccurrence';
 
 /** 행동 유형별 빈도 → Radar 차트 (5축) */
 export function logsToRadar(logs: BehaviorLog[]): RadarChartData {
   const categories = ['barking', 'anxiety', 'aggression', 'destructive', 'other_behavior'] as const;
   const labels: [string, string, string, string, string] = ['짖음', '불안', '공격성', '파괴', '기타'];
 
-  const counts = categories.map(
-    (cat) => logs.filter((l) => l.quick_category === cat).length
+  const counts = categories.map((cat) =>
+    logs.reduce((sum, log) => sum + (log.quick_category === cat ? getOccurrenceCount(log) : 0), 0)
   );
   const max = Math.max(...counts, 1);
   const normalized = counts.map((c) => Math.round((c / max) * 100)) as [number, number, number, number, number];
@@ -32,7 +33,7 @@ export function logsToHeatmap(logs: BehaviorLog[]): HeatmapData {
     const d = new Date(log.occurred_at);
     const dayIndex = (d.getDay() + 6) % 7; // 월=0
     const hour = d.getHours();
-    matrix[dayIndex]![hour]! += 1;
+    matrix[dayIndex]![hour]! += getOccurrenceCount(log);
   }
 
   const maxValue = Math.max(...matrix.flat(), 1);
@@ -53,10 +54,10 @@ export function logsToDailyBar(logs: BehaviorLog[], days: number = 7): BarChartD
 
     const dayStart = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
     const dayEnd = dayStart + 86400000;
-    const count = logs.filter((l) => {
+    const count = logs.reduce((sum, l) => {
       const t = new Date(l.occurred_at).getTime();
-      return t >= dayStart && t < dayEnd;
-    }).length;
+      return sum + (t >= dayStart && t < dayEnd ? getOccurrenceCount(l) : 0);
+    }, 0);
     counts.push(count);
   }
 
@@ -104,10 +105,10 @@ export function logsToWeeklyBar(logs: BehaviorLog[], days: number): BarChartData
 
     const startTime = new Date(weekStart.getFullYear(), weekStart.getMonth(), weekStart.getDate()).getTime();
     const endTime = new Date(weekEnd.getFullYear(), weekEnd.getMonth(), weekEnd.getDate()).getTime() + 86400000;
-    const count = logs.filter((l) => {
+    const count = logs.reduce((sum, l) => {
       const t = new Date(l.occurred_at).getTime();
-      return t >= startTime && t < endTime;
-    }).length;
+      return sum + (t >= startTime && t < endTime ? getOccurrenceCount(l) : 0);
+    }, 0);
     counts.push(count);
   }
 
@@ -161,10 +162,10 @@ export function logsToMonthlyBar(logs: BehaviorLog[]): BarChartData {
 
     const monthStart = new Date(y, m, 1).getTime();
     const monthEnd = new Date(y, m + 1, 1).getTime();
-    const count = logs.filter((l) => {
+    const count = logs.reduce((sum, l) => {
       const t = new Date(l.occurred_at).getTime();
-      return t >= monthStart && t < monthEnd;
-    }).length;
+      return sum + (t >= monthStart && t < monthEnd ? getOccurrenceCount(l) : 0);
+    }, 0);
     counts.push(count);
 
     m++;

@@ -46,7 +46,7 @@ export function Step4Health({ value, onChange }: Props) {
     <ScrollView showsVerticalScrollIndicator={false}>
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>건강 상태 체크</Text>
-        <Text style={styles.subtitle}>통증이나 질환은 행동 문제의 원인이 될 수 있습니다</Text>
+        <Text style={styles.subtitle}>통증이나 질환도 행동에 영향을 줄 수 있어요</Text>
         
         <View style={styles.switchRow}>
           <Text style={styles.switchLabel}>관절이나 신체 통증이 의심되나요?</Text>

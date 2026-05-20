@@ -20,9 +20,9 @@ interface PlanSelectorProps {
 const VARIANTS: PlanVariant[] = ['A', 'B', 'C'];
 
 const VARIANT_LABELS: Record<PlanVariant, string> = {
-  A: 'Plan A — 표준',
-  B: 'Plan B — 쉬운 버전',
-  C: 'Plan C — 심화 버전',
+  A: '기본 방법',
+  B: '쉬운 방법',
+  C: '심화 방법',
 };
 
 export function PlanSelector({

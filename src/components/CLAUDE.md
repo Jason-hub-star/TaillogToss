@@ -8,13 +8,15 @@ DogCoach 패턴 계승. **의존 방향은 단방향만 허용.**
 
 ## 계층별 역할
 
-### ① tds-ext/ — TDS 갭 보완 프리미티브 (6종)
+### ① tds-ext/ — TDS 갭 보완 프리미티브
 
 TDS에 없는 UI 패턴을 React Native 기본 컴포넌트로 구현.
 
 | 파일 | 용도 |
 |------|------|
 | `Chip.tsx` | 인터랙티브 칩 + ChipGroup (빠른 기록 카테고리 선택) |
+| `IntensitySelector.tsx` | 1~10 강도 선택 + 좌우 스와이프 조절 |
+| `OccurrenceSelector.tsx` | 기록 횟수 프리셋 선택 |
 | `Accordion.tsx` | 접이식 섹션 (프로필 환경/건강/트리거) |
 | `SpeechBubble.tsx` | 강아지 시점 메시지 (코칭 Block 3) |
 | `DateTimePicker.tsx` | 시간 선택 (기록 발생 시각) |

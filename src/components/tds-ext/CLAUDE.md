@@ -1,6 +1,11 @@
-# tds-ext/ — TDS 갭 보완 프리미티브 (6종)
+# tds-ext/ — TDS 갭 보완 프리미티브
 
 TDS에 없는 UI 패턴을 React Native 기본 컴포넌트로 구현.
+
+| 파일 | 용도 |
+|------|------|
+| `IntensitySelector.tsx` | 1~10 강도 선택 + 좌우 스와이프 조절 |
+| `OccurrenceSelector.tsx` | 기록 횟수 프리셋 선택 |
 
 ## 스킬 참조
 - TDS 컴포넌트 갭: `Skill("toss_apps")` §7.5

@@ -15,11 +15,12 @@ import { useDashboard } from 'lib/hooks/useDashboard';
 import { useDeleteLog } from 'lib/hooks/useLogs';
 import { DogCard } from 'components/features/dashboard/DogCard';
 import { StreakBanner } from 'components/features/dashboard/StreakBanner';
+import { DashboardCoachingSummaryCard } from 'components/features/dashboard/DashboardCoachingSummaryCard';
 import { LogCard } from 'components/features/log/LogCard';
-import { EmptyState } from 'components/tds-ext/EmptyState';
 import { ErrorState } from 'components/tds-ext/ErrorState';
 import { TabLayout } from 'components/shared/layouts/TabLayout';
 import { BottomNavBar } from 'components/shared/BottomNavBar';
+import { LottieAnimation } from 'components/shared/LottieAnimation';
 import { usePageGuard } from 'lib/hooks/usePageGuard';
 import { SkeletonDashboard } from 'components/features/dashboard/SkeletonDashboard';
 import { CoachingPreviewCard } from 'components/features/dashboard/CoachingPreviewCard';
@@ -76,7 +77,7 @@ function DashboardPage() {
   const isB2B = isB2BRole(user?.role);
   const isPro = useIsPro(user?.id);
   const { data: dailyUsageData } = useDailyUsage(user?.id);
-  const dailyLimit = isPro ? 10 : 3;
+  const dailyLimit = dailyUsageData?.limit ?? (isPro ? 10 : 1);
 
   const today = useMemo(() => toLocalDateKey(new Date()), []);
   const {
@@ -89,13 +90,17 @@ function DashboardPage() {
   } = useDashboard(activeDog?.id);
 
   const recentLogs = dashboardData?.recentLogs ?? [];
-  const totalLogs = dashboardData?.stats.total_logs ?? recentLogs.length;
+  const displayedRecentLogs = useMemo(() => recentLogs.slice(0, 10), [recentLogs]);
+  const totalLogs = dashboardData?.stats?.total_logs ?? recentLogs.length;
+  const dogProfileFromDashboard = dashboardData?.dogProfile;
+  const dashboardDogProfile =
+    dogProfileFromDashboard?.id === activeDog?.id ? dogProfileFromDashboard : null;
   const displayDog = activeDog
     ? {
         id: activeDog.id,
         name: activeDog.name,
-        breed: activeDog.breed,
-        profile_image_url: activeDog.profile_image_url,
+        breed: dashboardDogProfile?.breed ?? activeDog.breed,
+        profile_image_url: dashboardDogProfile?.profile_image_url ?? activeDog.profile_image_url,
         birth_date: activeDog.birth_date,
         sex: activeDog.sex,
       }
@@ -179,58 +184,76 @@ function DashboardPage() {
 
   const recordContent = (
     <View style={styles.tabContent}>
-      {isB2B && (
-        <TouchableOpacity
-          style={styles.b2bBanner}
-          onPress={() => navigation.navigate('/ops/today' as never)}
-          activeOpacity={0.8}
-        >
-          <View style={styles.b2bBannerLeft}>
-            <Text style={styles.b2bBannerTitle}>센터 운영 대시보드</Text>
-            <Text style={styles.b2bBannerSub}>오늘의 강아지 현황 보기</Text>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.recordScrollContent}
+      >
+        {isB2B && (
+          <TouchableOpacity
+            style={styles.b2bBanner}
+            onPress={() => navigation.navigate('/ops/today' as never)}
+            activeOpacity={0.8}
+          >
+            <View style={styles.b2bBannerLeft}>
+              <Text style={styles.b2bBannerTitle}>센터 운영 대시보드</Text>
+              <Text style={styles.b2bBannerSub}>오늘의 강아지 현황 보기</Text>
+            </View>
+            <Text style={styles.b2bBannerArrow}>{'→'}</Text>
+          </TouchableOpacity>
+        )}
+
+        {displayDog && (
+          <DogCard
+            dog={displayDog}
+            todayLogCount={todayLogCount}
+            onPress={activeDog ? () => navigation.navigate('/dog/profile') : undefined}
+            onSwitchPress={dogs.length > 1 ? () => navigation.navigate('/dog/switcher') : undefined}
+          />
+        )}
+
+        <DashboardCoachingSummaryCard
+          dogId={activeDog?.id}
+          logCount={totalLogs}
+          onNavigateToCoaching={() => navigation.navigate('/coaching/result')}
+          onNavigateToTraining={() => navigation.navigate('/training/academy')}
+        />
+
+        <StreakBanner logs={recentLogs} streakOverride={dashboardData?.stats.current_streak} />
+
+        {/* B1: 배너 광고 — 무료 사용자 대시보드 홈 */}
+        {!isPro && <BannerAd placement="B1" />}
+
+        {dashboardLoading && !dashboardData && <SkeletonDashboard />}
+
+        {dashboardError && (
+          <ErrorState onRetry={() => { void refetchDashboard(); }} />
+        )}
+
+        {!dashboardLoading && !dashboardError && totalLogs === 0 && (
+          <View style={styles.emptyStateWrap}>
+            <LottieAnimation asset="long-dog" size={112} />
+            <Text style={styles.emptyStateTitle}>첫 기록을 남겨보세요</Text>
+            <Text style={styles.emptyStateDescription}>아래 버튼으로 간단하게 시작해요</Text>
           </View>
-          <Text style={styles.b2bBannerArrow}>{'→'}</Text>
-        </TouchableOpacity>
-      )}
+        )}
 
-      {displayDog && (
-        <DogCard
-          dog={displayDog}
-          todayLogCount={todayLogCount}
-          onPress={activeDog ? () => navigation.navigate('/dog/profile') : undefined}
-          onSwitchPress={dogs.length > 1 ? () => navigation.navigate('/dog/switcher') : undefined}
-        />
-      )}
-
-      <StreakBanner logs={recentLogs} streakOverride={dashboardData?.stats.current_streak} />
-
-      {/* B1: 배너 광고 — 무료 사용자 대시보드 홈 */}
-      {!isPro && <BannerAd placement="B1" />}
-
-      {dashboardLoading && !dashboardData && <SkeletonDashboard />}
-
-      {dashboardError && (
-        <ErrorState onRetry={() => { void refetchDashboard(); }} />
-      )}
-
-      {!dashboardLoading && !dashboardError && totalLogs === 0 && (
-        <EmptyState
-          title="첫 기록을 남겨보세요"
-          description="아래 버튼으로 간단하게 시작해요"
-          lottie="long-dog"
-        />
-      )}
-
-      {!dashboardLoading && !dashboardError && totalLogs > 0 && (
-        <ScrollView showsVerticalScrollIndicator={false}>
+        {!dashboardLoading && !dashboardError && totalLogs > 0 && (
+          <>
           <View style={styles.logListHeader}>
             <Text style={styles.logListTitle}>최근 기록</Text>
+            <Text style={styles.logListMeta}>최근 10개</Text>
           </View>
-          {recentLogs.map((log) => (
+          {displayedRecentLogs.map((log) => (
             <LogCard key={log.id} log={log} onDelete={handleDeleteLog} />
           ))}
-        </ScrollView>
-      )}
+          {recentLogs.length > displayedRecentLogs.length && (
+            <Text style={styles.logListFooter}>
+              최근 10개 기록만 보여드려요. 더 자세한 패턴은 분석 탭에서 볼 수 있어요.
+            </Text>
+          )}
+          </>
+        )}
+      </ScrollView>
 
       {/* 빠른 기록 CTA */}
       <View style={styles.bottomCTA}>
@@ -356,15 +379,56 @@ const styles = StyleSheet.create({
   tabContent: {
     flex: 1,
   },
+  recordScrollContent: {
+    paddingBottom: spacing.lg,
+  },
   logListHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     paddingHorizontal: spacing.screenHorizontal,
-    paddingTop: spacing.lg,
+    paddingTop: spacing.md,
     paddingBottom: spacing.sm,
   },
   logListTitle: {
     ...typography.bodySmall,
     fontWeight: '600',
     color: colors.textPrimary,
+  },
+  logListMeta: {
+    ...typography.caption,
+    color: colors.textSecondary,
+    fontWeight: '600',
+  },
+  logListFooter: {
+    ...typography.caption,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    paddingHorizontal: spacing.screenHorizontal,
+    paddingTop: spacing.lg,
+    paddingBottom: spacing.md,
+  },
+  emptyStateWrap: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'flex-start',
+    minHeight: 220,
+    paddingHorizontal: spacing.xxxl,
+    paddingTop: spacing.lg,
+    paddingBottom: spacing.xxl,
+  },
+  emptyStateTitle: {
+    ...typography.subtitle,
+    fontWeight: '600',
+    color: colors.textPrimary,
+    textAlign: 'center',
+    marginTop: spacing.sm,
+    marginBottom: spacing.xs,
+  },
+  emptyStateDescription: {
+    ...typography.detail,
+    color: colors.textSecondary,
+    textAlign: 'center',
   },
   bottomCTA: {
     paddingHorizontal: spacing.screenHorizontal,

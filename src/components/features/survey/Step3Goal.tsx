@@ -106,7 +106,7 @@ export function Step3Goal({ step5, step6, step7, availableBehaviors: _availableB
     <ScrollView showsVerticalScrollIndicator={false}>
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>반려견의 기질을 알려주세요</Text>
-        <Text style={styles.subtitle}>AI가 아이의 성격에 맞춘 솔루션을 제안합니다</Text>
+        <Text style={styles.subtitle}>AI가 아이 성격에 맞는 방법을 제안해요</Text>
         
         {renderRatingSelector('에너지 레벨 (활동량)', step7.energy_score, (v) => update7({ energy_score: v }))}
         {renderRatingSelector('사회성 (우호도)', step7.social_score, (v) => update7({ social_score: v }))}
@@ -127,7 +127,7 @@ export function Step3Goal({ step5, step6, step7, availableBehaviors: _availableB
 
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>기초 복종 및 트릭</Text>
-        <Text style={styles.subtitle}>이미 마스터한 명령어를 모두 선택해주세요</Text>
+        <Text style={styles.subtitle}>이미 익숙한 명령어를 모두 선택해주세요</Text>
         
         {COMMAND_CATEGORIES.map((cat) => (
           <View key={cat.title} style={styles.commandCategory}>

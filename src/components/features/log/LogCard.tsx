@@ -7,6 +7,7 @@ import React, { useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import type { BehaviorLog } from 'types/log';
 import { colors, typography } from 'styles/tokens';
+import { formatLogOccurrence } from 'lib/logOccurrence';
 
 /** 카테고리 한글 라벨 */
 const CATEGORY_LABELS: Record<string, string> = {
@@ -23,14 +24,15 @@ const CATEGORY_LABELS: Record<string, string> = {
   training: '훈련',
   play: '놀이',
   rest: '휴식',
-  grooming: '그루밍',
+  grooming: '미용',
 };
 
-/** 강도 라벨 + 색상 */
+/** 반응 강도 라벨 + 색상 */
 function getIntensityBadge(intensity: number): { label: string; color: string; bg: string } {
-  if (intensity >= 8) return { label: '높음', color: colors.badgeRed, bg: colors.badgeRedBg };
-  if (intensity >= 5) return { label: '보통', color: colors.badgeAmber, bg: colors.badgeAmberBg };
-  return { label: '낮음', color: colors.badgeGreen, bg: colors.badgeGreenBg };
+  const label = `반응 ${intensity}/10`;
+  if (intensity >= 8) return { label, color: colors.badgeRed, bg: colors.badgeRedBg };
+  if (intensity >= 5) return { label, color: colors.badgeAmber, bg: colors.badgeAmberBg };
+  return { label, color: colors.badgeGreen, bg: colors.badgeGreenBg };
 }
 
 export interface LogCardProps {
@@ -77,6 +79,7 @@ export function LogCard({ log, onPress, onDelete }: LogCardProps) {
         <View style={[styles.badge, { backgroundColor: badge.bg }]}>
           <Text style={[styles.badgeText, { color: badge.color }]}>{badge.label}</Text>
         </View>
+        <Text style={styles.occurrenceText}>{formatLogOccurrence(log)}</Text>
       </View>
     </TouchableOpacity>
   );
@@ -120,5 +123,11 @@ const styles = StyleSheet.create({
   badgeText: {
     fontSize: 12,
     fontWeight: '600',
+  },
+  occurrenceText: {
+    ...typography.caption,
+    color: colors.grey700,
+    fontWeight: '600',
+    marginTop: 4,
   },
 });

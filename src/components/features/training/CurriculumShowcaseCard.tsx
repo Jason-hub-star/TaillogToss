@@ -1,7 +1,7 @@
 /**
  * CurriculumShowcaseCard — Journey Map 내부용 풀-width 쇼케이스 카드
  * 이미지 + 태그라인 + 행동 타깃 칩 + 프리뷰 스텝 + 진도 바
- * PRO 카드: 그라디언트 오버레이 + "PRO로 시작하기" CTA
+ * PRO 카드: preview entry + "미리보기" CTA
  * Parity: UI-001
  */
 import React, { useState } from 'react';
@@ -20,7 +20,6 @@ interface Props {
   isRecommended: boolean;
   reactionSummary?: Record<DogReaction, number>;
   onPress: () => void;
-  onProCTA?: () => void;
 }
 
 const STATUS_BADGE = {
@@ -41,7 +40,6 @@ export function CurriculumShowcaseCard({
   isRecommended,
   reactionSummary,
   onPress,
-  onProCTA,
 }: Props) {
   const [imageFailed, setImageFailed] = useState(false);
   const showImage = !!showcase.image_url && !imageFailed;
@@ -52,7 +50,7 @@ export function CurriculumShowcaseCard({
   return (
     <TouchableOpacity
       style={styles.card}
-      onPress={isLocked ? onProCTA : onPress}
+      onPress={onPress}
       activeOpacity={0.7}
     >
       {/* Icon/Image + Badge row */}
@@ -115,10 +113,10 @@ export function CurriculumShowcaseCard({
         </View>
       )}
 
-      {/* PRO overlay CTA */}
+      {/* PRO preview CTA */}
       {isLocked && (
         <View style={styles.proOverlay}>
-          <Text style={styles.proCTAText}>PRO로 시작하기</Text>
+          <Text style={styles.proCTAText}>1일차 미리보기</Text>
         </View>
       )}
     </TouchableOpacity>

@@ -53,7 +53,7 @@ export interface InterstitialPlacementConfig {
 }
 
 export const INTERSTITIAL_PLACEMENT_CONFIG: Record<InterstitialPlacement, InterstitialPlacementConfig> = {
-  I1: { screen: 'training-academy', dailyLimit: 2, description: '훈련 커리큘럼 시작 직전' },
+  I1: { screen: 'training-academy', dailyLimit: 1, description: '훈련 커리큘럼 시작 직전' },
 };
 
 export type InterstitialAdState =

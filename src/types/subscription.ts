@@ -1,7 +1,7 @@
 /**
  * 구독/결제 도메인 타입 — Toss IAP, DogCoach payment.py 마이그레이션
  * Parity: IAP-001
- * 가격 기준일: 2026-02-26
+ * 가격 기준일: 2026-05-19
  */
 
 /** 플랜 유형 (B2C) */
@@ -17,39 +17,70 @@ export type ProductType = 'non_consumable' | 'consumable';
 export interface IAPProduct {
   product_id: string;
   name: string;
-  price: number; // KRW
+  price: number; // KRW, 사용자 결제 판매가 = 콘솔 공급가 × 1.1
   type: ProductType;
   description: string;
+  console_supply_price?: number; // Toss IAP 콘솔 입력가
+  list_price?: number; // 앱 내 기준가/정가 표시용
+  promotion_label?: string;
+  unit_count?: number;
 }
 
 /**
  * IAP 상품 카탈로그
- * 가격 기준일: 2026-04-29 (콘솔 등록 확정)
+ * 가격 기준일: 2026-05-19 (프로모션 콘솔가 반영)
  * 판매가 = 공급가 × 1.1 (VAT 10%)
+ *
+ * 다음 가격 변경 시 이 객체만 바꾸면 구독 화면/업그레이드 시트가 함께 갱신된다.
  */
 export const IAP_PRODUCTS: Record<string, IAPProduct> = {
   PRO_MONTHLY: {
     product_id: 'ait.0000020829.09e69bf9.90a91624b0.7443236299',
     name: '테일로그 PRO',
-    price: 4895,          // 공급가 4,450 × 1.1
+    price: 7920,          // 콘솔 공급가 7,200 × 1.1
     type: 'non_consumable',
-    description: 'AI 코칭 무제한 + 멀티독 5마리 + 전체 커리큘럼',
+    console_supply_price: 7200,
+    list_price: 10000,
+    promotion_label: '런칭 특가',
+    description: 'AI 코칭 하루 10회 + 상담지 기반 정밀 코칭 + 전체 커리큘럼',
   },
   AI_TOKEN_10: {
     product_id: 'ait.0000020829.b0b00d71.17c5290dc1.7444362301',
     name: 'AI 코칭 토큰 10회',
-    price: 1892,          // 공급가 1,720 × 1.1
+    price: 2750,          // 콘솔 공급가 2,500 × 1.1
     type: 'consumable',
+    console_supply_price: 2500,
+    list_price: 4000,
+    promotion_label: '런칭가',
+    unit_count: 10,
     description: 'AI 행동 분석 코칭 10회 이용권',
   },
   AI_TOKEN_30: {
     product_id: 'ait.0000020829.32dc32cf.49e67a4cfa.7443541064',
     name: 'AI 코칭 토큰 30회',
-    price: 3498,          // 공급가 3,180 × 1.1
+    price: 6600,          // 콘솔 공급가 6,000 × 1.1
     type: 'consumable',
-    description: 'AI 행동 분석 코칭 30회 이용권 (회당 117원)',
+    console_supply_price: 6000,
+    list_price: 10000,
+    promotion_label: '추천 특가',
+    unit_count: 30,
+    description: 'AI 행동 분석 코칭 30회 이용권 (회당 220원)',
   },
 } as const;
+
+export function formatKRW(value: number): string {
+  return `₩${value.toLocaleString()}`;
+}
+
+export function getDiscountPercent(product: Pick<IAPProduct, 'price' | 'list_price'>): number | null {
+  if (!product.list_price || product.list_price <= product.price) return null;
+  return Math.round((1 - product.price / product.list_price) * 100);
+}
+
+export function getUnitPrice(product: Pick<IAPProduct, 'price' | 'unit_count'>): number | null {
+  if (!product.unit_count || product.unit_count <= 0) return null;
+  return Math.floor(product.price / product.unit_count);
+}
 
 /** 멀티독 제한 */
 export const DOG_LIMITS = {

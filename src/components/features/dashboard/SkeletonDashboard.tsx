@@ -13,7 +13,7 @@ export function SkeletonDashboard() {
     <View style={styles.container}>
       <View style={styles.lottieHeader}>
         <LottieAnimation asset="jackie" size={80} />
-        <Text style={styles.loadingText}>불러오는 중...</Text>
+        <Text style={styles.loadingText}>불러오고 있어요</Text>
       </View>
 
       {/* DogCard placeholder */}

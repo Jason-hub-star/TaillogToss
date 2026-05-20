@@ -6,6 +6,7 @@
 import type { BehaviorLog, QuickLogCategory } from 'types/log';
 import type { DogEnv } from 'types/dog';
 import type { TrainingProgress, CurriculumId } from 'types/training';
+import { getOccurrenceCount } from 'lib/logOccurrence';
 
 /** 카테고리 한국어 라벨 맵 */
 export const CATEGORY_LABELS: Record<string, string> = {
@@ -17,6 +18,12 @@ export const CATEGORY_LABELS: Record<string, string> = {
   anxiety: '분리불안',
   aggression: '공격성',
   other_behavior: '공포/회피',
+  walk: '산책',
+  meal: '식사',
+  training: '훈련',
+  play: '놀이',
+  rest: '휴식',
+  grooming: '미용',
   other: '기타',
 };
 
@@ -32,12 +39,12 @@ export function filterByPeriod(logs: BehaviorLog[], days: number): BehaviorLog[]
 export function countByCategory(logs: BehaviorLog[]): { key: string; label: string; count: number }[] {
   const counts: Record<string, number> = {};
   for (const log of logs) {
-    const key = log.quick_category ?? log.type_id ?? 'other';
-    counts[key] = (counts[key] ?? 0) + 1;
+    const key = log.quick_category ?? log.daily_activity ?? log.type_id ?? 'other';
+    counts[key] = (counts[key] ?? 0) + getOccurrenceCount(log);
   }
 
   return Object.entries(counts)
-    .map(([key, count]) => ({ key, label: CATEGORY_LABELS[key] ?? key, count }))
+    .map(([key, count]) => ({ key, label: CATEGORY_LABELS[key] ?? (key === 'manual' ? '직접 기록' : '기타'), count }))
     .sort((a, b) => b.count - a.count);
 }
 
@@ -192,7 +199,7 @@ export function buildAnalysisShareText(params: {
   const lines: string[] = [];
 
   lines.push(`${params.dogName} 행동 분석 · ${params.periodLabel}`);
-  lines.push(`총 ${params.totalLogs}건 기록됐어요`);
+  lines.push(`총 ${params.totalLogs}회 기록됐어요`);
 
   if (params.topBehaviors.length > 0) {
     lines.push('');

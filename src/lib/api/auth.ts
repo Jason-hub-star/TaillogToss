@@ -4,9 +4,11 @@
  */
 import { supabase } from './supabase';
 import { isSupabaseConfigured } from './supabase';
+import { Storage } from '@apps-in-toss/framework';
 import type { TossLoginResponse } from 'types/auth';
 
 type TossLoginReferrer = 'DEFAULT' | 'SANDBOX' | string;
+export type AuthEntryFlow = 'B2C' | 'B2B';
 type EdgeEnvelope<T> = {
   ok?: boolean;
   status?: number;
@@ -18,21 +20,23 @@ type EdgeEnvelope<T> = {
   };
 };
 
+const AUTH_ENTRY_FLOW_KEY = 'taillog:auth-entry-flow:v1';
+
 function createClientNonce(): string {
   return `${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}`;
 }
 
-function normalizeReferrer(referrer?: TossLoginReferrer): 'DEFAULT' | 'SANDBOX' {
+function normalizeReferrer(referrer?: TossLoginReferrer): string {
   const raw = referrer?.trim();
   if (!raw) return 'DEFAULT';
-  if (raw.toUpperCase() === 'SANDBOX') return 'SANDBOX';
-  return 'DEFAULT';
+  return raw;
 }
 
 /** Toss 로그인 (Edge Function 호출) */
 export async function loginWithToss(
   authCode: string,
-  referrer?: TossLoginReferrer
+  referrer?: TossLoginReferrer,
+  flow: AuthEntryFlow = 'B2C',
 ): Promise<TossLoginResponse> {
   if (!isSupabaseConfigured()) {
     throw new Error('SUPABASE_ENV_MISSING');
@@ -43,6 +47,7 @@ export async function loginWithToss(
       authorizationCode: authCode,
       referrer: normalizeReferrer(referrer),
       nonce: createClientNonce(),
+      flow,
     },
   });
   if (error) throw error;
@@ -58,6 +63,36 @@ export async function loginWithToss(
   }
 
   return data as TossLoginResponse;
+}
+
+export async function setPreferredAuthEntryFlow(flow: AuthEntryFlow): Promise<void> {
+  await Storage.setItem(AUTH_ENTRY_FLOW_KEY, flow);
+}
+
+export async function getPreferredAuthEntryFlow(): Promise<AuthEntryFlow | null> {
+  const value = await Storage.getItem(AUTH_ENTRY_FLOW_KEY);
+  return value === 'B2C' || value === 'B2B' ? value : null;
+}
+
+export async function clearPreferredAuthEntryFlow(): Promise<void> {
+  await Storage.removeItem(AUTH_ENTRY_FLOW_KEY);
+}
+
+/**
+ * 일반 사용자 진입은 같은 Toss 계정이 과거 B2B self-join을 눌렀더라도
+ * 세션 메타데이터를 B2C(user)로 되돌린다. 서버 함수도 같은 보정을 하지만,
+ * 이미 발급된 세션/로컬 부트스트랩 흔들림을 막기 위해 클라이언트에서도 다운그레이드만 허용한다.
+ */
+export async function normalizeCurrentSessionAsB2C(): Promise<void> {
+  const { error } = await supabase.auth.updateUser({
+    data: {
+      role: 'user',
+      status: 'active',
+      timezone: 'Asia/Seoul',
+    },
+  });
+  if (error) throw error;
+  await supabase.auth.refreshSession();
 }
 
 function isJwtLike(token: string): boolean {
@@ -78,13 +113,17 @@ export async function setSessionFromBridgeResponse(payload: TossLoginResponse): 
     return false;
   }
 
+  console.log('[AUTH-001] supabase setSession start');
   const { error } = await supabase.auth.setSession({
     access_token: payload.access_token,
     refresh_token: payload.refresh_token,
   });
   if (error) throw error;
+  console.log('[AUTH-001] supabase setSession done');
 
+  console.log('[AUTH-001] supabase getUser verify start');
   const { data: userData, error: userError } = await supabase.auth.getUser(payload.access_token);
+  console.log('[AUTH-001] supabase getUser verify done', { ok: Boolean(userData.user), hasError: Boolean(userError) });
   if (userError || !userData.user) {
     await supabase.auth.signOut();
     return false;
@@ -94,6 +133,7 @@ export async function setSessionFromBridgeResponse(payload: TossLoginResponse): 
 
 /** 로그아웃 */
 export async function logout(): Promise<void> {
+  await clearPreferredAuthEntryFlow();
   const { error } = await supabase.auth.signOut();
   if (error) throw error;
 }

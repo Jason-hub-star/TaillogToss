@@ -19,11 +19,12 @@ import {
 import { SafeAreaView } from '@granite-js/native/react-native-safe-area-context';
 import { Accordion } from 'components/tds-ext/Accordion';
 import { ErrorState } from 'components/tds-ext/ErrorState';
+import { BackButton, BackButtonSpacer } from 'components/shared/BackButton';
 import { DogPhotoPicker } from 'components/features/dog/DogPhotoPicker';
 import { usePageGuard } from 'lib/hooks/usePageGuard';
 import { useAuth } from 'stores/AuthContext';
 import { useActiveDog } from 'stores/ActiveDogContext';
-import { useDogDetail, useDogEnv, useUpdateDog, useDeleteDog } from 'lib/hooks/useDogs';
+import { useDogDetail, useDogEnv, useUpdateDog, useUpdateDogEnv, useDeleteDog } from 'lib/hooks/useDogs';
 import { uploadDogProfileImage } from 'lib/api/dog';
 import type { CaseIntakePayload, DogSex, HouseholdInfo } from 'types/dog';
 import { colors, spacing, typography } from 'styles/tokens';
@@ -90,6 +91,42 @@ function normalizeStringList(value: unknown): string[] {
   return [];
 }
 
+function formatDate(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function getAgeYears(birthDate: string): number {
+  const birth = new Date(birthDate);
+  const now = new Date();
+  let years = now.getFullYear() - birth.getFullYear();
+  const monthDelta = now.getMonth() - birth.getMonth();
+  if (monthDelta < 0 || (monthDelta === 0 && now.getDate() < birth.getDate())) {
+    years -= 1;
+  }
+  return Math.max(years, 0);
+}
+
+function buildBirthDateFromAge(ageText: string, currentBirthDate?: string | null): string | null {
+  const trimmed = ageText.replace(/\D/g, '');
+  if (!trimmed) return null;
+
+  const years = Number(trimmed);
+  if (!Number.isInteger(years) || years < 0 || years > 40) {
+    throw new Error('나이는 0~40 사이의 숫자로 입력해주세요.');
+  }
+
+  if (currentBirthDate && getAgeYears(currentBirthDate) === years) {
+    return currentBirthDate.slice(0, 10);
+  }
+
+  const date = new Date();
+  date.setFullYear(date.getFullYear() - years);
+  return formatDate(date);
+}
+
 function DogProfilePage() {
   const navigation = useNavigation();
   const { isReady } = usePageGuard({ currentPath: '/dog/profile' });
@@ -102,7 +139,9 @@ function DogProfilePage() {
   const { data: dogEnv } = dogEnvQuery;
   const displayDog = dog ?? activeDog;
   const updateDog = useUpdateDog();
+  const updateDogEnv = useUpdateDogEnv();
   const deleteDogMutation = useDeleteDog();
+  const isSaving = updateDog.isPending || updateDogEnv.isPending;
   const caseIntake = dogEnv?.onboarding_survey?.stage3_response?.case_intake;
   const intakeSummary = summarizeCaseIntake(caseIntake);
 
@@ -127,15 +166,10 @@ function DogProfilePage() {
   useEffect(() => {
     if (displayDog) {
       setName(displayDog.name);
-      setBreed(displayDog.breed);
+      setBreed(displayDog.breed ?? '');
       setProfileImageUrl(displayDog.profile_image_url ?? undefined);
       if (displayDog.birth_date) {
-        const birth = new Date(displayDog.birth_date);
-        const now = new Date();
-        const years = Math.floor(
-          (now.getTime() - birth.getTime()) / (365.25 * 24 * 60 * 60 * 1000)
-        );
-        setAgeText(String(years));
+        setAgeText(String(getAgeYears(displayDog.birth_date)));
       } else {
         setAgeText('');
       }
@@ -196,32 +230,98 @@ function DogProfilePage() {
     if (!activeDog?.id || !name.trim() || !user?.id) return;
 
     let finalImageUrl = profileImageUrl;
-    
+
     // 사진이 변경된 경우 (로컬 URI인 경우) 업로드
     if (profileImageUrl && !profileImageUrl.startsWith('http')) {
       try {
         finalImageUrl = await uploadDogProfileImage(user.id, activeDog.id, profileImageUrl);
       } catch (e) {
         console.error('Image upload failed during profile save:', e);
+        Alert.alert('사진 저장 실패', '사진 업로드에 실패했어요. 다시 선택한 뒤 저장해주세요.');
+        return;
       }
     }
 
     const baseSex = (displayDog?.sex?.replace('_NEUTERED', '') ?? 'MALE') as 'MALE' | 'FEMALE';
     const newSex: DogSex = isNeutered ? (`${baseSex}_NEUTERED` as DogSex) : baseSex;
 
-    updateDog.mutate(
-      { 
-        dogId: activeDog.id, 
-        updates: { 
-          name: name.trim(), 
-          breed: breed.trim(), 
-          sex: newSex,
-          profile_image_url: finalImageUrl || null
-        } 
-      },
-      { onSuccess: () => navigation.goBack() }
-    );
-  }, [activeDog?.id, user?.id, name, breed, isNeutered, displayDog?.sex, profileImageUrl, updateDog, navigation]);
+    let birthDate: string | null;
+    try {
+      birthDate = buildBirthDateFromAge(ageText, displayDog?.birth_date);
+    } catch (error) {
+      Alert.alert('나이 확인 필요', error instanceof Error ? error.message : '나이를 다시 입력해주세요.');
+      return;
+    }
+
+    const members = Number(membersCount.trim());
+    if (!Number.isInteger(members) || members < 1 || members > 20) {
+      Alert.alert('가족 수 확인 필요', '가족 수는 1~20 사이의 숫자로 입력해주세요.');
+      return;
+    }
+
+    const nextHousehold = {
+      ...dogEnv?.household_info,
+      living_type: livingType,
+      members_count: members,
+      has_children: dogEnv?.household_info?.has_children ?? false,
+      has_other_pets: dogEnv?.household_info?.has_other_pets ?? false,
+    };
+    const nextHealth = {
+      ...dogEnv?.health_meta,
+      chronic_issues: dogEnv?.health_meta?.chronic_issues ?? [],
+      medications: dogEnv?.health_meta?.medications ?? [],
+      vet_notes: healthNotes.trim() || null,
+    };
+
+    try {
+      await Promise.all([
+        updateDog.mutateAsync({
+          dogId: activeDog.id,
+          updates: {
+            name: name.trim(),
+            breed: breed.trim(),
+            birth_date: birthDate,
+            sex: newSex,
+            profile_image_url: finalImageUrl || null,
+          },
+        }),
+        updateDogEnv.mutateAsync({
+          dogId: activeDog.id,
+          updates: {
+            household_info: nextHousehold,
+            health_meta: nextHealth,
+            triggers,
+          },
+        }),
+      ]);
+      navigation.goBack();
+    } catch (error) {
+      console.error('[UIUX-006] dog profile save failed:', error);
+      Alert.alert(
+        '저장 실패',
+        error instanceof Error ? error.message.slice(0, 180) : '프로필 저장에 실패했어요.',
+      );
+    }
+  }, [
+    activeDog?.id,
+    user?.id,
+    name,
+    breed,
+    ageText,
+    isNeutered,
+    displayDog?.sex,
+    displayDog?.birth_date,
+    profileImageUrl,
+    membersCount,
+    dogEnv?.household_info,
+    dogEnv?.health_meta,
+    livingType,
+    healthNotes,
+    triggers,
+    updateDog,
+    updateDogEnv,
+    navigation,
+  ]);
 
   const handleDelete = useCallback(() => {
     if (!activeDog?.id) return;
@@ -296,7 +396,7 @@ function DogProfilePage() {
         <LabeledInput
           label="나이 (세)"
           value={ageText}
-          onChangeText={setAgeText}
+          onChangeText={(text) => setAgeText(text.replace(/\D/g, ''))}
           placeholder="나이"
           keyboardType="numeric"
         />
@@ -410,12 +510,12 @@ function DogProfilePage() {
       {/* 저장 버튼 */}
       <View style={styles.bottomCTA}>
         <TouchableOpacity
-          style={[styles.saveButton, (!name.trim() || updateDog.isPending) && styles.saveDisabled]}
+          style={[styles.saveButton, (!name.trim() || isSaving) && styles.saveDisabled]}
           onPress={handleSave}
-          disabled={!name.trim() || updateDog.isPending}
+          disabled={!name.trim() || isSaving}
           activeOpacity={0.7}
         >
-          <Text style={styles.saveText}>{updateDog.isPending ? '저장 중...' : '저장'}</Text>
+          <Text style={styles.saveText}>{isSaving ? '저장하고 있어요' : '저장'}</Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>
@@ -429,11 +529,9 @@ function DogProfilePage() {
 function Navbar({ onBack }: { onBack: () => void }) {
   return (
     <View style={styles.navbar}>
-      <TouchableOpacity onPress={onBack} style={styles.backButton}>
-        <Text style={styles.backText}>{'←'}</Text>
-      </TouchableOpacity>
+      <BackButton onPress={onBack} />
       <Text style={styles.navTitle}>반려견 프로필</Text>
-      <View style={styles.backButton} />
+      <BackButtonSpacer />
     </View>
   );
 }
@@ -493,8 +591,6 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: colors.surfaceTertiary,
   },
-  backButton: { width: 40 },
-  backText: { ...typography.sectionTitle, color: colors.grey950 },
   navTitle: { ...typography.body, fontWeight: '600', color: colors.grey950 },
   loading: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   scroll: { flex: 1 },

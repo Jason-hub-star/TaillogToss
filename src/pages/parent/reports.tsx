@@ -3,12 +3,13 @@
  * Parity: B2B-001
  */
 import React, { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, FlatList } from 'react-native';
+import { View, Text, StyleSheet, FlatList } from 'react-native';
 import { SafeAreaView } from '@granite-js/native/react-native-safe-area-context';
 import { colors, typography, spacing } from 'styles/tokens';
 import { createRoute, useNavigation } from '@granite-js/react-native';
 import { ErrorState } from 'components/tds-ext';
 import { LottieAnimation } from 'components/shared/LottieAnimation';
+import { BackButton, BackButtonSpacer } from 'components/shared/BackButton';
 import { usePageGuard } from 'lib/hooks/usePageGuard';
 import { useAuth } from 'stores/AuthContext';
 import { useActiveDog } from 'stores/ActiveDogContext';
@@ -25,7 +26,10 @@ export const Route = createRoute('/parent/reports', {
 });
 
 function ParentReportsPage() {
-  const { isReady } = usePageGuard({ currentPath: '/parent/reports' as any });
+  const { isReady } = usePageGuard({
+    currentPath: '/parent/reports' as any,
+    requireFeature: 'b2bOnly',
+  });
   const { user } = useAuth();
   const { activeDog } = useActiveDog();
   const navigation = useNavigation();
@@ -66,11 +70,9 @@ function ParentReportsPage() {
 
   const header = (
     <View style={styles.header}>
-      <TouchableOpacity onPress={() => navigation.goBack()} activeOpacity={0.7}>
-        <Text style={styles.backBtn}>{'\u2190'}</Text>
-      </TouchableOpacity>
+      <BackButton onPress={() => navigation.goBack()} />
       <Text style={styles.title}>리포트</Text>
-      <View style={styles.spacer} />
+      <BackButtonSpacer />
     </View>
   );
 
@@ -157,9 +159,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
   },
-  backBtn: { ...typography.sectionTitle, color: colors.textPrimary, paddingRight: spacing.md },
   title: { ...typography.body, fontWeight: '700', color: colors.textPrimary, flex: 1 },
-  spacer: { width: 32 },
   loadingText: { ...typography.bodySmall, color: colors.textSecondary, marginTop: spacing.sm },
   emptyTitle: { ...typography.body, fontWeight: '700', color: colors.textPrimary, textAlign: 'center' },
   emptySubtext: { ...typography.bodySmall, color: colors.textSecondary, textAlign: 'center', lineHeight: 22 },

@@ -4,29 +4,83 @@
  * 인터랙티브 카드: 수평 타임라인, 게이지 바, 프로필 카드
  * Parity: AI-001
  */
-import React from 'react';
-import { View, Text, Image, StyleSheet, ScrollView } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, Image, StyleSheet, ScrollView, TouchableOpacity, Modal } from 'react-native';
 import type { Next7DaysBlock, RiskSignalsBlock, ConsultationQuestionsBlock, DayPlan } from 'types/coaching';
 import { colors, typography, spacing } from 'styles/tokens';
 import { ICONS } from 'lib/data/iconSources';
+import { ModalLayout } from 'components/shared/layouts/ModalLayout';
 
 const BLOCK_META: Record<string, { label: string; iconSource: string; teaser: string }> = {
   next_7_days: {
     label: '7일 맞춤 플랜',
     iconSource: ICONS['ic-training']!,
-    teaser: '다음 7일간 해야 할 구체적인 훈련 계획을 확인하세요',
+    teaser: '다음 7일 동안 해볼 훈련 계획을 확인해요',
   },
   risk_signals: {
     label: '위험 신호 분석',
     iconSource: ICONS['ic-bolt']!,
-    teaser: '놓치고 있는 행동 위험 신호를 AI가 분석했습니다',
+    teaser: '놓치기 쉬운 행동 신호를 AI가 살펴봤어요',
   },
   consultation_questions: {
     label: '전문가 상담 질문',
     iconSource: ICONS['ic-trainer']!,
-    teaser: '수의사/훈련사에게 꼭 물어볼 맞춤 질문을 준비했습니다',
+    teaser: '수의사나 훈련사에게 물어볼 질문을 준비했어요',
   },
 };
+
+const TOOL_LABELS: Record<string, string> = {
+  'high-value treats': '좋아하는 간식',
+  'treat pouch': '간식 파우치',
+  'marker word': '표시어',
+  clicker: '클리커',
+  'marker word/clicker': '표시어/클리커',
+  mat: '매트',
+  'mat/bed': '매트/침대',
+  toys: '장난감',
+  'front-clip harness': '앞고리 하네스',
+  'fixed leash': '고정 리드줄',
+  'long line': '롱라인',
+  'fixed leash/long line': '고정 리드줄/롱라인',
+  'baby gate/pen': '안전문/펜스',
+  'visual barrier': '시야 차단막',
+  'white noise': '백색소음',
+  'sound file': '소리 파일',
+  'white noise/sound file': '백색소음/소리 파일',
+  'lick mat/snuffle mat': '리킹매트/노즈워크 매트',
+  'grooming dummy tools': '모형 미용 도구',
+  'towel/non-slip mat': '수건/미끄럼 방지 매트',
+  'video log': '영상 기록',
+};
+
+const CURRICULUM_LABELS: Record<string, string> = {
+  separation_anxiety: '분리불안 완화 훈련',
+  reactivity_management: '반응성 관리 훈련',
+  fear_desensitization: '공포·소리·핸들링 둔감화',
+  impulse_control: '충동 조절 훈련',
+  leash_manners: '산책 매너 훈련',
+  basic_obedience: '기본 예절 루틴',
+  socialization: '사회화 적응 훈련',
+};
+
+const ASCIIISH_PATTERN = /^[a-z0-9_\-/ ]+$/i;
+
+function localizeTool(value: string): string {
+  const normalized = value.trim().toLowerCase();
+  if (!normalized) return '준비물';
+  return TOOL_LABELS[normalized] ?? (ASCIIISH_PATTERN.test(value) ? '맞춤 준비물' : value);
+}
+
+function localizeCurriculum(value: string): string {
+  const normalized = value.trim();
+  if (!normalized) return '맞춤 훈련';
+  return CURRICULUM_LABELS[normalized] ?? (ASCIIISH_PATTERN.test(value) ? '맞춤 훈련' : value);
+}
+
+function formatLocalizedList(values: string[] | undefined, formatter: (value: string) => string): string {
+  if (!values?.length) return '';
+  return Array.from(new Set(values.map(formatter).filter(Boolean))).join(', ');
+}
 
 interface LockedBlockProps {
   blockKey: 'next_7_days' | 'risk_signals' | 'consultation_questions';
@@ -80,52 +134,72 @@ export function Next7DaysView({
 }: {
   data: Next7DaysBlock;
 }) {
+  const [selectedDay, setSelectedDay] = useState<DayPlan | null>(null);
   const today = new Date().getDay(); // 0=Sun
   const todayIndex = today === 0 ? 6 : today - 1; // 0=Mon
 
   return (
-    <ScrollView
-      horizontal
-      showsHorizontalScrollIndicator={false}
-      contentContainerStyle={styles.timelineScroll}
-    >
-      {data.days.map((day) => {
-        const isToday = day.day_number - 1 === todayIndex;
-        return (
-          <View
-            key={day.day_number}
-            style={[styles.timelineCard, isToday && styles.timelineCardToday]}
-          >
-            <View style={styles.timelineHeader}>
-              <View style={[styles.dayBadge, isToday && styles.dayBadgeToday]}>
-                <Text style={[styles.dayNumber, isToday && styles.dayNumberToday]}>
-                  Day {day.day_number}
-                </Text>
+    <>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.timelineScroll}
+      >
+        {data.days.map((day) => {
+          const isToday = day.day_number - 1 === todayIndex;
+          return (
+            <TouchableOpacity
+              key={day.day_number}
+              activeOpacity={0.82}
+              onPress={() => setSelectedDay(day)}
+              style={[styles.timelineCard, isToday && styles.timelineCardToday]}
+            >
+              <View style={styles.timelineHeader}>
+                <View style={[styles.dayBadge, isToday && styles.dayBadgeToday]}>
+                  <Text style={[styles.dayNumber, isToday && styles.dayNumberToday]}>
+                    {day.day_number}일차
+                  </Text>
+                </View>
+                {isToday && <Text style={styles.todayLabel}>오늘</Text>}
               </View>
-              {isToday && <Text style={styles.todayLabel}>오늘</Text>}
-            </View>
-            <Text style={styles.dayFocus} numberOfLines={2}>{day.focus}</Text>
-            {day.tasks.map((task, i) => (
-              <View key={i} style={styles.taskRow}>
-                <Text style={styles.taskBullet}>{'•'}</Text>
-                <Text style={styles.dayTask} numberOfLines={2}>{task}</Text>
-              </View>
-            ))}
-            <DayPlanMeta day={day} />
-          </View>
-        );
-      })}
-    </ScrollView>
+              <Text style={styles.dayFocus} numberOfLines={2}>{day.focus}</Text>
+              {day.tasks.slice(0, 2).map((task, i) => (
+                <View key={i} style={styles.taskRow}>
+                  <Text style={styles.taskBullet}>{'•'}</Text>
+                  <Text style={styles.dayTask} numberOfLines={2}>{task}</Text>
+                </View>
+              ))}
+              <DayPlanMeta day={day} compact />
+              <Text style={styles.openDetailText}>자세히 보기</Text>
+            </TouchableOpacity>
+          );
+        })}
+      </ScrollView>
+
+      <Modal
+        visible={!!selectedDay}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setSelectedDay(null)}
+      >
+        <ModalLayout
+          title={selectedDay ? `${selectedDay.day_number}일차 자세히 보기` : '7일 플랜'}
+          onClose={() => setSelectedDay(null)}
+        >
+          {selectedDay && <DayPlanDetail day={selectedDay} />}
+        </ModalLayout>
+      </Modal>
+    </>
   );
 }
 
-function DayPlanMeta({ day }: { day: DayPlan }) {
+function DayPlanMeta({ day, compact = false }: { day: DayPlan; compact?: boolean }) {
   const rows: Array<{ label: string; value: string }> = [];
   if (day.session_duration_minutes) rows.push({ label: '시간', value: `${day.session_duration_minutes}분` });
   if (day.environment) rows.push({ label: '장소', value: day.environment });
-  if (day.tools?.length) rows.push({ label: '준비물', value: day.tools.join(', ') });
+  if (!compact && day.tools?.length) rows.push({ label: '준비물', value: formatLocalizedList(day.tools, localizeTool) });
   if (day.progression_rule) rows.push({ label: '다음 기준', value: day.progression_rule });
-  if (day.reference_curriculum_ids?.length) rows.push({ label: '참고 훈련', value: day.reference_curriculum_ids.join(', ') });
+  if (!compact && day.reference_curriculum_ids?.length) rows.push({ label: '참고 훈련', value: formatLocalizedList(day.reference_curriculum_ids, localizeCurriculum) });
 
   if (rows.length === 0) return null;
 
@@ -137,6 +211,45 @@ function DayPlanMeta({ day }: { day: DayPlan }) {
           <Text style={styles.dayMetaText} numberOfLines={2}>{row.value}</Text>
         </View>
       ))}
+    </View>
+  );
+}
+
+function DayPlanDetail({ day }: { day: DayPlan }) {
+  const toolText = formatLocalizedList(day.tools, localizeTool);
+  const curriculumText = formatLocalizedList(day.reference_curriculum_ids, localizeCurriculum);
+
+  return (
+    <View>
+      <Text style={styles.detailFocus}>{day.focus}</Text>
+      <Text style={styles.detailSectionTitle}>할 일</Text>
+      {day.tasks.map((task, index) => (
+        <View key={`${day.day_number}-${index}`} style={styles.detailTaskRow}>
+          <View style={styles.detailTaskBadge}>
+            <Text style={styles.detailTaskBadgeText}>{index + 1}</Text>
+          </View>
+          <Text style={styles.detailTaskText}>{task}</Text>
+        </View>
+      ))}
+
+      <View style={styles.detailMetaGroup}>
+        {day.session_duration_minutes ? (
+          <DetailRow label="시간" value={`${day.session_duration_minutes}분`} />
+        ) : null}
+        {day.environment ? <DetailRow label="장소" value={day.environment} /> : null}
+        {toolText ? <DetailRow label="준비물" value={toolText} /> : null}
+        {day.progression_rule ? <DetailRow label="다음 단계 기준" value={day.progression_rule} /> : null}
+        {curriculumText ? <DetailRow label="참고 훈련" value={curriculumText} /> : null}
+      </View>
+    </View>
+  );
+}
+
+function DetailRow({ label, value }: { label: string; value: string }) {
+  return (
+    <View style={styles.detailMetaRow}>
+      <Text style={styles.detailMetaLabel}>{label}</Text>
+      <Text style={styles.detailMetaText}>{value}</Text>
     </View>
   );
 }
@@ -322,7 +435,7 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   timelineCard: {
-    width: 160,
+    width: 184,
     backgroundColor: colors.surfaceSecondary,
     borderRadius: 14,
     padding: spacing.lg,
@@ -406,6 +519,71 @@ const styles = StyleSheet.create({
     ...typography.caption,
     flex: 1,
     color: colors.grey700,
+  },
+  openDetailText: {
+    ...typography.caption,
+    color: colors.primaryBlue,
+    fontWeight: '700',
+    marginTop: spacing.sm,
+  },
+  detailFocus: {
+    ...typography.body,
+    color: colors.textPrimary,
+    fontWeight: '700',
+    lineHeight: 24,
+    marginBottom: spacing.lg,
+  },
+  detailSectionTitle: {
+    ...typography.label,
+    color: colors.textPrimary,
+    fontWeight: '700',
+    marginBottom: spacing.sm,
+  },
+  detailTaskRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.sm,
+    paddingVertical: spacing.sm,
+  },
+  detailTaskBadge: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: colors.primaryBlueLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 1,
+  },
+  detailTaskBadgeText: {
+    ...typography.caption,
+    color: colors.primaryBlue,
+    fontWeight: '700',
+  },
+  detailTaskText: {
+    ...typography.bodySmall,
+    color: colors.textPrimary,
+    lineHeight: 22,
+    flex: 1,
+  },
+  detailMetaGroup: {
+    marginTop: spacing.lg,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    paddingTop: spacing.md,
+    gap: spacing.md,
+  },
+  detailMetaRow: {
+    gap: spacing.xs,
+  },
+  detailMetaLabel: {
+    ...typography.caption,
+    color: colors.primaryBlue,
+    fontWeight: '700',
+  },
+  detailMetaText: {
+    ...typography.bodySmall,
+    color: colors.textPrimary,
+    lineHeight: 22,
   },
   // ── 위험 게이지 ──
   gaugeContainer: {

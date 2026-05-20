@@ -23,6 +23,7 @@ import { EmptyState } from 'components/tds-ext/EmptyState';
 import { ErrorState } from 'components/tds-ext/ErrorState';
 import { Toast } from 'components/tds-ext/Toast';
 import { getCurriculumById } from 'lib/data/published/runtime';
+import { getLockedCurriculumPreview, isCurriculumLockedForUser } from 'lib/data/trainingAccess';
 import { useTrainingProgress, useCompleteStep, useUncompleteStep, useStartTraining, useStepFeedback, useSubmitStepFeedback, useSubmitStepAttempt, useStepAttempts } from 'lib/hooks/useTraining';
 import { useDogEnv } from 'lib/hooks/useDogs';
 import { recommendPlan } from 'lib/data/recommendation/engine';
@@ -30,7 +31,6 @@ import { ReactionTrendBar } from 'components/features/training/ReactionTrendBar'
 import { StreakBadge } from 'components/features/training/StreakBadge';
 import { useIsPro } from 'lib/hooks/useSubscription';
 import { usePageGuard } from 'lib/hooks/usePageGuard';
-import { BannerAd } from 'components/shared/ads';
 import { tracker } from 'lib/analytics/tracker';
 import { ICONS } from 'lib/data/iconSources';
 import { useActiveDog } from 'stores/ActiveDogContext';
@@ -136,6 +136,11 @@ function TrainingDetailPage() {
     if (!currentDay) return false;
     return currentDay.steps.every((s) => completedStepIds.includes(s.id));
   }, [currentDay, completedStepIds]);
+
+  const isLockedPreview = useMemo(
+    () => !!curriculum && isCurriculumLockedForUser(curriculum, isPro ?? false),
+    [curriculum, isPro],
+  );
 
   const handleBack = useCallback(() => navigation.goBack(), [navigation]);
 
@@ -300,6 +305,65 @@ function TrainingDetailPage() {
     );
   }
 
+  if (isLockedPreview) {
+    const { firstDay, previewSteps } = getLockedCurriculumPreview(curriculum);
+    const hiddenStepCount = Math.max(0, (firstDay?.steps.length ?? 0) - previewSteps.length);
+
+    return (
+      <DetailLayout
+        title={curriculum.title}
+        onBack={handleBack}
+        bottomCTA={{
+          label: 'PRO로 전체 훈련 열기',
+          onPress: showProUpgrade,
+        }}
+      >
+        <CurriculumHeroCard
+          curriculumId={curriculumId}
+          title={curriculum.title}
+          difficulty={curriculum.difficulty}
+        />
+
+        <View style={styles.previewNotice}>
+          <Text style={styles.previewNoticeTitle}>1일차 일부를 먼저 볼 수 있어요</Text>
+          <Text style={styles.previewNoticeText}>
+            전체 일정, 다양한 훈련 방법, 반응 추이와 시도 이력은 PRO에서 이어서 확인해요.
+          </Text>
+        </View>
+
+        {firstDay && (
+          <>
+            <Text style={styles.dayTitle}>{firstDay.title}</Text>
+            <Text style={styles.dayDescription}>{firstDay.description}</Text>
+            <View style={styles.previewStepList}>
+              {previewSteps.map((step) => (
+                <View key={step.id} style={styles.previewStepItem}>
+                  <View style={styles.previewStepDot} />
+                  <Text style={styles.previewStepText}>{step.instruction}</Text>
+                </View>
+              ))}
+              {hiddenStepCount > 0 && (
+                <Text style={styles.previewHiddenText}>
+                  이외 {hiddenStepCount}개 미션과 남은 일정은 PRO에서 열려요
+                </Text>
+              )}
+            </View>
+          </>
+        )}
+
+        <TouchableOpacity
+          style={styles.previewCTA}
+          onPress={showProUpgrade}
+          activeOpacity={0.8}
+        >
+          <Text style={styles.previewCTAText}>전체 커리큘럼 보기</Text>
+        </TouchableOpacity>
+
+        {ProUpgradeSheetNode}
+      </DetailLayout>
+    );
+  }
+
   return (
     <DetailLayout
       title={curriculum.title}
@@ -307,7 +371,7 @@ function TrainingDetailPage() {
       bottomCTA={
         allDayStepsCompleted
           ? {
-              label: selectedDay < curriculum.total_days ? '다음 Day로' : '미션 완료!',
+              label: selectedDay < curriculum.total_days ? '다음 날로' : '미션 완료!',
               onPress: handleMissionComplete,
             }
           : undefined
@@ -332,9 +396,6 @@ function TrainingDetailPage() {
         selectedDay={selectedDay}
         onSelect={setSelectedDay}
       />
-
-      {/* B3: 배너 광고 — 무료 사용자 훈련상세 */}
-      {!isPro && <BannerAd placement="B3" />}
 
       {currentDay && (
         <>
@@ -467,6 +528,66 @@ const styles = StyleSheet.create({
     ...typography.bodySmall,
     color: colors.grey700,
     marginBottom: 20,
+  },
+  previewNotice: {
+    backgroundColor: colors.blue50,
+    borderRadius: 14,
+    padding: spacing.lg,
+    marginBottom: spacing.lg,
+  },
+  previewNoticeTitle: {
+    ...typography.body,
+    fontWeight: '700',
+    color: colors.textPrimary,
+    marginBottom: spacing.xs,
+  },
+  previewNoticeText: {
+    ...typography.detail,
+    color: colors.textSecondary,
+    lineHeight: 20,
+  },
+  previewStepList: {
+    backgroundColor: colors.white,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: colors.divider,
+    padding: spacing.lg,
+    gap: spacing.md,
+  },
+  previewStepItem: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+  },
+  previewStepDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: colors.primaryBlue,
+    marginTop: 7,
+    marginRight: spacing.sm,
+  },
+  previewStepText: {
+    flex: 1,
+    ...typography.bodySmall,
+    color: colors.textPrimary,
+    lineHeight: 21,
+  },
+  previewHiddenText: {
+    ...typography.caption,
+    color: colors.textSecondary,
+    textAlign: 'center',
+  },
+  previewCTA: {
+    marginTop: spacing.lg,
+    backgroundColor: colors.primaryBlue,
+    borderRadius: 12,
+    paddingVertical: spacing.lg,
+    alignItems: 'center',
+  },
+  previewCTAText: {
+    ...typography.label,
+    color: colors.white,
+    fontWeight: '700',
   },
   difficultyLink: {
     alignItems: 'center',

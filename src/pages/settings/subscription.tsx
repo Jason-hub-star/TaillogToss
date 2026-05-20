@@ -20,7 +20,13 @@ import { usePageGuard } from 'lib/hooks/usePageGuard';
 import { ErrorState } from 'components/tds-ext';
 import { SkeletonBox } from 'components/tds-ext/SkeletonBox';
 import { useCurrentSubscription, useIsPro, usePurchaseIAP, useRestoreSubscription } from 'lib/hooks/useSubscription';
-import { IAP_PRODUCTS, DOG_LIMITS } from 'types/subscription';
+import {
+  IAP_PRODUCTS,
+  DOG_LIMITS,
+  formatKRW,
+  getDiscountPercent,
+  getUnitPrice,
+} from 'types/subscription';
 import { B2B_IAP_PRODUCTS } from 'types/b2b';
 import type { IAPProduct } from 'types/subscription';
 import { colors, typography } from 'styles/tokens';
@@ -34,17 +40,57 @@ export const Route = createRoute('/settings/subscription', {
 });
 
 const PRO_FEATURES: Array<{ iconSource: string; label: string }> = [
-  { iconSource: ICONS['ic-coaching']!, label: 'AI 코칭 무제한' },
+  { iconSource: ICONS['ic-coaching']!, label: 'AI 코칭 하루 10회' },
   { iconSource: ICONS['ic-dog']!, label: `다견 기능 최대 ${DOG_LIMITS.PRO}마리` },
-  { iconSource: ICONS['ic-analysis']!, label: '심화 인사이트 리포트' },
-  { iconSource: ICONS['ic-training']!, label: '훈련 계획 무제한 (Plan A/B/C)' },
+  { iconSource: ICONS['ic-analysis']!, label: '상담지 기반 정밀 코칭' },
+  { iconSource: ICONS['ic-training']!, label: '다양한 훈련 플랜 모두 이용' },
 ];
 
 const FREE_FEATURES = [
-  { label: 'AI 코칭', free: '하루 3회', pro: '무제한' },
+  { label: 'AI 코칭', free: '하루 1회 + 토큰 충전', pro: '하루 10회' },
   { label: '다견 기능', free: `${DOG_LIMITS.FREE}마리`, pro: `${DOG_LIMITS.PRO}마리` },
-  { label: '훈련 계획', free: 'Plan A', pro: '무제한 (A/B/C)' },
+  { label: '훈련 계획', free: '기본 플랜', pro: '전체 플랜' },
 ] as const;
+
+function PricePromo({ product, period }: { product: IAPProduct; period?: string }) {
+  const discount = getDiscountPercent(product);
+  return (
+    <View style={styles.pricePromo}>
+      <View style={styles.promoMetaRow}>
+        {product.promotion_label && (
+          <Text style={styles.promoLabel}>{product.promotion_label}</Text>
+        )}
+        {discount !== null && (
+          <Text style={styles.discountLabel}>{discount}% 할인</Text>
+        )}
+      </View>
+      {product.list_price && (
+        <Text style={styles.listPrice}>{formatKRW(product.list_price)}</Text>
+      )}
+      <Text style={styles.planPrice}>
+        {formatKRW(product.price)}
+        {period && <Text style={styles.planPeriod}>{period}</Text>}
+      </Text>
+    </View>
+  );
+}
+
+function TokenPrice({ product }: { product: IAPProduct }) {
+  const unitPrice = getUnitPrice(product);
+  return (
+    <>
+      <View style={styles.tokenPriceBlock}>
+        {product.list_price && (
+          <Text style={styles.tokenListPrice}>{formatKRW(product.list_price)}</Text>
+        )}
+        <Text style={styles.tokenPrice}>{formatKRW(product.price)}</Text>
+      </View>
+      {unitPrice !== null && (
+        <Text style={styles.tokenUnit}>회당 {formatKRW(unitPrice)}</Text>
+      )}
+    </>
+  );
+}
 
 function SubscriptionPage() {
   const navigation = useNavigation();
@@ -62,16 +108,16 @@ function SubscriptionPage() {
       onSuccess: (granted) => {
         setPurchasingId(null);
         if (granted) {
-          Alert.alert('구독 완료', 'PRO 구독이 시작되었어요!', [
+          Alert.alert('구독 완료', 'PRO를 시작했어요!', [
             { text: '확인', onPress: () => navigation.goBack() },
           ]);
         } else {
-          Alert.alert('구매 실패', '결제 처리 중 문제가 발생했습니다. 다시 시도해주세요.');
+          Alert.alert('결제를 완료하지 못했어요', '잠시 후 다시 시도해주세요.');
         }
       },
       onError: () => {
         setPurchasingId(null);
-        Alert.alert('구매 실패', '결제 처리 중 문제가 발생했습니다. 다시 시도해주세요.');
+        Alert.alert('결제를 완료하지 못했어요', '잠시 후 다시 시도해주세요.');
       },
     });
   }, [purchaseMutation]);
@@ -79,8 +125,8 @@ function SubscriptionPage() {
   const handleRestore = useCallback(() => {
     if (!user?.id) return;
     restoreMutation.mutate(user.id, {
-      onSuccess: () => Alert.alert('복원 완료', '구독 정보가 복원되었습니다.'),
-      onError: () => Alert.alert('복원 실패', '복원할 구독 정보가 없습니다.'),
+      onSuccess: () => Alert.alert('복원 완료', '구독/토큰 상태를 다시 확인했어요.'),
+      onError: () => Alert.alert('복원 실패', '복원할 결제 내역이 없어요.'),
     });
   }, [user?.id, restoreMutation]);
 
@@ -153,10 +199,7 @@ function SubscriptionPage() {
           <View style={styles.planCard}>
             <View style={styles.planHeader}>
               <Text style={styles.planTitle}>PRO 월간 플랜</Text>
-              <Text style={styles.planPrice}>
-                ₩{proProduct.price.toLocaleString()}
-                <Text style={styles.planPeriod}>/월</Text>
-              </Text>
+              <PricePromo product={proProduct} period="/월" />
             </View>
             <View style={styles.featureList}>
               {PRO_FEATURES.map((f) => (
@@ -173,7 +216,7 @@ function SubscriptionPage() {
               activeOpacity={0.8}
             >
               <Text style={styles.purchaseButtonText}>
-                {purchasingId === proProduct.product_id ? '처리 중...' : 'PRO 시작하기'}
+                {purchasingId === proProduct.product_id ? '처리하고 있어요' : 'PRO 시작하기'}
               </Text>
             </TouchableOpacity>
             {isDevToolsEnabled() && (
@@ -195,10 +238,11 @@ function SubscriptionPage() {
         <Text style={styles.sectionTitle}>AI 토큰 충전</Text>
         <View style={styles.tokenRow}>
           <View style={styles.tokenCard}>
-            <View style={styles.badgePlaceholder} />
+            <View style={styles.tokenBadge}>
+              <Text style={styles.tokenBadgeText}>{token10.promotion_label}</Text>
+            </View>
             <Text style={styles.tokenAmount}>10회</Text>
-            <Text style={styles.tokenPrice}>₩{token10.price.toLocaleString()}</Text>
-            <Text style={styles.tokenUnit}>회당 ₩{Math.floor(token10.price / 10).toLocaleString()}</Text>
+            <TokenPrice product={token10} />
             <TouchableOpacity
               style={[styles.tokenButton, purchasingId === token10.product_id && styles.buttonDisabled]}
               onPress={() => handlePurchase(token10.product_id)}
@@ -212,11 +256,10 @@ function SubscriptionPage() {
           </View>
           <View style={styles.tokenCard}>
             <View style={styles.bestValueBadge}>
-              <Text style={styles.bestValueText}>추천</Text>
+              <Text style={styles.bestValueText}>{token30.promotion_label ?? '추천'}</Text>
             </View>
             <Text style={styles.tokenAmount}>30회</Text>
-            <Text style={styles.tokenPrice}>₩{token30.price.toLocaleString()}</Text>
-            <Text style={styles.tokenUnit}>회당 ₩{Math.floor(token30.price / 30).toLocaleString()}</Text>
+            <TokenPrice product={token30} />
             <TouchableOpacity
               style={[styles.tokenButton, styles.tokenButtonHighlight, purchasingId === token30.product_id && styles.buttonDisabled]}
               onPress={() => handlePurchase(token30.product_id)}
@@ -255,7 +298,7 @@ function SubscriptionPage() {
               {Object.values(B2B_IAP_PRODUCTS).map((product: IAPProduct) => (
                 <View key={product.product_id} style={styles.b2bCard}>
                   <Text style={styles.b2bName}>{product.name}</Text>
-                  <Text style={styles.b2bPrice}>₩{product.price.toLocaleString()}/월</Text>
+                  <Text style={styles.b2bPrice}>{formatKRW(product.price)}/월</Text>
                   <Text style={styles.b2bDesc}>{product.description}</Text>
                   <TouchableOpacity
                     style={[styles.tokenButton, styles.tokenButtonHighlight, purchasingId === product.product_id && styles.buttonDisabled]}
@@ -275,7 +318,7 @@ function SubscriptionPage() {
 
         {/* 구독 복원 */}
         <TouchableOpacity style={styles.restoreButton} onPress={handleRestore} activeOpacity={0.7}>
-          <Text style={styles.restoreText}>구매 내역 복원</Text>
+          <Text style={styles.restoreText}>결제 복원</Text>
         </TouchableOpacity>
     </DetailLayout>
   );
@@ -312,6 +355,35 @@ const styles = StyleSheet.create({
   },
   planHeader: { marginBottom: 16 },
   planTitle: { ...typography.subtitle, fontWeight: '700', color: colors.primaryBlue },
+  pricePromo: {
+    marginTop: 6,
+  },
+  promoMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 4,
+  },
+  promoLabel: {
+    ...typography.badge,
+    fontWeight: '700',
+    color: colors.primaryBlue,
+    backgroundColor: colors.white,
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    overflow: 'hidden',
+  },
+  discountLabel: {
+    ...typography.badge,
+    fontWeight: '700',
+    color: colors.orange700,
+  },
+  listPrice: {
+    ...typography.detail,
+    color: colors.grey400,
+    textDecorationLine: 'line-through',
+  },
   planPrice: { ...typography.heroTitle, fontWeight: '800', color: colors.textPrimary, marginTop: 4 },
   planPeriod: { ...typography.detail, fontWeight: '400', color: colors.grey600 },
   featureList: { marginBottom: 20 },
@@ -336,9 +408,17 @@ const styles = StyleSheet.create({
     padding: 16,
     alignItems: 'center',
   },
-  badgePlaceholder: {
-    height: 20,
+  tokenBadge: {
+    backgroundColor: colors.white,
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
     marginBottom: 8,
+  },
+  tokenBadgeText: {
+    ...typography.badge,
+    fontWeight: '700',
+    color: colors.primaryBlue,
   },
   bestValueBadge: {
     backgroundColor: colors.orange700,
@@ -349,7 +429,13 @@ const styles = StyleSheet.create({
   },
   bestValueText: { ...typography.badge, fontWeight: '700', color: colors.white },
   tokenAmount: { ...typography.sectionTitle, fontWeight: '800', color: colors.textPrimary, marginBottom: 4 },
-  tokenPrice: { ...typography.label, fontWeight: '600', color: colors.textDark },
+  tokenPriceBlock: { alignItems: 'center' },
+  tokenListPrice: {
+    ...typography.badge,
+    color: colors.grey400,
+    textDecorationLine: 'line-through',
+  },
+  tokenPrice: { ...typography.label, fontWeight: '700', color: colors.textDark },
   tokenUnit: { ...typography.badge, color: colors.grey400, marginTop: 2, marginBottom: 12 },
   tokenButton: {
     borderWidth: 1,

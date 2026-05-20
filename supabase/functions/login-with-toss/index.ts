@@ -12,11 +12,13 @@ import { decryptTossPiiField, isTossEncryptedField } from '../_shared/tossPiiDec
 import { readEnv, resolveMtlsMode } from '../_shared/mtlsMode.ts';
 
 type TossLoginReferrer = 'DEFAULT' | 'SANDBOX';
+type AuthEntryFlow = 'B2C' | 'B2B';
 
 export interface LoginWithTossRequest {
   authorizationCode: string;
   referrer?: string;
   nonce: string;
+  flow?: AuthEntryFlow;
 }
 
 export interface LoginWithTossResponse {
@@ -58,6 +60,7 @@ interface BridgeSessionInput {
   tossUserKey: string;
   pepperVersion: number;
   nowIso: string;
+  flow: AuthEntryFlow;
 }
 
 interface LoginHandlerDeps {
@@ -260,6 +263,57 @@ async function signInBridgeUser(
   };
 }
 
+async function updateBridgeUserRole(
+  supabaseUrl: string,
+  serviceRoleKey: string,
+  userId: string,
+  role: 'user',
+): Promise<void> {
+  const adminResponse = await fetch(`${supabaseUrl}/auth/v1/admin/users/${userId}`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      apikey: serviceRoleKey,
+      Authorization: `Bearer ${serviceRoleKey}`,
+    },
+    body: JSON.stringify({
+      user_metadata: {
+        role,
+        status: 'active',
+        timezone: 'Asia/Seoul',
+      },
+    }),
+  });
+
+  const adminBody = await adminResponse.text().catch(() => '');
+  if (!adminResponse.ok) {
+    throw toStatusError(
+      `Failed to update auth user role: ${adminResponse.status} ${adminBody}`,
+      adminResponse.status,
+      'SUPABASE_AUTH_ROLE_UPDATE_FAILED',
+    );
+  }
+
+  const usersResponse = await fetch(`${supabaseUrl}/rest/v1/users?id=eq.${userId}`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      apikey: serviceRoleKey,
+      Authorization: `Bearer ${serviceRoleKey}`,
+    },
+    body: JSON.stringify({ role }),
+  });
+
+  const usersBody = await usersResponse.text().catch(() => '');
+  if (!usersResponse.ok) {
+    throw toStatusError(
+      `Failed to update public user role: ${usersResponse.status} ${usersBody}`,
+      usersResponse.status,
+      'SUPABASE_PUBLIC_USER_ROLE_UPDATE_FAILED',
+    );
+  }
+}
+
 async function upsertPublicUser(
   supabaseUrl: string,
   serviceRoleKey: string,
@@ -318,7 +372,7 @@ async function bridgeSessionWithSupabase(input: BridgeSessionInput): Promise<Bri
 
   await ensureAuthUser(supabaseUrl, serviceRoleKey, email, password, tossUserKey);
 
-  const session = await signInBridgeUser(supabaseUrl, serviceRoleKey, email, password);
+  let session = await signInBridgeUser(supabaseUrl, serviceRoleKey, email, password);
   const userRow = await upsertPublicUser(
     supabaseUrl,
     serviceRoleKey,
@@ -327,6 +381,10 @@ async function bridgeSessionWithSupabase(input: BridgeSessionInput): Promise<Bri
     input.pepperVersion,
     input.nowIso,
   );
+  if (input.flow === 'B2C') {
+    await updateBridgeUserRole(supabaseUrl, serviceRoleKey, session.userId, 'user');
+    session = await signInBridgeUser(supabaseUrl, serviceRoleKey, email, password);
+  }
 
   return {
     accessToken: session.accessToken,
@@ -357,6 +415,7 @@ function defaultLoginDeps(): LoginHandlerDeps {
 
 function normalizeRequest(input: LoginWithTossRequest): LoginWithTossRequest {
   const rawReferrer = input.referrer?.trim();
+  const flow = input.flow === 'B2B' ? 'B2B' : 'B2C';
   const normalizedReferrer = rawReferrer
     ? (rawReferrer.toUpperCase() === 'SANDBOX' ? 'SANDBOX' : (rawReferrer.toUpperCase() === 'DEFAULT' ? 'DEFAULT' : undefined))
     : undefined;
@@ -364,6 +423,7 @@ function normalizeRequest(input: LoginWithTossRequest): LoginWithTossRequest {
     authorizationCode: input.authorizationCode?.trim() ?? '',
     referrer: normalizedReferrer,
     nonce: input.nonce?.trim() ?? '',
+    flow,
   };
 }
 
@@ -452,6 +512,7 @@ export function createLoginWithTossHandler(overrides?: Partial<LoginHandlerDeps>
         tossUserKey: profile.userKey,
         pepperVersion: pepper.pepperVersion,
         nowIso: timestamp,
+        flow: request.flow ?? 'B2C',
       });
 
       const response: LoginWithTossResponse = {

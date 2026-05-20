@@ -42,10 +42,18 @@ adb shell am start -W -a android.intent.action.VIEW -d 'intoss://taillog-app/' v
 
 PASS:
 - `curl http://localhost:8081/status` -> `packager-status:running`
+- `curl http://localhost:8765/health` -> `{"status":"ok"}`
+- `adb reverse --list`에 `tcp:8081`, `tcp:5173`, `tcp:8765`가 모두 존재
 - top activity가 `viva.republica.toss.test/im.toss.rn.granite.core.GraniteActivity`
 - Metro 터미널에 `Running "shared"`와 `scheme:"intoss://taillog-app/"`
 - logcat 또는 Metro 터미널에 `loadJSBundleFromMetro()` 또는 Metro bundle 로그
+- FastAPI 터미널에 대상 API가 `127.0.0.1`에서 들어와 `200 OK`로 끝남
 - 빨간 `DEV` control이 보이면 개발모드 증거로 기록 가능
+- 사진 선택/업로드 검증은 `granite.config.ts`의 `photos/read` 권한과 `adb reverse tcp:5173 tcp:5173`가 함께 있어야 DEV_LOCAL 성공 판정으로 인정한다.
+
+주의:
+- DEV_LOCAL은 화면 렌더만으로 판정하지 않는다. `.env`에 운영 `EXPO_PUBLIC_BACKEND_URL`이 있어도 개발 번들이 운영 백엔드를 호출할 수 있었던 과거 이슈가 있으므로, FastAPI 실제 API 로그를 PASS 조건에 포함한다.
+- 현재 표준은 `src/lib/api/backend.ts`가 `__DEV__`에서 Metro host 기반 `:8765`를 우선 사용하는 것이다. 임시로 `.env`나 `PUBLIC_BACKEND_URL`을 로컬로 고정하지 않는다.
 
 ### SANDBOX_REAL / AIT 업로드본으로 전환
 
@@ -75,6 +83,7 @@ PASS:
 FAIL/BLOCKED:
 - `지금은 서비스를 사용할 수 없어요`: Toss 앱 로그인 사용자와 워크스페이스 멤버/테스터 매핑 확인
 - `앱 실행도중 문제가 발생했습니다`: 앱 JS 진입 전 host/runtime 실패 가능성. `ReactNativeJS` marker 유무로 분류
+- 특정 폰/계정에서만 private URL이 열림: 코드 결함으로 단정하지 말고 AIT 테스터/워크스페이스 멤버/앱 설치 채널 매핑 문제로 분류한다. 같은 deploymentId에서 다른 폰만 실패하고 `ReactNativeJS`가 없으면 host-layer BLOCKED로 기록한다.
 - default resolver가 `viva.republica.toss.test`로 잡힘: production activity를 `-n viva.republica.toss/.intoss.MiniAppSchemeActivity`로 명시
 - USB는 보이지만 `adb devices`가 비어 있음: 폰 잠금 해제, USB 디버깅 재허용, `adb kill-server; adb start-server`
 
@@ -159,7 +168,7 @@ curl -sS http://localhost:8765/health
 ### SANDBOX_REAL로 올릴 때
 
 - AIT private URL 또는 deployment id 기록
-- `adb reverse tcp:8081 tcp:8081`, `adb reverse tcp:8765 tcp:8765`
+- Metro-off 검증이면 `localhost:8081/status`가 실패해야 하며, `adb reverse`는 성공 증거가 아니다
 - `supabase functions list` ACTIVE 버전 기록
 - IAP는 sandbox 3시나리오만 수행
 - Smart Message는 test send 또는 승인된 테스트 캠페인만 수행

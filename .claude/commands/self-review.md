@@ -11,6 +11,10 @@
 - `npx tsc --noEmit` 실행
 - 에러가 있으면 리스트업 (pre-existing vs 신규 구분)
 
+### 2.5. Diff 위생
+- `git diff --check`로 trailing whitespace, conflict marker, whitespace error 확인
+- staged 변경이 있으면 `git diff --cached --check`도 확인
+
 ### 3. 300줄 규칙 점검
 - 변경된 TSX/TS 파일 중 300줄 초과인 파일 검출
 - 400줄 초과면 경고 표시
@@ -59,6 +63,7 @@
 | 항목 | 결과 | 비고 |
 |------|------|------|
 | Typecheck | PASS/FAIL | |
+| Diff hygiene | PASS/FAIL | |
 | 300줄 규칙 | PASS/N건 | |
 | 보안 체크 | PASS/N건 | |
 | 미사용 코드 | PASS/N건 | |

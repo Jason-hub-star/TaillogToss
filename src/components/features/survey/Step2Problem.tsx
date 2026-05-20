@@ -170,7 +170,7 @@ export function Step2Problem({ step3, step4, onChange }: Props) {
             onChangeText={(text) => {
               onChange(step3, { ...step4, custom_trigger: text });
             }}
-            placeholder="상황을 직접 입력하세요 (선택)"
+            placeholder="상황을 직접 입력해주세요 (선택)"
           />
         </View>
       </View>

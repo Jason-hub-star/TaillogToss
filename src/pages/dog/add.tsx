@@ -20,6 +20,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from '@granite-js/native/react-native-safe-area-context';
 import { SkeletonBox } from 'components/tds-ext/SkeletonBox';
+import { BackButton, BackButtonSpacer } from 'components/shared/BackButton';
 import { usePageGuard } from 'lib/hooks/usePageGuard';
 import { useAuth } from 'stores/AuthContext';
 import { useActiveDog } from 'stores/ActiveDogContext';
@@ -92,7 +93,7 @@ function DogAddPage() {
           ]);
         },
         onError: () => {
-          Alert.alert('오류', '반려견 등록에 실패했어요. 다시 시도해주세요.');
+          Alert.alert('등록하지 못했어요', '잠시 후 다시 시도해주세요.');
         },
       }
     );
@@ -102,9 +103,9 @@ function DogAddPage() {
     return (
       <SafeAreaView style={styles.safe}>
         <View style={styles.navbar}>
-          <View style={styles.backButton} />
+          <BackButtonSpacer />
           <SkeletonBox width={100} height={20} />
-          <View style={styles.backButton} />
+          <BackButtonSpacer />
         </View>
         <View style={styles.scrollContent}>
           <View style={{ alignItems: 'center', marginBottom: 32 }}>
@@ -132,11 +133,9 @@ function DogAddPage() {
   return (
     <SafeAreaView style={styles.safe}>
       <View style={styles.navbar}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Text style={styles.backText}>{'←'}</Text>
-        </TouchableOpacity>
+        <BackButton onPress={() => navigation.goBack()} />
         <Text style={styles.navTitle}>반려견 추가</Text>
-        <View style={styles.backButton} />
+        <BackButtonSpacer />
       </View>
 
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
@@ -210,7 +209,7 @@ function DogAddPage() {
           disabled={!canSave}
           activeOpacity={0.7}
         >
-          <Text style={styles.saveText}>{createDog.isPending ? '등록 중...' : '등록하기'}</Text>
+          <Text style={styles.saveText}>{createDog.isPending ? '등록하고 있어요' : '등록하기'}</Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>
@@ -228,8 +227,6 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: colors.surfaceTertiary,
   },
-  backButton: { width: 40 },
-  backText: { ...typography.sectionTitle, color: colors.grey950 },
   navTitle: { ...typography.body, fontWeight: '600', color: colors.grey950 },
   scroll: { flex: 1 },
   scrollContent: { paddingHorizontal: 20, paddingTop: 24, paddingBottom: 32 },

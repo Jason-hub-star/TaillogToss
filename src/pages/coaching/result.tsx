@@ -252,7 +252,7 @@ function CoachingResultPage() {
   if (generateCoaching.isPending) {
     return (
       <DetailLayout title="AI 행동 진단" onBack={handleBack}>
-        <CoachingGenerationLoader />
+        <CoachingGenerationLoader dogName={activeDog?.name} />
       </DetailLayout>
     );
   }
@@ -310,15 +310,7 @@ function CoachingResultPage() {
 
   return (
     <>
-    <DetailLayout
-      title="AI 행동 진단"
-      onBack={handleBack}
-      bottomCTA={
-        activeTab === 'latest' && !selectedHistoryCoaching
-          ? { label: '훈련 시작하기', onPress: handleNavigateToAcademy }
-          : undefined
-      }
-    >
+    <DetailLayout title="AI 행동 진단" onBack={handleBack}>
       <View style={styles.topBar}>
         <View style={styles.tabRow}>
           <TouchableOpacity

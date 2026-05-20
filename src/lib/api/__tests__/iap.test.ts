@@ -10,11 +10,22 @@ const mockRefreshSession = jest.fn();
 const mockGetUser = jest.fn();
 const mockCreateOneTimePurchaseOrder = jest.fn(() => jest.fn());
 const mockCompleteProductGrant = jest.fn();
+const mockGetPendingOrders = jest.fn();
+const mockStorageGetItem = jest.fn();
+const mockStorageSetItem = jest.fn();
 
 jest.mock('@apps-in-toss/native-modules', () => ({
   IAP: {
     createOneTimePurchaseOrder: (...args: unknown[]) => mockCreateOneTimePurchaseOrder.apply(null, args),
     completeProductGrant: (...args: unknown[]) => mockCompleteProductGrant.apply(null, args),
+    getPendingOrders: (...args: unknown[]) => mockGetPendingOrders.apply(null, args),
+  },
+}));
+
+jest.mock('@apps-in-toss/framework', () => ({
+  Storage: {
+    getItem: (...args: unknown[]) => mockStorageGetItem(...args),
+    setItem: (...args: unknown[]) => mockStorageSetItem(...args),
   },
 }));
 
@@ -47,6 +58,9 @@ beforeEach(() => {
     data: { session: { access_token: 'eyJ.base.refreshed' } },
     error: null,
   });
+  mockGetPendingOrders.mockResolvedValue(undefined);
+  mockStorageGetItem.mockResolvedValue(null);
+  mockStorageSetItem.mockResolvedValue(undefined);
   mockGetUser.mockResolvedValue({
     data: { user: { id: 'user-1' } },
     error: null,
@@ -186,19 +200,41 @@ describe('verifyAndGrant', () => {
 
 describe('recoverPendingOrders', () => {
   it('부분 복구: 3건 중 2건 성공 시 2 반환', async () => {
-    const chainMock = {
+    const pendingQueryChain = {
       select: jest.fn().mockReturnThis(),
       eq: jest.fn().mockReturnThis(),
       order: jest.fn().mockResolvedValue({
         data: [
-          { toss_order_id: 'ord_a', product_id: 'pro_monthly', id: 'id_a' },
-          { toss_order_id: 'ord_b', product_id: 'ai_token_10', id: 'id_b' },
-          { toss_order_id: 'ord_c', product_id: 'ai_token_30', id: 'id_c' },
+          {
+            toss_order_id: 'ord_a',
+            product_id: 'ait.0000020829.09e69bf9.90a91624b0.7443236299',
+            id: 'id_a',
+          },
+          {
+            toss_order_id: 'ord_b',
+            product_id: 'ait.0000020829.b0b00d71.17c5290dc1.7444362301',
+            id: 'id_b',
+          },
+          {
+            toss_order_id: 'ord_c',
+            product_id: 'ait.0000020829.32dc32cf.49e67a4cfa.7443541064',
+            id: 'id_c',
+          },
         ],
         error: null,
       }),
     };
-    mockFrom.mockReturnValue(chainMock);
+    const staleLookupChain = {
+      select: jest.fn().mockReturnThis(),
+      eq: jest.fn().mockReturnThis(),
+      order: jest.fn().mockReturnThis(),
+      limit: jest.fn().mockResolvedValue({ data: [], error: null }),
+    };
+    mockFrom
+      .mockReturnValueOnce(pendingQueryChain)
+      .mockReturnValueOnce(staleLookupChain)
+      .mockReturnValueOnce(staleLookupChain)
+      .mockReturnValueOnce(staleLookupChain);
 
     // 1번째, 3번째 성공 / 2번째 실패
     mockInvoke
@@ -221,6 +257,65 @@ describe('recoverPendingOrders', () => {
     const recovered = await recoverPendingOrders('user-1');
     expect(recovered).toBe(0);
     expect(mockInvoke).not.toHaveBeenCalled();
+  });
+
+  it('알 수 없는 legacy product pending order는 재검증 없이 SDK pending에서 정리', async () => {
+    mockGetPendingOrders.mockResolvedValue({
+      orders: [{ orderId: 'legacy_ord', sku: 'sku_106' }],
+    });
+
+    const recovered = await recoverPendingOrders('user-1');
+
+    expect(recovered).toBe(0);
+    expect(mockInvoke).not.toHaveBeenCalled();
+    expect(mockCompleteProductGrant).toHaveBeenCalledWith({
+      params: { orderId: 'legacy_ord' },
+    });
+  });
+
+  it('이미 terminal failure로 기록된 known product pending order는 재검증 없이 정리', async () => {
+    mockGetPendingOrders.mockResolvedValue({
+      orders: [{ orderId: 'known_failed_ord', sku: 'ait.0000020829.b0b00d71.17c5290dc1.7444362301' }],
+    });
+    const terminalRecordChain = {
+      select: jest.fn().mockReturnThis(),
+      eq: jest.fn().mockReturnThis(),
+      order: jest.fn().mockReturnThis(),
+      limit: jest.fn().mockResolvedValue({
+        data: [
+          {
+            product_id: 'ait.0000020829.b0b00d71.17c5290dc1.7444362301',
+            grant_status: 'grant_failed',
+            toss_status: 'NOT_FOUND',
+          },
+        ],
+        error: null,
+      }),
+    };
+    mockFrom.mockReturnValue(terminalRecordChain);
+
+    const recovered = await recoverPendingOrders('user-1');
+
+    expect(recovered).toBe(0);
+    expect(mockInvoke).not.toHaveBeenCalled();
+    expect(mockCompleteProductGrant).toHaveBeenCalledWith({
+      params: { orderId: 'known_failed_ord' },
+    });
+  });
+
+  it('이미 suppression marker가 있으면 stale pending order를 다시 정리 시도하지 않음', async () => {
+    mockGetPendingOrders.mockResolvedValue({
+      orders: [{ orderId: 'legacy_ord', sku: 'sku_106' }],
+    });
+    mockStorageGetItem.mockResolvedValueOnce(
+      JSON.stringify({ 'legacy_ord:sku_106': 'unknown_product' })
+    );
+
+    const recovered = await recoverPendingOrders('user-1');
+
+    expect(recovered).toBe(0);
+    expect(mockInvoke).not.toHaveBeenCalled();
+    expect(mockCompleteProductGrant).not.toHaveBeenCalled();
   });
 });
 

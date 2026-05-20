@@ -7,6 +7,7 @@ import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { CurriculumShowcaseCard } from './CurriculumShowcaseCard';
 import { CURRICULUM_SHOWCASES } from 'lib/data/published/showcase';
+import { isCurriculumLockedForUser } from 'lib/data/trainingAccess';
 import type { Curriculum, CurriculumId, CurriculumStatus, TrainingProgress, DogReaction, StepFeedback } from 'types/training';
 import { colors, spacing } from 'styles/tokens';
 
@@ -31,7 +32,7 @@ function getNodeStatus(
   if (progress?.status === 'completed') return 'completed';
   if (progress?.status === 'in_progress') return 'active';
   if (curriculum.id === recommendedId) return 'active';
-  if (curriculum.access === 'pro' && !isPro && !__DEV__) return 'locked';
+  if (isCurriculumLockedForUser(curriculum, isPro)) return 'locked';
   return 'available';
 }
 
@@ -69,7 +70,6 @@ export function CurriculumJourneyMap({
   isPro,
   recommendedId,
   onCardPress,
-  onProCTA,
 }: Props) {
   return (
     <View style={styles.container}>
@@ -83,7 +83,7 @@ export function CurriculumJourneyMap({
         const status: CurriculumStatus = progress?.status ?? 'not_started';
         const totalSteps = curriculum.days.reduce((sum, d) => sum + d.steps.length, 0);
         const completedSteps = progress?.completed_steps?.length ?? 0;
-        const isLocked = curriculum.access === 'pro' && !isPro && !__DEV__;
+        const isLocked = isCurriculumLockedForUser(curriculum, isPro);
         const isRecommended = curriculum.id === recommendedId && status === 'not_started';
         const reactionSummary = getReactionSummary(feedbackList, curriculum.id);
 
@@ -112,7 +112,6 @@ export function CurriculumJourneyMap({
                   isRecommended={isRecommended}
                   reactionSummary={reactionSummary}
                   onPress={() => onCardPress(curriculum)}
-                  onProCTA={onProCTA}
                 />
               ) : null}
             </View>

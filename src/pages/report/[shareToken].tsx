@@ -56,10 +56,10 @@ function ShareTokenReportPage() {
       if (data === true) {
         setIsVerified(true);
       } else {
-        setVerifyError('전화번호가 일치하지 않습니다');
+        setVerifyError('전화번호가 맞지 않아요');
       }
     } catch {
-      setVerifyError('인증에 실패했습니다. 다시 시도해주세요');
+      setVerifyError('인증하지 못했어요. 다시 시도해주세요');
     } finally {
       setIsVerifying(false);
     }
@@ -83,7 +83,7 @@ function ShareTokenReportPage() {
         <View style={styles.center}>
           <Text style={styles.errorIcon}>{'\uD83D\uDD12'}</Text>
           <Text style={styles.errorTitle}>리포트를 찾을 수 없어요</Text>
-          <Text style={styles.errorDesc}>링크가 만료되었거나 잘못된 주소입니다</Text>
+          <Text style={styles.errorDesc}>링크가 만료됐거나 주소가 달라요</Text>
         </View>
       </SafeAreaView>
     );
@@ -116,7 +116,7 @@ function ShareTokenReportPage() {
             activeOpacity={0.8}
           >
             <Text style={styles.verifyBtnText}>
-              {isVerifying ? '확인 중...' : '확인'}
+              {isVerifying ? '확인하고 있어요' : '확인'}
             </Text>
           </TouchableOpacity>
         </View>

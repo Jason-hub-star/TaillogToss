@@ -136,7 +136,7 @@ appsInToss({
     primaryColor: '#3182F6',
     icon: brandIcon,
   },
-  permissions: [],
+  permissions: [{ name: 'photos', access: 'read' }],
 });
 ```
 
@@ -155,6 +155,26 @@ appsInToss({
 ---
 
 ## 빌드 절차
+
+### 업로드 가드레일 (Codex MUST)
+
+- 사용자가 명시적으로 “업로드”, “배포”, “deploy”를 요청한 경우에만 `ait deploy`를 실행한다.
+- “개발모드”, “DEV_LOCAL”, “로컬에서 확인” 요청에서는 Metro/FastAPI/ADB reverse 기반 검증까지만 진행하고 `.ait` 업로드는 중단한다.
+- 새 `.ait` 빌드는 가능하지만, 업로드 전에는 번들 스캔 결과와 예상 private URL 형식만 보고한다.
+
+### 0. 빌드 전 백엔드 정책 확인
+
+AIT는 production 모드에서 `.env`의 `EXPO_PUBLIC_BACKEND_URL` 또는 `src/lib/api/backend.ts`의 `PUBLIC_BACKEND_URL`을 번들에 인라인한다. AI 코칭 한도/토큰처럼 서버 정책이 바뀐 경우, 새 `.ait`만으로는 충분하지 않다.
+
+```bash
+rg -n "EXPO_PUBLIC_BACKEND_URL|const PUBLIC_BACKEND_URL" .env src/lib/api/backend.ts
+```
+
+- 프로덕션 AIT 검증: DigitalOcean/운영 백엔드에 최신 정책이 먼저 배포되어야 한다.
+- 로컬 DEV 검증: `.ait` 빌드가 아니라 Metro DEV_LOCAL로 확인한다. 현재 표준은 `src/lib/api/backend.ts`가 `__DEV__`에서 Metro host 기반 `:8765`를 우선 사용하고, FastAPI 로그의 `127.0.0.1 ... 200 OK`로 판정한다.
+- 검증 중 `.env`/`backend.ts`를 임시 변경했다면 반드시 원복한다.
+
+예: FREE 한도 변경 후 AIT에서 `오늘 0/3회 사용`이 보이면, 먼저 운영 백엔드가 구버전인지 확인한다. 새 서버 정책이 반영된 경우 기대값은 `오늘 0/1회 사용`이다.
 
 ### 1. 빌드
 
@@ -195,6 +215,16 @@ unzip -p taillog-app.ait "bundle.android.0_84_0.js" | rg -o "ait-ad-test-[A-Za-z
 ### 3. 콘솔 업로드
 
 ```bash
+# TaillogToss 현재 표준: .env의 AIT_DEPLOY_API_KEY를 shell에 export한 뒤 명시 업로드
+cd /Users/family/jason/TaillogToss
+set -a
+source .env
+set +a
+/Users/family/jason/TaillogToss/node_modules/.bin/ait deploy \
+  --api-key "$AIT_DEPLOY_API_KEY" \
+  --location ./taillog-app.ait \
+  --scheme-only
+
 # 1회성: API 키를 명시해서 업로드
 /Users/family/jason/TaillogToss/node_modules/.bin/ait deploy \
   --api-key "<AIT_CONSOLE_DEPLOY_API_KEY>" \
@@ -212,7 +242,7 @@ unzip -p taillog-app.ait "bundle.android.0_84_0.js" | rg -o "ait-ad-test-[A-Za-z
   --scheme-only
 ```
 
-API 키 위치: AIT 콘솔 → 앱 설정 → 배포 API 키. 키는 문서/git에 남기지 말고 터미널 입력 또는 `ait token add` 프로필에만 저장한다.
+API 키 위치: AIT 콘솔 → 앱 설정 → 배포 API 키. 키는 문서/git에 남기지 말고 `.env`, 터미널 입력 또는 `ait token add` 프로필에만 저장한다. 이 repo에서는 `~/.ait`/`default` 프로필이 없을 수 있으므로 `--profile default`보다 `.env`의 `AIT_DEPLOY_API_KEY`를 명시하는 패턴을 우선 사용한다.
 
 ### 4. 테스트 진입 URL
 
@@ -222,6 +252,27 @@ intoss-private://taillog-app?_deploymentId=<deploymentId>
 
 SchemeLabActivity에서 입력:
 - `viva.republica.toss/.service.SchemeLabActivity`
+
+### 5. AIT 실패와 DEV_LOCAL 성공 분리
+
+같은 코드가 DEV_LOCAL에서는 열리고 AIT private/real에서 JS marker 없이 실패하면 앱 코드 실패로 단정하지 않는다.
+
+분류 기준:
+
+| 증거 | 판정 |
+|---|---|
+| DEV_LOCAL: `viva.republica.toss.test`, `Running "shared"`, FastAPI `127.0.0.1 ... 200 OK` | 로컬 코드/Metro 경로 PASS |
+| AIT: `지금은 서비스를 사용할 수 없어요`, `ReactNativeJS`/`[AIT-BUILD]` 없음 | Toss 앱 계정/테스터/워크스페이스 매핑 또는 host-layer BLOCKED |
+| AIT private test host: `앱 실행도중 문제가 발생했습니다`, `ReactNativeJS` 없음 | JS 진입 전 host/runtime 실패 |
+| AIT: `Running "shared"` 후 화면 오류 | 앱 코드/runtime 오류로 분류하고 logcat stack 확인 |
+
+기록할 증거:
+- deploymentId
+- private/real scheme URL
+- 대상 패키지(`viva.republica.toss` 또는 `viva.republica.toss.test`)
+- UI 오류 문구
+- logcat에 `ReactNativeJS`/`[AIT-BUILD]` 존재 여부
+- 가능하면 DEV_LOCAL 대조 스크린샷과 FastAPI API 로그
 
 ---
 
@@ -238,8 +289,11 @@ uvicorn app.main:app --host 0.0.0.0 --port 8765 --reload &
 
 # adb reverse
 adb reverse tcp:8081 tcp:8081
+adb reverse tcp:5173 tcp:5173
 adb reverse tcp:8765 tcp:8765
 ```
+
+> DEV_LOCAL에서 사진 선택까지 검증할 때는 `8081`과 `8765`만으로는 부족하다. `5173` Bedrock/Granite dev bridge가 빠지면 번들/권한 bridge가 불완전해져 앱 진입 또는 `fetchAlbumPhotos` 검증을 오판할 수 있다.
 
 ---
 
@@ -253,6 +307,7 @@ adb reverse tcp:8765 tcp:8765
 | Babel 플러그인 에러 | transform-inline-env + esbuild define 충돌 | babel.config.js에서 플러그인 제거 |
 | `[granite.config] env var missing` | RN 0.72.6 빌드에서 `__dirname`이 `.granite/` | `findEnvFile()` 상위 탐색 |
 | `intoss-private://`가 Metro 없이 "앱 실행도중 문제가 발생했습니다." | `brand.icon` 로컬 경로/data URI 또는 AIT test host deployment 실행/호환성 문제 | 먼저 콘솔 앱 정보 이미지의 HTTPS URL을 `brand.icon`에 넣고 재빌드. 그래도 JS marker 없이 실패하면 deploymentId, CLI URL, UI error text, logcat(no `ReactNativeJS`)을 묶어 Toss 지원에 문의 |
+| `intoss-private://`가 한 폰에서만 열림 | AIT 테스터/워크스페이스/로그인 계정 매핑 차이 | 성공 폰과 실패 폰의 Toss 계정, 패키지, deploymentId, JS marker 유무를 비교하고 host-layer BLOCKED로 문서화 |
 | `인증정보를 찾을 수 없음` / `앱인토스 배포 API 키를 입력해주세요` | 로컬 AIT token profile이 없거나 만료됨 (`~/.ait` 비어 있음) | `ait deploy --api-key "<key>" --location ./taillog-app.ait --scheme-only`로 1회 업로드하거나, `ait token add --api-key "<key>" default` 후 `ait deploy --profile default --location ./taillog-app.ait --scheme-only` 사용 |
 | `ait deploy` Code 4097 | 동일 콘텐츠 이미 업로드됨 | 무시 가능, 기존 deploymentId 사용 |
 | IAP 크래시 `Already resumed` | AIT 테스트앱 `getEdgeValue` SDK 버그 | `__DEV__` 바이패스 버튼으로 우회 |

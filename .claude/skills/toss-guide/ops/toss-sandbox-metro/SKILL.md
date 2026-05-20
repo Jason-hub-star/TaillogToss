@@ -22,6 +22,7 @@ description: Toss Sandbox 실기기 테스트에서 Metro 서버 연결, 진입 
 2. Android면 USB 연결 후 아래 실행:
    - `adb reverse tcp:8081 tcp:8081`
    - `adb reverse tcp:5173 tcp:5173`
+   - `adb reverse tcp:8765 tcp:8765`
 3. Toss Sandbox 앱(개발자 로그인)에서 진입 스킴 입력 화면으로 이동.
 4. `intoss://taillog-app` 입력 후 진입.
 5. 로그인 버튼을 눌러 Toss Login 플로우 실행.
@@ -61,20 +62,16 @@ description: Toss Sandbox 실기기 테스트에서 Metro 서버 연결, 진입 
   - `pages/_404.tsx`에서 `/login` 리다이렉트 처리 여부 확인
 - Android만 접속 실패:
   - `adb reverse tcp:8081 tcp:8081` 재실행 (Metro 번들링)
-  - backend는 LAN IP direct 방식 사용 (adb reverse 8000 불필요)
+  - `adb reverse tcp:5173 tcp:5173` 재실행 (Bedrock/Granite dev bridge)
+  - `adb reverse tcp:8765 tcp:8765` 재실행 (FastAPI)
 - FastAPI 307 Temporary Redirect 반복:
   - BE 라우터가 `@router.get("/")` 형태면 FE 경로에 trailing slash 필수
   - 예: `/api/v1/subscription` → `/api/v1/subscription/`
 - `[FE-BE] backend fallback to supabase [TypeError: Network request failed]`:
-  - FastAPI 실행 주소를 `0.0.0.0:8000`으로 열었는지 확인 (`uvicorn app.main:app --host 0.0.0.0 --port 8000`)
-  - **원인**: Metro가 `0.0.0.0`으로 바인딩 → `resolveBackendUrl()`이 `127.0.0.1:8000` 반환 → 실기기에서 `127.0.0.1`은 기기 자신 → 연결 실패
-  - **1차 시도** `adb reverse tcp:8000 tcp:8000` → `Address already in use` 빈발로 불안정
-  - **2차 시도** `adb reverse tcp:18000 tcp:8000` 우회 + `EXPO_PUBLIC_BACKEND_URL` env → Granite이 `EXPO_PUBLIC_*` env를 번들에 인라인하지 않아 실패
-  - **해결 (2026-02-28)**: `backend.ts` `resolveBackendUrl()`에서 `__DEV__` + loopback 감지 시 `DEV_LAN_BACKEND_URL`(PC Wi-Fi LAN IP + `:8000`)로 직접 연결
-  - LAN IP 확인: `ipconfig | grep IPv4` → Wi-Fi 어댑터 IP 사용 (WSL/Hyper-V IP 제외)
-  - 네트워크 변경 시 `backend.ts`의 `DEV_LAN_BACKEND_URL` 상수만 수정
-  - Windows 방화벽에 8000 인바운드 허용 규칙 필요 (`netsh advfirewall firewall add rule name="FastAPI 8000" dir=in action=allow protocol=tcp localport=8000`)
-  - 성공 기준: Metro 로그에 `[FE-BE] backend fallback` 미발생 + Uvicorn에 기기 IP(`172.30.1.x`)에서 `/api/v1/...` 요청 로그 유입
+  - FastAPI 실행 주소를 `0.0.0.0:8765`로 열었는지 확인 (`Backend/venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8765`)
+  - **현재 표준**: `src/lib/api/backend.ts`가 `__DEV__`에서 Metro host 기반 `:8765`를 우선 사용하고, 실기기는 `adb reverse tcp:8765 tcp:8765`로 접근한다.
+  - **과거 방식**: LAN IP direct / 8000 포트 설명은 legacy fallback이다. 현재 DEV_LOCAL 판정에는 FastAPI 로그의 `127.0.0.1 ... 200 OK`를 우선 증거로 사용한다.
+  - 성공 기준: Metro 로그에 `[FE-BE] backend fallback` 미발생 + Uvicorn에 `/api/v1/...` 요청 로그 유입
 
 ## 로그인 성공 패턴 (2026-02-27 확정)
 아래 순서를 만족하면 Sandbox 실기기 로그인 성공 패턴으로 본다.
@@ -104,9 +101,7 @@ description: Toss Sandbox 실기기 테스트에서 Metro 서버 연결, 진입 
 
 ## Operational Guardrails
 <!-- enrich:35a1c6d9b290 -->
-- LAN IP(`DEV_LAN_BACKEND_URL`)는 네트워크 변경 시마다 수동 업데이트가 필요하므로, `.env.local`로 추출하거나 세션 시작 루틴에 `ipconfig` 확인 단계를 포함한다.
-- Windows 방화벽 8000번 인바운드 허용 규칙이 없으면 실기기 → PC FastAPI 요청이 무소음으로 drop되므로, 세션 시작 전 `netsh advfirewall` 규칙 존재 여부를 확인한다.
-- `adb reverse tcp:8081 tcp:8081`은 USB 재연결 또는 Android 재시작 시 해제되므로, Metro 번들 오류 발생 시 먼저 adb reverse를 재실행한다.
+- `adb reverse tcp:8081/5173/8765`는 USB 재연결 또는 Android 재시작 시 해제되므로, Metro 번들 오류나 사진 권한 bridge 오류 발생 시 먼저 세 포트를 모두 재등록한다.
 
 ## 공식 문서
 - Native Quickstart (스킴): https://developers-apps-in-toss.toss.im/guide/native/quickstart.html

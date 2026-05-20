@@ -140,6 +140,29 @@ BEHAVIOR_TO_CURRICULUM: dict[str, tuple[str, ...]] = {
 
 _CATALOG_BY_ID = {ref.curriculum_id: ref for ref in TRAINING_REFERENCE_CATALOG}
 
+TOOL_LABELS: dict[str, str] = {
+    "high-value treats": "좋아하는 간식",
+    "treat pouch": "간식 파우치",
+    "marker word": "표시어",
+    "clicker": "클리커",
+    "marker word/clicker": "표시어/클리커",
+    "front-clip harness": "앞고리 하네스",
+    "fixed leash": "고정 리드줄",
+    "long line": "롱라인",
+    "fixed leash/long line": "고정 리드줄/롱라인",
+    "mat": "매트",
+    "mat/bed": "매트/침대",
+    "baby gate/pen": "안전문/펜스",
+    "visual barrier": "시야 차단막",
+    "white noise": "백색소음",
+    "sound file": "소리 파일",
+    "white noise/sound file": "백색소음/소리 파일",
+    "lick mat/snuffle mat": "리킹매트/노즈워크 매트",
+    "grooming dummy tools": "모형 미용 도구",
+    "towel/non-slip mat": "수건/미끄럼 방지 매트",
+    "video log": "영상 기록",
+}
+
 _KEYWORD_RULES: tuple[tuple[str, tuple[str, ...]], ...] = (
     ("separation", ("separation", "owner_leaves", "보호자", "이탈", "분리", "혼자", "외출", "문 앞", "문앞", "재결합")),
     ("resource_guarding", ("resource", "guarding", "자원", "밥그릇", "식사", "음식", "장난감")),
@@ -247,6 +270,14 @@ def sanitize_reference_curriculum_ids(
     return cleaned
 
 
+def localize_user_visible_tools(blocks: dict[str, Any]) -> dict[str, Any]:
+    """Normalize user-facing tool labels before persisting AI coaching blocks."""
+    cleaned = deepcopy(blocks)
+    _localize_item_tools(((cleaned.get("action_plan") or {}).get("items") or []))
+    _localize_item_tools(((cleaned.get("next_7_days") or {}).get("days") or []))
+    return cleaned
+
+
 def _collect_text(
     issues: list[str] | None,
     triggers: list[str] | None,
@@ -290,3 +321,20 @@ def _sanitize_items(items: list[Any], allowed_ids: list[str]) -> None:
         else:
             sanitized = []
         item["reference_curriculum_ids"] = sanitized or [allowed_ids[0]]
+
+
+def _localize_item_tools(items: list[Any]) -> None:
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        tools = item.get("tools")
+        if not isinstance(tools, list):
+            continue
+        localized: list[str] = []
+        for tool in tools:
+            if not isinstance(tool, str):
+                continue
+            label = TOOL_LABELS.get(tool.strip().lower(), tool)
+            if label and label not in localized:
+                localized.append(label)
+        item["tools"] = localized

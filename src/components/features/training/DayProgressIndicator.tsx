@@ -17,7 +17,7 @@ export function DayProgressIndicator({ selectedDay, totalDays }: Props) {
   return (
     <View style={styles.container}>
       <Text style={styles.text}>
-        Day {selectedDay} / {totalDays}
+        {selectedDay}일차 / 총 {totalDays}일
       </Text>
       <View style={styles.bar}>
         <View style={[styles.fill, { width: `${progress}%` }]} />

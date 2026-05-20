@@ -7,10 +7,11 @@
     "postinstall": "bash scripts/patch-node-modules.sh",
     "dev": "set -a && source .env 2>/dev/null; set +a; granite dev",
     "build": "set -a && source .env 2>/dev/null; set +a; ait build | tee /tmp/ait-build.log; DID=$(grep -o 'deploymentId: [0-9a-f-]*' /tmp/ait-build.log | awk '{print $2}'); [ -n \"$DID\" ] && mv taillog-app.ait taillog-app-${DID}.ait && echo \"→ taillog-app-${DID}.ait\"",
-    "test": "npm run test:app && npm run test:edge",
+    "test": "npm run ux-copy:check && npm run test:app && npm run test:edge",
     "test:app": "jest --config jest.config.js --testPathIgnorePatterns=/supabase/functions/ --passWithNoTests",
     "test:edge": "jest --config jest.edge.config.js --runInBand --testPathPattern=supabase/functions --passWithNoTests",
     "typecheck": "tsc --noEmit",
+    "ux-copy:check": "node scripts/check-ux-copy.js",
     "lint": "eslint ."
   },
   "dependencies": {

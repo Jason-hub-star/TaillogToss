@@ -1,12 +1,11 @@
 /**
  * DogPhotoPicker — 반려견 사진 선택 컴포넌트
- * @apps-in-toss/native-modules fetchAlbumPhotos 실 SDK 연동
+ * @apps-in-toss/framework fetchAlbumPhotos 실 SDK 연동
  * onSelect(localFileUri) → profile.tsx handleSave → uploadDogProfileImage → Supabase Storage
  */
 import React, { useState } from 'react';
 import { View, TouchableOpacity, Image, StyleSheet, Text, Alert, ActivityIndicator } from 'react-native';
-import { fetchAlbumPhotos } from '@apps-in-toss/native-modules';
-import { FetchAlbumPhotosPermissionError } from '@apps-in-toss/types';
+import { fetchAlbumPhotos, FetchAlbumPhotosPermissionError } from '@apps-in-toss/framework';
 import { colors, typography } from 'styles/tokens';
 import { ICONS } from 'lib/data/iconSources';
 
@@ -21,7 +20,49 @@ function isPermissionLikeError(error: unknown): boolean {
   if (error instanceof FetchAlbumPhotosPermissionError) return true;
 
   const message = error instanceof Error ? error.message : String(error);
-  return /permission|denied|READ_MEDIA|READ_EXTERNAL|SecurityException/i.test(message);
+  return /permission|denied|osPermissionDenied|READ_MEDIA|READ_EXTERNAL|SecurityException/i.test(message);
+}
+
+function toPreviewUri(dataUri: string, base64: boolean): string {
+  if (!base64 || dataUri.startsWith('data:')) return dataUri;
+  return `data:image/jpeg;base64,${dataUri}`;
+}
+
+async function promptPhotoPermissionIfNeeded(): Promise<void> {
+  const current = await fetchAlbumPhotos.getPermission();
+  if (current === 'allowed') return;
+
+  if (String(current) === 'osPermissionDenied') {
+    throw new FetchAlbumPhotosPermissionError();
+  }
+
+  // Let fetchAlbumPhotos remain the source of truth. Some host/OS permission paths
+  // can return "denied" from the dialog even though the next album request can proceed.
+  await fetchAlbumPhotos.openPermissionDialog();
+}
+
+async function fetchFirstPhoto(): Promise<string | null> {
+  const attempts = [
+    { base64: true, maxCount: 2, maxWidth: 720 },
+    { base64: false, maxCount: 2, maxWidth: 1024 },
+    { base64: true, maxWidth: 720 },
+  ];
+  let lastError: unknown;
+
+  for (const options of attempts) {
+    try {
+      const images = await fetchAlbumPhotos(options);
+      const first = images[0];
+      if (first?.dataUri) return toPreviewUri(first.dataUri, options.base64);
+      return null;
+    } catch (error) {
+      if (isPermissionLikeError(error)) throw error;
+      lastError = error;
+      if (__DEV__) console.warn('[DogPhotoPicker] fetchAlbumPhotos attempt failed:', options, error);
+    }
+  }
+
+  throw lastError;
 }
 
 export function DogPhotoPicker({ uri, onSelect }: Props) {
@@ -32,16 +73,10 @@ export function DogPhotoPicker({ uri, onSelect }: Props) {
     try {
       setIsLoading(true);
 
-      // fetchAlbumPhotos 내부에서 권한 확인과 요청을 한 번만 처리한다.
-      const images = await fetchAlbumPhotos({
-        base64: false,
-        maxCount: 1,
-        maxWidth: 1024,
-      });
-
-      const first = images[0];
-      if (first != null) {
-        onSelect(first.dataUri);
+      await promptPhotoPermissionIfNeeded();
+      const selectedUri = await fetchFirstPhoto();
+      if (selectedUri != null) {
+        onSelect(selectedUri);
         return;
       }
 
@@ -63,12 +98,12 @@ export function DogPhotoPicker({ uri, onSelect }: Props) {
         } else {
           Alert.alert(
             '사진 접근 권한 필요',
-            '사진을 선택하려면 Toss 앱의 사진 접근 권한이 필요해요.\n허용 후 다시 시도해주세요.',
+            '사진을 선택하려면 Toss 앱의 사진 접근 권한이 필요해요.\n허용한 뒤 다시 시도해주세요.',
           );
         }
       } else {
         console.error('[DogPhotoPicker] fetchAlbumPhotos error:', error);
-        Alert.alert('사진 선택 실패', '다시 시도해주세요.');
+        Alert.alert('사진을 선택하지 못했어요', '다시 시도해주세요.');
       }
     } finally {
       setIsLoading(false);
@@ -101,7 +136,7 @@ export function DogPhotoPicker({ uri, onSelect }: Props) {
         )}
       </TouchableOpacity>
       <Text style={styles.hint}>
-        {isLoading ? '사진 불러오는 중...' : '반려견 사진을 등록해주세요'}
+        {isLoading ? '사진을 불러오고 있어요' : '반려견 사진을 등록해주세요'}
       </Text>
     </View>
   );

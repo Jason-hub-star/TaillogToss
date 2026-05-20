@@ -4,7 +4,7 @@
  * Parity: APP-001
  */
 import { createRoute, useNavigation } from '@granite-js/react-native';
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import {
   View,
@@ -45,15 +45,13 @@ export const Route = createRoute('/settings', {
   screenOptions: { headerShown: false },
 });
 
-type StatusTone = 'neutral' | 'success' | 'danger';
-
 function toSettingsErrorMessage(error: unknown): string {
   const maybeError = error as { code?: string; message?: string };
   const code = maybeError?.code;
   const message = maybeError?.message ?? '';
 
   if (code === '42501' || /row-level security/i.test(message)) {
-    return '권한 정책 문제로 저장에 실패했어요. 잠시 후 다시 시도하거나 다시 로그인해주세요.';
+    return '저장 권한을 확인하지 못했어요. 잠시 후 다시 시도하거나 다시 로그인해주세요.';
   }
 
   if (/network request failed/i.test(message)) {
@@ -61,14 +59,6 @@ function toSettingsErrorMessage(error: unknown): string {
   }
 
   return '설정을 저장하지 못했어요. 잠시 후 다시 시도해주세요.';
-}
-
-function formatSavedTime(isoString: string): string {
-  return new Date(isoString).toLocaleTimeString('ko-KR', {
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false,
-  });
 }
 
 function SettingsPage() {
@@ -82,23 +72,25 @@ function SettingsPage() {
   const updateSettings = useUpdateSettings();
 
   const saveReqSeqRef = useRef(0);
-  const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
-  const [syncPhase, setSyncPhase] = useState<'idle' | 'saving' | 'saved' | 'failed'>('idle');
 
   const [notifPref, setNotifPref] = useState<NotificationPref>(
     settings?.notification_pref ?? DEFAULT_NOTIFICATION_PREF,
   );
+  const [marketingAgreed, setMarketingAgreed] = useState(settings?.marketing_agreed ?? false);
   const [aiPersona, setAiPersona] = useState(settings?.ai_persona ?? DEFAULT_AI_PERSONA);
 
   useEffect(() => {
     if (settings?.notification_pref) {
       setNotifPref(settings.notification_pref);
     }
+    if (typeof settings?.marketing_agreed === 'boolean') {
+      setMarketingAgreed(settings.marketing_agreed);
+    }
     if (settings?.ai_persona) {
       setAiPersona(settings.ai_persona);
     }
-  }, [settings?.notification_pref, settings?.ai_persona]);
+  }, [settings?.notification_pref, settings?.marketing_agreed, settings?.ai_persona]);
 
   const applyUpdates = useCallback(
     (updates: Partial<UserSettings>) => {
@@ -106,20 +98,17 @@ function SettingsPage() {
 
       const reqSeq = ++saveReqSeqRef.current;
       setSaveError(null);
-      setSyncPhase('saving');
       updateSettings.mutate(
         { userId: user.id, updates },
         {
           onSuccess: () => {
             if (reqSeq !== saveReqSeqRef.current) return;
-            setLastSavedAt(new Date().toISOString());
-            setSyncPhase('saved');
+            setSaveError(null);
           },
           onError: (error) => {
             if (reqSeq !== saveReqSeqRef.current) return;
             const message = toSettingsErrorMessage(error);
             setSaveError(message);
-            setSyncPhase('failed');
           },
         },
       );
@@ -134,64 +123,51 @@ function SettingsPage() {
     [applyUpdates],
   );
 
-  const toggleChannel = useCallback(
-    (key: 'push' | 'smart_message') => {
-      const nextPref: NotificationPref = {
-        ...notifPref,
-        channels: {
-          ...notifPref.channels,
-          [key]: !notifPref.channels[key],
-        },
-      };
-      setNotifPref(nextPref);
-      saveNotificationPref(nextPref);
-    },
-    [notifPref, saveNotificationPref],
-  );
-
-  const toggleType = useCallback(
-    (key: keyof NotificationPref['types']) => {
-      const nextPref: NotificationPref = {
-        ...notifPref,
-        types: {
-          ...notifPref.types,
-          [key]: !notifPref.types[key],
-        },
-      };
-      setNotifPref(nextPref);
-      saveNotificationPref(nextPref);
-    },
-    [notifPref, saveNotificationPref],
-  );
-
-  const toggleQuietHoursEnabled = useCallback(() => {
+  const toggleImportantNotifications = useCallback(() => {
+    const currentlyEnabled =
+      notifPref.channels.smart_message &&
+      (
+        notifPref.types.log_reminder ||
+        notifPref.types.surge_alert ||
+        notifPref.types.coaching_ready ||
+        notifPref.types.training_reminder
+      );
+    const nextEnabled = !currentlyEnabled;
     const nextPref: NotificationPref = {
       ...notifPref,
-      quiet_hours: {
-        ...notifPref.quiet_hours,
-        enabled: !notifPref.quiet_hours.enabled,
+      channels: {
+        ...notifPref.channels,
+        push: nextEnabled,
+        smart_message: nextEnabled,
+      },
+      types: {
+        ...notifPref.types,
+        log_reminder: nextEnabled,
+        surge_alert: nextEnabled,
+        coaching_ready: nextEnabled,
+        training_reminder: nextEnabled,
       },
     };
     setNotifPref(nextPref);
     saveNotificationPref(nextPref);
   }, [notifPref, saveNotificationPref]);
 
-  const shiftQuietHour = useCallback(
-    (key: 'start_hour' | 'end_hour', delta: 1 | -1) => {
-      const current = notifPref.quiet_hours[key];
-      const next = (current + delta + 24) % 24;
-      const nextPref: NotificationPref = {
-        ...notifPref,
-        quiet_hours: {
-          ...notifPref.quiet_hours,
-          [key]: next,
-        },
-      };
-      setNotifPref(nextPref);
-      saveNotificationPref(nextPref);
-    },
-    [notifPref, saveNotificationPref],
-  );
+  const togglePromoNotifications = useCallback(() => {
+    const nextEnabled = !(notifPref.types.promo && marketingAgreed);
+    const nextPref: NotificationPref = {
+      ...notifPref,
+      types: {
+        ...notifPref.types,
+        promo: nextEnabled,
+      },
+    };
+    setNotifPref(nextPref);
+    setMarketingAgreed(nextEnabled);
+    applyUpdates({
+      notification_pref: nextPref,
+      marketing_agreed: nextEnabled,
+    });
+  }, [notifPref, marketingAgreed, applyUpdates]);
 
   const toggleAiTone = useCallback(() => {
     const nextPersona: AiPersona = {
@@ -225,7 +201,7 @@ function SettingsPage() {
   const handleWithdrawal = useCallback(() => {
     Alert.alert(
       '회원탈퇴',
-      '탈퇴하면 모든 데이터가 삭제되며 복구할 수 없습니다. 정말 탈퇴하시겠어요?',
+      '탈퇴하면 모든 데이터가 삭제되고 복구할 수 없어요. 정말 탈퇴할까요?',
       [
         { text: '취소', style: 'cancel' },
         {
@@ -242,7 +218,7 @@ function SettingsPage() {
               console.error('[WITHDRAW] 탈퇴 오류:', error);
               const code =
                 (error as { message?: string })?.message ?? '알 수 없는 오류';
-              Alert.alert('오류', `탈퇴 처리 중 문제가 발생했습니다.\n(${code})`);
+              Alert.alert('탈퇴하지 못했어요', `잠시 후 다시 시도해주세요.\n(${code})`);
             }
           },
         },
@@ -255,13 +231,6 @@ function SettingsPage() {
       Alert.alert('안내', '기기 설정을 열지 못했어요. 설정 앱에서 직접 권한을 확인해주세요.');
     });
   }, []);
-
-  const syncStatus = useMemo<{ text: string; tone: StatusTone }>(() => {
-    if (syncPhase === 'saving') return { text: '동기화 중...', tone: 'neutral' };
-    if (syncPhase === 'failed' && saveError) return { text: '동기화 실패', tone: 'danger' };
-    if (lastSavedAt) return { text: `${formatSavedTime(lastSavedAt)} 저장됨`, tone: 'success' };
-    return { text: '동기화 대기', tone: 'neutral' };
-  }, [syncPhase, saveError, lastSavedAt]);
 
   const canGoBack = navigation.canGoBack();
   const onBack = canGoBack ? () => navigation.goBack() : undefined;
@@ -304,12 +273,13 @@ function SettingsPage() {
     >
         <NotificationSettingsSection
           notifPref={notifPref}
-          syncStatus={syncStatus}
-          onToggleChannel={toggleChannel}
-          onToggleType={toggleType}
-          onToggleQuietHours={toggleQuietHoursEnabled}
-          onShiftQuietHour={shiftQuietHour}
+          marketingAgreed={marketingAgreed}
+          onToggleImportant={toggleImportantNotifications}
+          onTogglePromo={togglePromoNotifications}
         />
+        {saveError ? (
+          <Text style={styles.saveErrorText}>{saveError}</Text>
+        ) : null}
 
         <SettingsPermissionBanner onOpenSettings={handleOpenDeviceSettings} />
 
@@ -351,6 +321,12 @@ const styles = StyleSheet.create({
     marginTop: 32,
     paddingHorizontal: 20,
     gap: 12,
+  },
+  saveErrorText: {
+    ...typography.caption,
+    color: colors.red600,
+    marginHorizontal: 20,
+    marginTop: 8,
   },
   dangerButton: {
     paddingVertical: 8,

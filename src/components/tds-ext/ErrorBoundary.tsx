@@ -43,8 +43,8 @@ export class ErrorBoundary extends Component<Props, State> {
             <Image source={{ uri: ICONS['ic-bolt'] }} style={styles.iconImg} resizeMode="contain" />
             <Text style={styles.title}>문제가 발생했어요</Text>
             <Text style={styles.description}>
-              예상하지 못한 오류가 발생했습니다.{'\n'}
-              아래 버튼을 눌러 홈으로 이동해주세요.
+              예상하지 못한 문제가 생겼어요.{'\n'}
+              홈으로 이동해 다시 시작해볼게요.
             </Text>
             <TouchableOpacity
               style={styles.button}

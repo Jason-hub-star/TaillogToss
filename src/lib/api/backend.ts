@@ -11,13 +11,12 @@ const DEV_LOOPBACK_BACKEND_URL = 'http://127.0.0.1:8765';
 
 function resolveBackendUrl(): string {
   const fromEnv = process.env.EXPO_PUBLIC_BACKEND_URL;
-  if (fromEnv && fromEnv.trim().length > 0) return fromEnv;
-  if (!__DEV__) return PUBLIC_BACKEND_URL;
+  if (!__DEV__) return fromEnv && fromEnv.trim().length > 0 ? fromEnv : PUBLIC_BACKEND_URL;
 
   // 개발 중 실기기 Metro 번들 URL(host:8081)에서 host를 추출해 backend(8765)로 맞춘다.
   const scriptURL = (NativeModules as { SourceCode?: { scriptURL?: string } })?.SourceCode?.scriptURL;
   if (!scriptURL || (!scriptURL.startsWith('http://') && !scriptURL.startsWith('https://'))) {
-    return PUBLIC_BACKEND_URL;
+    return DEV_LOOPBACK_BACKEND_URL;
   }
 
   try {
@@ -30,7 +29,7 @@ function resolveBackendUrl(): string {
     }
     return `${parsed.protocol}//${parsed.hostname}:8765`;
   } catch {
-    return PUBLIC_BACKEND_URL;
+    return DEV_LOOPBACK_BACKEND_URL;
   }
 }
 

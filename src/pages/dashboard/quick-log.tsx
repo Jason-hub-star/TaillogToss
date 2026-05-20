@@ -7,20 +7,18 @@
  */
 import { createRoute, useNavigation } from '@granite-js/react-native';
 import React, { useState, useCallback } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet  } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform } from 'react-native';
 import { SafeAreaView } from '@granite-js/native/react-native-safe-area-context';
 import { colors, typography } from 'styles/tokens';
 import { useActiveDog } from 'stores/ActiveDogContext';
 import { useCreateQuickLog, useCreateDetailedLog } from 'lib/hooks/useLogs';
 import { usePageGuard } from 'lib/hooks/usePageGuard';
 import { tracker } from 'lib/analytics/tracker';
-import { useAuth } from 'stores/AuthContext';
-import { useIsPro } from 'lib/hooks/useSubscription';
-import { BannerAd } from 'components/shared/ads';
 import { QuickLogForm } from 'components/features/log/QuickLogForm';
 import { ABCForm } from 'components/features/log/ABCForm';
 import { EmptyState } from 'components/tds-ext/EmptyState';
 import { Toast } from 'components/tds-ext/Toast';
+import { BackButton, BackButtonSpacer } from 'components/shared/BackButton';
 import type { QuickLogInput, DetailedLogInput } from 'types/log';
 
 export const Route = createRoute('/dashboard/quick-log', {
@@ -33,44 +31,62 @@ type TabKey = 'quick' | 'detailed';
 function QuickLogPage() {
   const [activeTab, setActiveTab] = useState<TabKey>('quick');
   const [showToast, setShowToast] = useState(false);
+  const [toastMessage, setToastMessage] = useState('기록이 저장되었어요');
+  const [shouldReturnToDashboard, setShouldReturnToDashboard] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const { activeDog } = useActiveDog();
   const navigation = useNavigation();
-  const { user } = useAuth();
-  const isPro = useIsPro(user?.id);
   const { isReady } = usePageGuard({ currentPath: '/dashboard/quick-log' });
 
   const quickLogMutation = useCreateQuickLog();
   const detailedLogMutation = useCreateDetailedLog();
 
-  const handleQuickSubmit = useCallback((inputs: QuickLogInput[]) => {
-    const total = inputs.length;
-    let completed = 0;
-    inputs.forEach((input) => {
-      quickLogMutation.mutate(input, {
-        onSettled: () => {
-          completed++;
-          if (completed === total) {
-            tracker.behaviorLogCreated('quick');
-            setShowToast(true);
-          }
-        },
-      });
-    });
-  }, [quickLogMutation]);
+  const showSaveSuccess = useCallback((mode: 'quick' | 'detailed') => {
+    tracker.behaviorLogCreated(mode);
+    setToastMessage('저장 완료. 대시보드로 돌아가요');
+    setShouldReturnToDashboard(true);
+    setShowToast(true);
+  }, []);
 
-  const handleDetailedSubmit = useCallback((input: DetailedLogInput) => {
-    detailedLogMutation.mutate(input, {
-      onSuccess: () => {
-        tracker.behaviorLogCreated('detailed');
-        setShowToast(true);
-      },
-    });
-  }, [detailedLogMutation]);
+  const showSaveError = useCallback(() => {
+    setToastMessage('저장하지 못했어요. 다시 시도해주세요');
+    setShouldReturnToDashboard(false);
+    setShowToast(true);
+  }, []);
+
+  const handleQuickSubmit = useCallback(async (inputs: QuickLogInput[]) => {
+    if (inputs.length === 0 || isSubmitting) return;
+    setIsSubmitting(true);
+    try {
+      await Promise.all(inputs.map((input) => quickLogMutation.mutateAsync(input)));
+      showSaveSuccess('quick');
+    } catch {
+      showSaveError();
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [isSubmitting, quickLogMutation, showSaveError, showSaveSuccess]);
+
+  const handleDetailedSubmit = useCallback(async (input: DetailedLogInput) => {
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+    try {
+      await detailedLogMutation.mutateAsync(input);
+      showSaveSuccess('detailed');
+    } catch {
+      showSaveError();
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [detailedLogMutation, isSubmitting, showSaveError, showSaveSuccess]);
 
   const handleToastDismiss = useCallback(() => {
     setShowToast(false);
-    navigation.goBack();
-  }, [navigation]);
+    if (shouldReturnToDashboard) {
+      setShouldReturnToDashboard(false);
+      navigation.navigate('/dashboard' as never);
+    }
+  }, [navigation, shouldReturnToDashboard]);
 
   if (!isReady) return null;
 
@@ -79,11 +95,9 @@ function QuickLogPage() {
     return (
       <SafeAreaView style={styles.safe}>
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()} activeOpacity={0.7}>
-            <Text style={styles.back}>{'\u2190'}</Text>
-          </TouchableOpacity>
+          <BackButton onPress={() => navigation.goBack()} />
           <Text style={styles.title}>빠른 기록</Text>
-          <View style={styles.placeholder} />
+          <BackButtonSpacer />
         </View>
         <EmptyState
           title="반려견을 먼저 등록해주세요"
@@ -98,11 +112,9 @@ function QuickLogPage() {
   return (
     <SafeAreaView style={styles.safe}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} activeOpacity={0.7}>
-          <Text style={styles.back}>{'\u2190'}</Text>
-        </TouchableOpacity>
+        <BackButton onPress={() => navigation.goBack()} />
         <Text style={styles.title}>빠른 기록</Text>
-        <View style={styles.placeholder} />
+        <BackButtonSpacer />
       </View>
 
       <View style={styles.segmented}>
@@ -120,28 +132,30 @@ function QuickLogPage() {
         </TouchableOpacity>
       </View>
 
-      <View style={styles.content}>
+      <KeyboardAvoidingView
+        style={styles.content}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 24 : 0}
+      >
         {activeTab === 'quick' ? (
           <QuickLogForm
             dogId={dogId}
             onSubmit={handleQuickSubmit}
-            isLoading={quickLogMutation.isPending}
+            isLoading={isSubmitting || quickLogMutation.isPending}
           />
         ) : (
           <ABCForm
             dogId={dogId}
             onSubmit={handleDetailedSubmit}
-            isLoading={detailedLogMutation.isPending}
+            isLoading={isSubmitting || detailedLogMutation.isPending}
           />
         )}
-      </View>
-
-      {/* B2: 배너 광고 — 무료 사용자 빠른기록 */}
-      {!isPro && <BannerAd placement="B2" />}
+      </KeyboardAvoidingView>
 
       <Toast
-        message="기록이 저장되었어요"
+        message={toastMessage}
         visible={showToast}
+        duration={1200}
         onDismiss={handleToastDismiss}
       />
     </SafeAreaView>
@@ -160,17 +174,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 14,
   },
-  back: {
-    ...typography.pageTitle,
-    color: colors.textPrimary,
-  },
   title: {
     ...typography.body,
     fontWeight: '600',
     color: colors.textPrimary,
-  },
-  placeholder: {
-    width: 22,
   },
   segmented: {
     flexDirection: 'row',

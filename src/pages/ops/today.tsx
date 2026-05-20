@@ -146,7 +146,7 @@ function OpsTodayPage() {
           tracker.reportGenerated('daycare_general');
         },
         onError: () => {
-          Alert.alert('생성 실패', '리포트 생성에 실패했어요. 다시 시도해주세요.');
+          Alert.alert('리포트를 만들지 못했어요', '잠시 후 다시 시도해주세요.');
           setGeneratingDogId(null);
           setReportSourceItem(null);
         },
@@ -164,7 +164,7 @@ function OpsTodayPage() {
         Alert.alert('발송 완료', '보호자에게 리포트가 발송되었어요.');
       },
       onError: () => {
-        Alert.alert('발송 실패', '리포트 발송에 실패했어요. 다시 시도해주세요.');
+        Alert.alert('리포트를 보내지 못했어요', '잠시 후 다시 시도해주세요.');
       },
     });
   }, [sendReport, refetch]);
@@ -206,7 +206,7 @@ function OpsTodayPage() {
           setRecordModalItem(null);
         },
         onError: () => {
-          Alert.alert('저장 실패', '기록을 저장하지 못했어요. 다시 시도해주세요.');
+          Alert.alert('기록을 저장하지 못했어요', '잠시 후 다시 시도해주세요.');
         },
       },
     );
@@ -248,7 +248,7 @@ function OpsTodayPage() {
   );
 
   const emptyComponent = (
-    <EmptyState title="오늘 관리할 강아지가 없어요" description="센터에 강아지를 등록하세요" icon={'\uD83D\uDC36'} />
+    <EmptyState title="오늘 관리할 강아지가 없어요" description="센터에 강아지를 등록해주세요" icon={'\uD83D\uDC36'} />
   );
 
   const tabs = useMemo(() => [
@@ -276,7 +276,7 @@ function OpsTodayPage() {
       content: (
         <OpsList items={unreportedItems} selectedIds={selectedIds}
           onItemPress={handleReportItemPress} onItemLongPress={handleItemLongPress}
-          ListEmptyComponent={<EmptyState title="미발송 리포트가 없어요" description="기록이 있는 강아지 리포트를 탭해서 생성하세요" icon={'\uD83D\uDCE8'} />} />
+          ListEmptyComponent={<EmptyState title="미발송 리포트가 없어요" description="기록이 있는 강아지 리포트를 탭해 만들어주세요" icon={'\uD83D\uDCE8'} />} />
       ),
     },
     {

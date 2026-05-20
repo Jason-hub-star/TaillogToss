@@ -20,6 +20,7 @@ import { usePageGuard } from 'lib/hooks/usePageGuard';
 import { useCreateOrgDog } from 'lib/hooks/useOrg';
 import { useOrg } from 'stores/OrgContext';
 import { useAuth } from 'stores/AuthContext';
+import { BackButton, BackButtonSpacer } from 'components/shared/BackButton';
 import { DogPhotoPicker } from 'components/features/dog/DogPhotoPicker';
 
 export const Route = createRoute('/ops/dog-add', {
@@ -98,7 +99,7 @@ function OpsDogAddPage() {
           navigation.navigate('/ops/today' as never);
         },
         onError: (err) => {
-          setError('등록에 실패했어요. 다시 시도해주세요.');
+          setError('등록하지 못했어요. 다시 시도해주세요.');
           if (__DEV__) console.error('[B2B-001] createOrgDog failed', err);
         },
       },
@@ -132,11 +133,9 @@ function OpsDogAddPage() {
       >
         {/* 헤더 */}
         <View style={styles.navbar}>
-          <TouchableOpacity onPress={() => navigation.goBack()} activeOpacity={0.7}>
-            <Text style={styles.backText}>{'←'}</Text>
-          </TouchableOpacity>
+          <BackButton onPress={() => navigation.goBack()} />
           <Text style={styles.navTitle}>강아지 등록</Text>
-          <View style={styles.navSpacer} />
+          <BackButtonSpacer />
         </View>
 
         <ScrollView
@@ -349,9 +348,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: colors.divider,
   },
-  backText: { ...typography.sectionTitle, color: colors.textPrimary, paddingRight: spacing.sm },
   navTitle: { flex: 1, ...typography.bodySmall, fontWeight: '600', color: colors.textPrimary, textAlign: 'center' },
-  navSpacer: { width: 30 },
   scroll: { flex: 1 },
   content: { padding: spacing.screenHorizontal, paddingBottom: spacing.xxl },
   sectionTitle: {

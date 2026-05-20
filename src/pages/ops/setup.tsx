@@ -58,7 +58,7 @@ function OpsSetupPage() {
           navigation.navigate('/ops/today' as never);
         },
         onError: (err) => {
-          setError('조직 생성에 실패했어요. 다시 시도해주세요.');
+          setError('센터를 만들지 못했어요. 다시 시도해주세요.');
           if (__DEV__) console.error('[B2B-001] createOrg failed', err);
         },
       },

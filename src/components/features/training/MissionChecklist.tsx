@@ -64,7 +64,7 @@ function StepItem({
           {isCompleted && <Text style={styles.checkmark}>{'✓'}</Text>}
         </View>
         <View style={styles.stepContent}>
-          <Text style={[styles.stepInstruction, isCompleted && styles.stepDone]}>{instruction}</Text>
+          <Text style={[styles.stepInstruction, isCompleted && styles.stepInstructionDone]}>{instruction}</Text>
           <View style={styles.stepMeta}>
             <Text style={styles.duration}>{duration}분</Text>
             {variantData?.difficulty_note && variantData.difficulty_note !== '표준 방법' && (
@@ -147,9 +147,8 @@ const styles = StyleSheet.create({
     color: colors.textDark,
     marginBottom: 8,
   },
-  stepDone: {
-    textDecorationLine: 'line-through',
-    color: colors.textSecondary,
+  stepInstructionDone: {
+    color: colors.green500,
   },
   stepMeta: {
     flexDirection: 'row',

@@ -9,7 +9,7 @@ import { LottieAnimation, type LottieAssetKey } from './LottieAnimation';
 import { colors, typography } from 'styles/tokens';
 
 interface Props {
-  /** 표시할 메시지 (기본: '불러오는 중...') */
+  /** 표시할 메시지 (기본: '불러오고 있어요') */
   message?: string;
   /** Lottie 에셋 키 (기본: 'cute-doggie') */
   asset?: LottieAssetKey;
@@ -18,7 +18,7 @@ interface Props {
 }
 
 export function SkeletonLoader({
-  message = '불러오는 중...',
+  message = '불러오고 있어요',
   asset = 'cute-doggie',
   size = 160,
 }: Props) {

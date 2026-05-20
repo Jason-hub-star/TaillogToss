@@ -25,15 +25,16 @@ export function ActiveDogProvider({ children }: { children: React.ReactNode }) {
   const [activeDog, setActiveDogState] = useState<Dog | null>(null);
   const [dogs, setDogsState] = useState<Dog[]>([]);
 
-  // 인증 후 dogs 자동 로딩 → activeDog 세팅
+  // 인증 후 dogs 자동 로딩 → activeDog 세팅 및 같은 id의 최신 프로필 동기화
   useEffect(() => {
     if (fetchedDogs && fetchedDogs.length > 0) {
       setDogsState(fetchedDogs);
-      if (!activeDog || !fetchedDogs.find((d) => d.id === activeDog.id)) {
-        setActiveDogState(fetchedDogs[0] ?? null);
-      }
+      setActiveDogState((current) => {
+        if (!current) return fetchedDogs[0] ?? null;
+        return fetchedDogs.find((d) => d.id === current.id) ?? fetchedDogs[0] ?? null;
+      });
     }
-  }, [fetchedDogs, activeDog]);
+  }, [fetchedDogs]);
 
   const setActiveDog = useCallback((dog: Dog) => {
     setActiveDogState(dog);

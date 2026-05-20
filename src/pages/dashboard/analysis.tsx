@@ -5,7 +5,7 @@
  * Parity: UI-001, LOG-001
  */
 import { createRoute, useNavigation } from '@granite-js/react-native';
-import React, { useState, useMemo, useCallback, useRef } from 'react';
+import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Share, Image } from 'react-native';
 import { SafeAreaView } from '@granite-js/native/react-native-safe-area-context';
 import { useActiveDog } from 'stores/ActiveDogContext';
@@ -27,9 +27,11 @@ import { SkeletonLoader } from 'components/shared/SkeletonLoader';
 import { EmptyState } from 'components/tds-ext/EmptyState';
 import { ErrorState } from 'components/tds-ext/ErrorState';
 import { tracker } from 'lib/analytics/tracker';
-import { getBehaviorIcon, BACK_ICON } from 'lib/data/behaviorIcons';
+import { getBehaviorIcon } from 'lib/data/behaviorIcons';
+import { BackButton } from 'components/shared/BackButton';
 import { RewardedAdButton } from 'components/shared/ads';
 import { LOG_LIMIT_ANALYSIS } from 'lib/api/queryConfig';
+import { getOccurrenceCount } from 'lib/logOccurrence';
 import type { ChartPeriod } from 'types/chart';
 import { colors, typography, spacing } from 'styles/tokens';
 
@@ -66,14 +68,16 @@ const BAR_TITLE: Record<string, string> = {
   monthly: '월별 기록 건수',
 };
 
+type CapturedChart = { period: ChartPeriod; dataUrl: string };
+
 function AnalysisPage() {
   const [period, setPeriod] = useState<ChartPeriod>('weekly');
-  const chartImages = useRef<{ bar?: string; radar?: string }>({});
+  const chartImages = useRef<{ bar?: CapturedChart; radar?: CapturedChart }>({});
   const { activeDog } = useActiveDog();
   const { user } = useAuth();
   const isPro = useIsPro(user?.id);
-  const dailyLimit = isPro ? 10 : 3;
   const { data: dailyUsageData } = useDailyUsage(user?.id);
+  const dailyLimit = dailyUsageData?.limit ?? (isPro ? 10 : 1);
   const navigation = useNavigation();
   const { isReady } = usePageGuard({ currentPath: '/dashboard/analysis' });
 
@@ -92,6 +96,16 @@ function AnalysisPage() {
   const radarData = useMemo(() => logsToRadar(filteredLogs), [filteredLogs]);
   const heatmapData = useMemo(() => logsToHeatmap(filteredLogs), [filteredLogs]);
   const categoryFreq = useMemo(() => countByCategory(filteredLogs), [filteredLogs]);
+  const occurrenceTotal = useMemo(
+    () => filteredLogs.reduce((sum, log) => sum + getOccurrenceCount(log), 0),
+    [filteredLogs]
+  );
+  const allCategoryFreq = useMemo(() => countByCategory(effectiveAllLogs), [effectiveAllLogs]);
+  const allHeatmapData = useMemo(() => logsToHeatmap(effectiveAllLogs), [effectiveAllLogs]);
+  const allOccurrenceTotal = useMemo(
+    () => effectiveAllLogs.reduce((sum, log) => sum + getOccurrenceCount(log), 0),
+    [effectiveAllLogs]
+  );
 
   const trainingEffects = useMemo(
     () => (trainingProgress ? computeTrainingEffects(effectiveAllLogs, trainingProgress) : []),
@@ -102,30 +116,35 @@ function AnalysisPage() {
   const radarHTML = useMemo(() => generateRadarHTML(radarData, '원인 분석'), [radarData]);
   const heatmapHTML = useMemo(() => generateHeatmapHTML(heatmapData, '시간대별 밀도'), [heatmapData]);
 
+  useEffect(() => {
+    chartImages.current = {};
+  }, [period]);
+
   const handleBarCapture = useCallback((dataUrl: string) => {
-    chartImages.current.bar = dataUrl;
-  }, []);
+    chartImages.current.bar = { period, dataUrl };
+  }, [period]);
 
   const handleRadarCapture = useCallback((dataUrl: string) => {
-    chartImages.current.radar = dataUrl;
-  }, []);
+    chartImages.current.radar = { period, dataUrl };
+  }, [period]);
 
   const handleShare = useCallback(() => {
-    const peakHour = heatmapPeakHour(heatmapData);
+    const peakHour = heatmapPeakHour(allHeatmapData);
     const baseMessage = buildAnalysisShareText({
       dogName: activeDog?.name ?? '우리 강아지',
-      periodLabel: periodConfig.label,
-      totalLogs: filteredLogs.length,
-      topBehaviors: categoryFreq.slice(0, 3),
+      periodLabel: '전체',
+      totalLogs: allOccurrenceTotal,
+      topBehaviors: allCategoryFreq.slice(0, 3),
       trainingEffects,
       peakHour,
       dogEnv: dogEnv ?? null,
     });
-    tracker.analysisShared(periodConfig.key, filteredLogs.length);
+    tracker.analysisShared('all', allOccurrenceTotal);
 
     const dogId = activeDog?.id ?? 'dog';
-    const hasBarData = !!chartImages.current.bar;
-    const hasRadarData = !!chartImages.current.radar;
+    const canAttachCurrentCharts = period === 'all';
+    const hasBarData = canAttachCurrentCharts && chartImages.current.bar?.period === period && !!chartImages.current.bar.dataUrl;
+    const hasRadarData = canAttachCurrentCharts && chartImages.current.radar?.period === period && !!chartImages.current.radar.dataUrl;
 
     if (!hasBarData && !hasRadarData) {
       void Share.share({ message: baseMessage });
@@ -136,10 +155,10 @@ function AnalysisPage() {
       try {
         const [barResult, radarResult] = await Promise.allSettled([
           hasBarData
-            ? uploadChart(supabase, chartImages.current.bar!, dogId, 'bar')
+            ? uploadChart(supabase, chartImages.current.bar!.dataUrl, dogId, 'bar')
             : Promise.reject(new Error('no-bar')),
           hasRadarData
-            ? uploadChart(supabase, chartImages.current.radar!, dogId, 'radar')
+            ? uploadChart(supabase, chartImages.current.radar!.dataUrl, dogId, 'radar')
             : Promise.reject(new Error('no-radar')),
         ]);
 
@@ -155,7 +174,7 @@ function AnalysisPage() {
         void Share.share({ message: baseMessage });
       }
     })();
-  }, [categoryFreq, trainingEffects, heatmapData, activeDog?.name, activeDog?.id, periodConfig, filteredLogs.length, dogEnv]);
+  }, [allCategoryFreq, trainingEffects, allHeatmapData, activeDog?.name, activeDog?.id, allOccurrenceTotal, dogEnv, period]);
 
   const isInitialLoading = isLoading && !allLogs;
 
@@ -178,11 +197,14 @@ function AnalysisPage() {
   return (
     <SafeAreaView style={styles.safe}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} activeOpacity={0.7}>
-          <Image source={{ uri: BACK_ICON }} style={styles.backIcon} resizeMode="contain" />
-        </TouchableOpacity>
+        <BackButton onPress={() => navigation.goBack()} />
         <Text style={styles.title}>행동 분석</Text>
-        <TouchableOpacity onPress={handleShare} activeOpacity={0.7} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+        <TouchableOpacity
+          onPress={handleShare}
+          activeOpacity={0.7}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          style={styles.headerAction}
+        >
           <Text style={styles.shareIcon}>{'\u{1F4E4}'}</Text>
         </TouchableOpacity>
       </View>
@@ -209,7 +231,7 @@ function AnalysisPage() {
           {allLogs && allLogs.length > 0 && period !== 'all' && (
             <TouchableOpacity style={styles.periodHint} onPress={() => setPeriod('all')} activeOpacity={0.7}>
               <Text style={styles.periodHintText}>
-                이 기간에는 기록이 없어요. 전체 기간으로 전환하면 {allLogs?.length ?? 0}건의 기록을 확인할 수 있어요
+                이 기간에는 기록이 없어요. 전체 기간으로 전환하면 {allOccurrenceTotal}회 기록을 확인할 수 있어요
               </Text>
             </TouchableOpacity>
           )}
@@ -223,12 +245,12 @@ function AnalysisPage() {
 
           <View style={styles.chartSection}>
             <Text style={styles.chartTitle}>원인 분석</Text>
-            <ChartWebView type="radar" html={radarHTML} height={280} onCapture={handleRadarCapture} />
+            <ChartWebView type="radar" html={radarHTML} height={320} onCapture={handleRadarCapture} />
           </View>
 
           <View style={styles.chartSection}>
             <Text style={styles.chartTitle}>시간대별 밀도</Text>
-            <ChartWebView type="heatmap" html={heatmapHTML} height={200} />
+            <ChartWebView type="heatmap" html={heatmapHTML} height={230} />
           </View>
 
           <View style={styles.divider} />
@@ -243,7 +265,7 @@ function AnalysisPage() {
                     {icon && <Image source={{ uri: icon }} style={styles.freqIcon} resizeMode="contain" />}
                     <Text style={styles.freqLabel}>{item.label}</Text>
                   </View>
-                  <Text style={styles.freqCount}>{item.count}회</Text>
+              <Text style={styles.freqCount}>{item.count}회</Text>
                 </View>
               );
             })}
@@ -265,7 +287,7 @@ function AnalysisPage() {
           {/* AI 코칭 CTA — 데이터 기반 */}
           <View style={styles.coachingSection}>
             <Text style={styles.coachingContext}>
-              {filteredLogs.length}건 기록 기반 · AI 코칭 받기
+              {occurrenceTotal}회 기록 기반 · AI 코칭 받기
             </Text>
             <CoachingPreviewCard
               dogId={activeDog?.id}
@@ -294,14 +316,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.screenHorizontal,
     paddingVertical: 14,
   },
-  backIcon: {
-    width: 24,
-    height: 24,
-  },
   title: {
     ...typography.body,
     fontWeight: '600',
     color: colors.textPrimary,
+  },
+  headerAction: {
+    width: 40,
+    alignItems: 'flex-end',
   },
   shareIcon: {
     fontSize: 20,
@@ -329,7 +351,7 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   segmentText: {
-    ...typography.detail,
+    ...typography.bodySmall,
     color: colors.textSecondary,
     fontWeight: '500',
   },
@@ -345,7 +367,7 @@ const styles = StyleSheet.create({
     paddingTop: spacing.lg,
   },
   chartTitle: {
-    ...typography.bodySmall,
+    ...typography.body,
     fontWeight: '600',
     color: colors.textPrimary,
     marginBottom: spacing.md,
@@ -361,7 +383,7 @@ const styles = StyleSheet.create({
     paddingTop: spacing.lg,
   },
   freqTitle: {
-    ...typography.bodySmall,
+    ...typography.body,
     fontWeight: '600',
     color: colors.textPrimary,
     marginBottom: spacing.md,
@@ -384,11 +406,11 @@ const styles = StyleSheet.create({
     height: 20,
   },
   freqLabel: {
-    ...typography.bodySmall,
+    ...typography.body,
     color: colors.textPrimary,
   },
   freqCount: {
-    ...typography.bodySmall,
+    ...typography.body,
     color: colors.grey700,
     fontWeight: '500',
   },
@@ -397,7 +419,7 @@ const styles = StyleSheet.create({
     paddingTop: spacing.lg,
   },
   coachingContext: {
-    ...typography.caption,
+    ...typography.detail,
     color: colors.textSecondary,
     marginBottom: spacing.sm,
   },

@@ -1,6 +1,6 @@
 /**
  * QuickLogChips — 빠른 기록 카테고리 Chip 그리드 (8행동 + 6일상)
- * 원탭 = 해당 카테고리로 즉시 기록 (intensity=3 기본값)
+ * 카테고리 선택 후 강도/시간 조절 → 저장
  * Parity: UI-001, LOG-001
  */
 import React from 'react';
@@ -28,7 +28,7 @@ const ACTIVITY_CHIPS: { key: DailyActivityCategory; label: string; icon: string 
   { key: 'training', label: '훈련', icon: ICONS['ic-cat-train']! },
   { key: 'play', label: '놀이', icon: ICONS['ic-cat-play']! },
   { key: 'rest', label: '휴식', icon: ICONS['ic-cat-rest']! },
-  { key: 'grooming', label: '그루밍', icon: ICONS['ic-cat-grooming']! },
+  { key: 'grooming', label: '미용', icon: ICONS['ic-cat-grooming']! },
 ];
 
 export interface QuickLogChipsProps {
@@ -90,7 +90,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
   },
   sectionLabel: {
-    ...typography.caption,
+    ...typography.detail,
     fontWeight: '600',
     color: colors.textSecondary,
     marginBottom: 8,
@@ -118,7 +118,7 @@ const styles = StyleSheet.create({
     height: 24,
   },
   chipText: {
-    ...typography.badge,
+    ...typography.caption,
     color: colors.grey700,
   },
   chipTextSelected: {

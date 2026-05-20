@@ -1,8 +1,8 @@
 # 자동화 상태 보고서
 
-점검 시각: 2026-05-19 (Asia/Seoul)
+점검 시각: 2026-05-20 (Asia/Seoul)
 총 자동화 프롬프트: 13개 | 기본 오케스트레이터: 4개 | 수동 전용: 1개 | 이슈: 0개
-Hooks: 1개 | Commands: 4개 | MCP: 2개
+Hooks: 1개 | Commands: 9개 | MCP: 2개
 
 ## 상태 요약
 
@@ -27,6 +27,11 @@ Hooks: 1개 | Commands: 4개 | MCP: 2개
 | 유형 | 이름 | 상태 | 메모 |
 |------|------|------|------|
 | Hook | `post-edit-typecheck` | ✅ REGISTERED | Edit\|Write → tsc --noEmit |
+| Command | `/intake` | ✅ REGISTERED | 요청 분류 + parity/skill 고정 |
+| Command | `/impact-map` | ✅ REGISTERED | 영향 범위 + 검증 매트릭스 |
+| Command | `/evidence-review` | ✅ REGISTERED | 완료 근거와 잔여 리스크 점검 |
+| Command | `/handoff` | ✅ REGISTERED | 다음 세션 재진입 캡슐 |
+| Command | `/profile-recommend` | ✅ REGISTERED | 작업 프로필 선택 |
 | Command | `/learn` | ✅ REGISTERED | 교정 → feedback memory |
 | Command | `/doc-update` | ✅ REGISTERED | 코드변경 후 문서 갱신 |
 | Command | `/self-review` | ✅ REGISTERED | working tree 자기 리뷰 |
@@ -48,6 +53,11 @@ Hooks: 1개 | Commands: 4개 | MCP: 2개
 ## 이슈 상세
 
 이슈 없음. 기본 실행은 오케스트레이터 4개로 제한한다.
+
+## 수동 커맨드 헬스 체크 (2026-05-20)
+
+- `/doc-update`: ✅ HEALTHY — 문서 정합성 체크 PASS. Claude 전용 모델명 배분표는 현재 Codex 운영 방식에 맞춰 직접 실행/명시 요청 시 위임 정책으로 정리함.
+- `/self-review`: ✅ HEALTHY — `npx tsc --noEmit` PASS. diff hygiene 체크를 절차에 추가해 리뷰 품질 게이트를 보강함.
 
 ## 실행 정책
 

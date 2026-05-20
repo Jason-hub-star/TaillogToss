@@ -57,9 +57,11 @@ export function usePurchaseIAP() {
       cleanupRef.current?.();
 
       return new Promise<boolean>((resolve, reject) => {
+        console.log('[IAP-001] purchase mutation start', { productId });
         const cleanup = createOneTimePurchaseOrder({
           sku: productId,
           processProductGrant: async ({ orderId }) => {
+            console.log('[IAP-001] purchase mutation process grant', { productId, orderId });
             return verifyAndGrant({
               orderId,
               productId,
@@ -67,6 +69,7 @@ export function usePurchaseIAP() {
             });
           },
           onEvent: ({ type }) => {
+            console.log('[IAP-001] purchase mutation event', { productId, type });
             if (type === 'GRANT_COMPLETED') {
               tracker.iapPurchaseSuccess(productId);
               resolve(true);
@@ -74,7 +77,13 @@ export function usePurchaseIAP() {
               resolve(false);
             }
           },
-          onError: (error) => reject(error),
+          onError: (error) => {
+            console.warn('[IAP-001] purchase mutation error', {
+              productId,
+              message: error instanceof Error ? error.message : String(error),
+            });
+            reject(error);
+          },
         });
         cleanupRef.current = cleanup;
       });

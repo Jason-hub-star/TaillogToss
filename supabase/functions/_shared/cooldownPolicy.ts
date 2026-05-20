@@ -14,6 +14,12 @@ export interface CooldownDecision {
   retryAfterSeconds?: number;
 }
 
+export interface QuietHoursConfig {
+  enabled: boolean;
+  startHour: number;
+  endHour: number;
+}
+
 const TEN_MINUTES_MS = 10 * 60 * 1000;
 const DAILY_LIMIT = 3;
 
@@ -29,16 +35,41 @@ export function getKstDayKey(nowMs: number): string {
   return kstDate.toISOString().slice(0, 10);
 }
 
-export function evaluateCooldown(history: CooldownRecord[], userId: string, nowMs = Date.now()): CooldownDecision {
+function normalizeHour(hour: number): number {
+  if (!Number.isFinite(hour)) return 0;
+  return ((Math.trunc(hour) % 24) + 24) % 24;
+}
+
+function isInQuietHours(hour: number, config?: QuietHoursConfig): boolean {
+  const quietHours = config ?? { enabled: true, startHour: 22, endHour: 8 };
+  if (!quietHours.enabled) return false;
+
+  const start = normalizeHour(quietHours.startHour);
+  const end = normalizeHour(quietHours.endHour);
+  if (start === end) return true;
+  if (start < end) return hour >= start && hour < end;
+  return hour >= start || hour < end;
+}
+
+function getRetryHours(hour: number, config?: QuietHoursConfig): number {
+  const quietHours = config ?? { enabled: true, startHour: 22, endHour: 8 };
+  const end = normalizeHour(quietHours.endHour);
+  if (hour < end) return end - hour;
+  return 24 - hour + end;
+}
+
+export function evaluateCooldown(
+  history: CooldownRecord[],
+  userId: string,
+  nowMs = Date.now(),
+  quietHours?: QuietHoursConfig
+): CooldownDecision {
   const hour = getKstHour(nowMs);
-  const inQuietHours = hour >= 22 || hour < 8;
-  if (inQuietHours) {
-    const nextHour = hour < 8 ? 8 : 32;
-    const retryHours = nextHour - hour;
+  if (isInQuietHours(hour, quietHours)) {
     return {
       allowed: false,
       reason: 'QUIET_HOURS',
-      retryAfterSeconds: retryHours * 60 * 60,
+      retryAfterSeconds: getRetryHours(hour, quietHours) * 60 * 60,
     };
   }
 

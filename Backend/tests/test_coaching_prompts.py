@@ -78,3 +78,27 @@ def test_build_user_prompt_multiple_situations_combined():
     assert "산책 중 줄 당김" in prompt
     assert "낯선 사람 방문 시 짖음" in prompt
     assert "10분간 계속 짖었어요" in prompt
+
+
+def test_build_user_prompt_accepts_legacy_list_onboarding_fields():
+    """DEV_LOCAL 기존 세션처럼 설문 필드가 list로 저장된 경우도 프롬프트를 만든다."""
+    prompt = prompts.build_user_prompt(
+        dog_name="메이",
+        breed="믹스",
+        age_months=20,
+        issues=["barking"],
+        triggers=["visitor"],
+        behavior_analytics="3 logs",
+        onboarding_context={
+            "stage": 2,
+            "stage2": {
+                "chronic_issues": ["짖음", "줄 당김"],
+                "triggers": ["낯선 사람", "현관문"],
+                "past_attempts": ["간식 보상"],
+            },
+        },
+    )
+
+    assert "주요 고민: 짖음, 줄 당김" in prompt
+    assert "주요 트리거: 낯선 사람, 현관문" in prompt
+    assert "과거 시도한 방법: 간식 보상" in prompt

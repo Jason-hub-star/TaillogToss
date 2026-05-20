@@ -88,4 +88,14 @@ describe('evaluatePageGuard + requireRole', () => {
     });
     expect(result).toEqual({ status: 'allow' });
   });
+
+  it('parent reports도 B2C user는 차단하고 /dashboard로 보낸다', () => {
+    const result = evaluatePageGuard({
+      ...baseInput,
+      currentPath: '/parent/reports',
+      requireFeature: 'b2bOnly',
+      userRole: 'user',
+    });
+    expect(result).toEqual({ status: 'redirect', redirectTo: '/dashboard' });
+  });
 });

@@ -17,8 +17,9 @@ function wrapHTML(chartScript: string): string {
   <script src="${CHART_JS_CDN}"></script>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { background: transparent; display: flex; align-items: center; justify-content: center; }
-    canvas { max-width: 100%; }
+    html, body { width: 100%; height: 100%; }
+    body { background: transparent; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+    canvas { max-width: 100%; max-height: 100%; }
   </style>
 </head>
 <body>
@@ -45,12 +46,19 @@ export function generateRadarHTML(data: RadarChartData, title?: string): string 
     },
     options: {
       responsive: true,
+      maintainAspectRatio: false,
+      layout: { padding: { top: 8, right: 14, bottom: 26, left: 14 } },
       scales: {
-        r: { beginAtZero: true, max: 100, ticks: { stepSize: 20 } },
+        r: {
+          beginAtZero: true,
+          max: 100,
+          ticks: { stepSize: 20, backdropColor: 'transparent', font: { size: 11 } },
+          pointLabels: { padding: 10, font: { size: 13, weight: '600' }, color: '#333D4B' },
+        },
       },
       plugins: {
         legend: { display: false },
-        title: { display: !!title, text: title ?? '', font: { size: 13, weight: 'bold' }, padding: { bottom: 8 } },
+        title: { display: !!title, text: title ?? '', font: { size: 14, weight: 'bold' }, padding: { bottom: 8 } },
       },
     },
   };
@@ -72,18 +80,18 @@ export function generateHeatmapHTML(data: HeatmapData, title?: string): string {
     const maxVal = ${data.max_value};
     const title = ${JSON.stringify(title ?? null)};
 
-    const cellW = 20, cellH = 20, padL = 30, padT = ${padT};
+    const cellW = 18, cellH = 20, padL = 34, padT = ${padT};
     canvas.width = padL + hours.length * cellW + 10;
     canvas.height = padT + days.length * cellH + 10;
 
     if (title) {
-      ctx.font = 'bold 13px sans-serif';
+      ctx.font = 'bold 14px sans-serif';
       ctx.fillStyle = '#1a1a1a';
       ctx.textAlign = 'center';
       ctx.fillText(title, canvas.width / 2, 18);
     }
 
-    ctx.font = '10px sans-serif';
+    ctx.font = '11px sans-serif';
     ctx.fillStyle = '#333';
     ctx.textAlign = 'center';
 
@@ -120,9 +128,11 @@ export function generateBarHTML(data: BarChartData, title?: string): string {
     },
     options: {
       responsive: true,
+      maintainAspectRatio: false,
+      layout: { padding: { top: 4, right: 8, bottom: 4, left: 4 } },
       plugins: {
         legend: { display: false },
-        title: { display: !!title, text: title ?? '', font: { size: 13, weight: 'bold' }, padding: { bottom: 8 } },
+        title: { display: !!title, text: title ?? '', font: { size: 14, weight: 'bold' }, padding: { bottom: 8 } },
       },
       scales: { y: { beginAtZero: true, ticks: { precision: 0, stepSize: 1 } } },
     },
@@ -130,7 +140,7 @@ export function generateBarHTML(data: BarChartData, title?: string): string {
   return wrapHTML(`
     const ctx = document.getElementById('chart').getContext('2d');
     const config = ${JSON.stringify(configBase)};
-    config.options.scales.y.ticks.callback = (v) => v + '건';
+    config.options.scales.y.ticks.callback = (v) => v + '회';
     new Chart(ctx, config);
   `);
 }

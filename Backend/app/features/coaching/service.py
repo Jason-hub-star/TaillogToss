@@ -17,6 +17,7 @@ from app.core.config import settings
 from app.core.exceptions import BadRequestException, NotFoundException
 from app.features.coaching import budget, prompts, rule_engine, schemas
 from app.features.coaching.training_references import (
+    localize_user_visible_tools,
     retrieve_training_references,
     sanitize_reference_curriculum_ids,
 )
@@ -111,6 +112,7 @@ async def generate_coaching(
                 parsed,
                 retrieve_training_references(issues, triggers, onboarding_ctx, limit=3),
             )
+            parsed = localize_user_visible_tools(parsed)
             blocks = schemas.CoachingBlocks(**parsed)
             blocks = _apply_safety_filter(blocks)  # 앱인토스 AI 심사 필수: 위험 콘텐츠 사후 필터
             ai_tokens_used = result["input_tokens"] + result["output_tokens"]

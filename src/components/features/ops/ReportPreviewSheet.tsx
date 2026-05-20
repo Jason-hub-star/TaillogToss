@@ -2,9 +2,10 @@
  * ReportPreviewSheet — 리포트 미리보기/편집/발송 바텀시트
  * Parity: B2B-001
  */
-import React, { useState, useCallback } from 'react';
-import { View, Text, TextInput, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
-import { colors, typography } from 'styles/tokens';
+import React, { useRef, useState, useCallback } from 'react';
+import { View, Text, TextInput, StyleSheet, TouchableOpacity, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
+import { SafeAreaProvider, useSafeAreaInsets } from '@granite-js/native/react-native-safe-area-context';
+import { colors, typography, spacing } from 'styles/tokens';
 import type { DailyReport } from 'types/b2b';
 
 /** 토스 미니앱 공유 링크 생성 (getTossShareLink 래퍼) */
@@ -28,6 +29,22 @@ interface ReportPreviewSheetProps {
 }
 
 export function ReportPreviewSheet({ report, dogName, onSend, onUpdate, onClose }: ReportPreviewSheetProps) {
+  return (
+    <SafeAreaProvider>
+      <ReportPreviewSheetInner
+        report={report}
+        dogName={dogName}
+        onSend={onSend}
+        onUpdate={onUpdate}
+        onClose={onClose}
+      />
+    </SafeAreaProvider>
+  );
+}
+
+function ReportPreviewSheetInner({ report, dogName, onSend, onUpdate, onClose }: ReportPreviewSheetProps) {
+  const scrollRef = useRef<ScrollView>(null);
+  const insets = useSafeAreaInsets();
   const [summary, setSummary] = useState(report.behavior_summary ?? '');
   const [notes, setNotes] = useState(report.condition_notes ?? '');
   const isSent = report.generation_status === 'sent';
@@ -41,7 +58,11 @@ export function ReportPreviewSheet({ report, dogName, onSend, onUpdate, onClose 
   }, [report.id, onSend]);
 
   return (
-    <View style={styles.container}>
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 12 : 0}
+    >
       <View style={styles.header}>
         <View>
           <Text style={styles.title}>{dogName} 리포트</Text>
@@ -52,7 +73,12 @@ export function ReportPreviewSheet({ report, dogName, onSend, onUpdate, onClose 
         </TouchableOpacity>
       </View>
 
-      <ScrollView style={styles.body}>
+      <ScrollView
+        ref={scrollRef}
+        style={styles.body}
+        contentContainerStyle={styles.bodyContent}
+        keyboardShouldPersistTaps="handled"
+      >
         <View style={styles.section}>
           <Text style={styles.label}>행동 요약</Text>
           <TextInput
@@ -62,7 +88,8 @@ export function ReportPreviewSheet({ report, dogName, onSend, onUpdate, onClose 
             multiline
             numberOfLines={4}
             editable={!isSent}
-            placeholder="AI 생성 요약이 표시됩니다"
+            placeholder="AI 요약이 여기에 보여요"
+            onFocus={() => setTimeout(() => scrollRef.current?.scrollTo({ y: 0, animated: true }), 120)}
           />
         </View>
 
@@ -76,6 +103,7 @@ export function ReportPreviewSheet({ report, dogName, onSend, onUpdate, onClose 
             numberOfLines={3}
             editable={!isSent}
             placeholder="컨디션 특이사항"
+            onFocus={() => setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 120)}
           />
         </View>
 
@@ -107,7 +135,7 @@ export function ReportPreviewSheet({ report, dogName, onSend, onUpdate, onClose 
         )}
       </ScrollView>
 
-      <View style={styles.footer}>
+      <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, spacing.md) }]}>
         {!isSent && (
           <>
             <TouchableOpacity style={styles.saveBtn} onPress={handleSave} activeOpacity={0.8}>
@@ -120,11 +148,11 @@ export function ReportPreviewSheet({ report, dogName, onSend, onUpdate, onClose 
         )}
         {isSent && (
           <View style={styles.sentNotice}>
-            <Text style={styles.sentText}>이미 발송된 리포트입니다</Text>
+            <Text style={styles.sentText}>이미 보낸 리포트예요</Text>
           </View>
         )}
       </View>
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -138,6 +166,7 @@ const styles = StyleSheet.create({
   date: { ...typography.caption, color: colors.textSecondary, marginTop: 2 },
   closeBtn: { ...typography.sectionTitle, color: colors.textSecondary, padding: 4 },
   body: { flex: 1 },
+  bodyContent: { flexGrow: 1, paddingBottom: spacing.lg },
   section: { paddingHorizontal: 20, paddingTop: 16 },
   label: { ...typography.detail, fontWeight: '600', color: colors.textDark, marginBottom: 8 },
   input: {

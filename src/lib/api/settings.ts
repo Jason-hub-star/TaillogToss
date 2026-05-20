@@ -10,12 +10,16 @@ import { DEFAULT_NOTIFICATION_PREF, DEFAULT_AI_PERSONA } from 'types/settings';
 interface BackendSettingsResponse {
   notification_pref?: UserSettings['notification_pref'];
   ai_persona?: UserSettings['ai_persona'];
+  marketing_agreed?: boolean;
+  marketing_agreed_at?: string | null;
 }
 
 function mapBackendSettings(row: BackendSettingsResponse | null | undefined): UserSettings {
   return {
     notification_pref: row?.notification_pref ?? DEFAULT_NOTIFICATION_PREF,
     ai_persona: row?.ai_persona ?? DEFAULT_AI_PERSONA,
+    marketing_agreed: row?.marketing_agreed ?? false,
+    marketing_agreed_at: row?.marketing_agreed_at ?? null,
     language: 'ko',
   };
 }
@@ -38,6 +42,8 @@ export async function getSettings(userId: string): Promise<UserSettings> {
         return {
           notification_pref: DEFAULT_NOTIFICATION_PREF,
           ai_persona: DEFAULT_AI_PERSONA,
+          marketing_agreed: false,
+          marketing_agreed_at: null,
           language: 'ko',
         };
       }

@@ -31,7 +31,7 @@ export function DayTabBar({ days, selectedDay, onSelect }: Props) {
             activeOpacity={0.7}
           >
             <Text style={[styles.tabText, isActive && styles.tabTextActive]}>
-              Day {day.day_number}
+              {day.day_number}일차
             </Text>
           </TouchableOpacity>
         );

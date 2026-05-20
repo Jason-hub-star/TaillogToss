@@ -77,6 +77,70 @@ export function CoachingDetailContent({
 
   return (
     <>
+      {/* 새 코칭 생성 — 최신 탭에서만 표시, 최상단 고정 */}
+      {isLatestTab && (
+        <View style={styles.regenerateSection}>
+          {/* 오늘의 상황 입력 (한도 미도달 시에만) */}
+          {!isLimitReached && (
+            <>
+              <CoachingPersonalizationBadge
+                dogName={activeDog?.name ?? '강아지'}
+                hasUserContext={selectedSituations.length > 0 || userContext.trim().length > 0}
+              />
+              <CoachingContextInput
+                isPro={isPro}
+                selectedSituations={selectedSituations}
+                onSituationToggle={onSituationToggle}
+                userContext={userContext}
+                onUserContextChange={onUserContextChange}
+                disabled={isGenerating}
+              />
+            </>
+          )}
+
+          {/* 한도 배너 */}
+          {isLimitReached && (
+            <UsageLimitBanner isPro={isPro} limit={usage!.limit} />
+          )}
+
+          {/* 버튼: 한도초과+무료 → Pro CTA / 한도초과+Pro → 내일안내 / 정상 → 새 코칭 받기 */}
+          {isLimitReached && !isPro ? (
+            <TouchableOpacity
+              style={styles.proCtaButton}
+              onPress={onNavigateToSubscription}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.proCtaButtonText}>✨ PRO로 무제한 코칭 받기</Text>
+              <Text style={styles.proCtaButtonSub}>하루 최대 10회</Text>
+            </TouchableOpacity>
+          ) : isLimitReached && isPro ? (
+            <View style={styles.proLimitInfo}>
+              <Text style={styles.proLimitInfoText}>오늘 코칭을 모두 사용했어요. 내일 다시 가능해요 🌙</Text>
+            </View>
+          ) : (
+            <TouchableOpacity
+              style={[styles.regenerateButton, isGenerating && styles.regenerateButtonDisabled]}
+              onPress={onGenerate}
+              activeOpacity={0.7}
+              disabled={isGenerating}
+            >
+              <Text style={styles.regenerateButtonText}>
+                {isGenerating ? '생성하고 있어요' : '새 코칭 받기'}
+              </Text>
+            </TouchableOpacity>
+          )}
+
+          {usage && (
+            <Text style={styles.usageTextSmall}>
+              오늘 {usage.used}/{usage.limit}회 사용
+            </Text>
+          )}
+          {generateError && (
+            <Text style={styles.generateErrorText}>{generateError}</Text>
+          )}
+        </View>
+      )}
+
       {/* 인사이트 요약 헤더 카드 */}
       <View style={styles.insightSummary}>
         <View style={styles.insightSummaryLeft}>
@@ -184,67 +248,6 @@ export function CoachingDetailContent({
         </View>
       )}
 
-      {/* 새 코칭 생성 — 최신 탭에서만 표시 */}
-      <View style={styles.regenerateSection}>
-        {/* 오늘의 상황 입력 (최신 탭 + 한도 미도달 시에만) */}
-        {isLatestTab && !isLimitReached && (
-          <>
-            <CoachingPersonalizationBadge
-              dogName={activeDog?.name ?? '강아지'}
-              hasUserContext={selectedSituations.length > 0 || userContext.trim().length > 0}
-            />
-            <CoachingContextInput
-              isPro={isPro}
-              selectedSituations={selectedSituations}
-              onSituationToggle={onSituationToggle}
-              userContext={userContext}
-              onUserContextChange={onUserContextChange}
-              disabled={isGenerating}
-            />
-          </>
-        )}
-
-        {/* 한도 배너 */}
-        {isLatestTab && isLimitReached && (
-          <UsageLimitBanner isPro={isPro} limit={usage!.limit} />
-        )}
-
-        {/* 버튼: 최신+한도초과+무료 → Pro CTA / 최신+한도초과+Pro → 내일안내 / 최신+정상 → 새 코칭 받기 */}
-        {isLatestTab && isLimitReached && !isPro ? (
-          <TouchableOpacity
-            style={styles.proCtaButton}
-            onPress={onNavigateToSubscription}
-            activeOpacity={0.7}
-          >
-            <Text style={styles.proCtaButtonText}>✨ PRO로 무제한 코칭 받기</Text>
-            <Text style={styles.proCtaButtonSub}>하루 최대 10회</Text>
-          </TouchableOpacity>
-        ) : isLatestTab && isLimitReached && isPro ? (
-          <View style={styles.proLimitInfo}>
-            <Text style={styles.proLimitInfoText}>오늘 코칭을 모두 사용했어요. 내일 다시 가능해요 🌙</Text>
-          </View>
-        ) : isLatestTab && !isLimitReached ? (
-          <TouchableOpacity
-            style={[styles.regenerateButton, isGenerating && styles.regenerateButtonDisabled]}
-            onPress={onGenerate}
-            activeOpacity={0.7}
-            disabled={isGenerating}
-          >
-            <Text style={styles.regenerateButtonText}>
-              {isGenerating ? '생성하고 있어요' : '새 코칭 받기'}
-            </Text>
-          </TouchableOpacity>
-        ) : null}
-
-        {usage && (
-          <Text style={styles.usageTextSmall}>
-            오늘 {usage.used}/{usage.limit}회 사용
-          </Text>
-        )}
-        {generateError && (
-          <Text style={styles.generateErrorText}>{generateError}</Text>
-        )}
-      </View>
     </>
   );
 }
@@ -414,9 +417,10 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   regenerateSection: {
-    paddingTop: spacing.lg,
-    borderTopWidth: 1,
-    borderTopColor: colors.divider,
+    paddingVertical: spacing.lg,
+    alignItems: 'center',
+    borderBottomWidth: 1,
+    borderBottomColor: colors.divider,
   },
   regenerateButton: {
     alignSelf: 'center',

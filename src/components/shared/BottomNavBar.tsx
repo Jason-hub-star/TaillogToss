@@ -39,6 +39,8 @@ const B2B_TABS: TabConfig[] = [
   { key: 'settings', label: '설정', icon: ICONS['ic-settings']!, route: '/settings' },
 ];
 
+const BOTTOM_NAV_ICON_SIZE = 30;
+
 interface BottomNavBarProps {
   activeTab: NavTab;
 }
@@ -89,7 +91,7 @@ export function BottomNavBar({ activeTab }: BottomNavBarProps) {
               onPress={() => handlePress(tab)}
               activeOpacity={0.7}
             >
-              <Image source={{ uri: tab.icon }} style={styles.iconImg} />
+              <Image source={{ uri: tab.icon }} style={styles.iconImg} resizeMode="contain" />
               <Text style={[styles.label, isActive && styles.labelActive]}>
                 {tab.label}
               </Text>
@@ -121,12 +123,12 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.xs,
   },
   iconImg: {
-    width: 24,
-    height: 24,
-    marginBottom: 2,
+    width: BOTTOM_NAV_ICON_SIZE,
+    height: BOTTOM_NAV_ICON_SIZE,
+    marginBottom: spacing.xs,
   },
   label: {
-    ...typography.caption,
+    ...typography.detail,
     color: colors.textSecondary,
   },
   labelActive: {

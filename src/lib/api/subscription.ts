@@ -4,6 +4,7 @@
  */
 import { getSupabasePublicConfig, supabase } from './supabase';
 import { requestBackend, withBackendFallback } from './backend';
+import { recoverPendingOrders } from './iap';
 import type { Subscription, TossOrder, PurchaseRequest } from 'types/subscription';
 
 function toIdempotencyKey(request: PurchaseRequest): string {
@@ -246,5 +247,8 @@ export async function getOrders(userId: string): Promise<TossOrder[]> {
 
 /** 구독 복원 — 앱 시작 pending 복구 후 최신 구독 상태를 재조회한다. */
 export async function restoreSubscription(userId: string): Promise<Subscription | null> {
+  console.log('[IAP-001] restoreSubscription start', { userId });
+  const recovered = await recoverPendingOrders(userId);
+  console.log('[IAP-001] restoreSubscription recovered pending orders', { userId, recovered });
   return getSubscription(userId);
 }

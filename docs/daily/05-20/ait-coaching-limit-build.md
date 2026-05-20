@@ -1,5 +1,16 @@
 # 2026-05-20 AIT Coaching Limit Build
 
+## Training Academy Hotfix
+
+- [x] AIT device QA found `/training/academy` AI hero showing raw `separation_anxiety` in the copy.
+- [x] Hotfix applied in `src/pages/training/academy.tsx`: `separation_anxiety` now renders as `분리불안`.
+- [x] Added Stage 2 persisted keys to the same label map (`bathroom_miss`, `destructive`) and changed unknown behavior fallback from raw key to `기타`.
+- [x] Validation: `npx tsc --noEmit` PASS, scoped `git diff --check -- src/pages/training/academy.tsx` PASS.
+- [x] AIT rebuild/upload PASS: `deploymentId=019e432f-33e9-7013-a44f-2942848a16d1`, SHA256 `571f1e6230561840960c7e76483ed22e9321c97c4db5c1ab3e57020a251898a5`.
+- [x] Bundle scan PASS: `separation_anxiety 행동` `0`, `ait-ad-test-*` `0`, Railway marker `0`, secret markers `0`, DigitalOcean backend marker present, HTTPS brand icon marker present.
+- [ ] Metro-off device launch for the new deployment is BLOCKED at the AIT host layer: real Toss shows `지금은 서비스를 사용할 수 없어요`, private test host shows `앱 실행도중 문제가 발생했습니다`; no new `ReactNativeJS`/`AIT-BUILD` marker reached logcat.
+- [x] DEV_LOCAL retry PASS after `src/lib/api/backend.ts` dev resolver hotfix: Metro `packager-status:running`, FastAPI `/health` `ok`, adb reverse `8081/8765`, Toss test host opened `/dashboard` and `/training/academy`; FastAPI received `GET /api/v1/training/...` from `127.0.0.1` with 200.
+
 ## DigitalOcean Backend Cutover
 
 - [x] `Backend/.env` `OCEAN_API_KEY` verified against DigitalOcean account API (HTTP 200).

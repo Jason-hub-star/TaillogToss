@@ -4,8 +4,9 @@
  * Parity: UI-001
  */
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, type ViewStyle } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, type ViewStyle } from 'react-native';
 import { SafeAreaView } from '@granite-js/native/react-native-safe-area-context';
+import { BackButton } from 'components/shared/BackButton';
 import { colors, typography, spacing } from '../../../styles/tokens';
 
 export interface ListLayoutProps {
@@ -27,11 +28,7 @@ export function ListLayout({ title, headerRight, onBack, footer, children, style
     <SafeAreaView style={[styles.safe, style]}>
       <View style={styles.header}>
         <View style={styles.headerLeft}>
-          {onBack && (
-            <TouchableOpacity onPress={onBack} style={styles.backButton}>
-              <Text style={styles.backText}>{'←'}</Text>
-            </TouchableOpacity>
-          )}
+          {onBack && <BackButton onPress={onBack} />}
           <Text style={styles.title}>{title}</Text>
         </View>
         {headerRight && <View>{headerRight}</View>}
@@ -56,8 +53,6 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.divider,
   },
   headerLeft: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  backButton: { paddingRight: spacing.xs },
-  backText: { ...typography.sectionTitle, color: colors.grey950 },
   title: { ...typography.sectionTitle, fontWeight: '700', color: colors.textPrimary },
   body: { flex: 1 },
   content: { paddingHorizontal: spacing.screenHorizontal, paddingTop: spacing.lg, paddingBottom: spacing.xxxl },

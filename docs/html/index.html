@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TaillogToss 현황판</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans KR', sans-serif;
+         background: #0f0f14; color: #e0e0e0; font-size: 14px; line-height: 1.5; }
+
+  /* ── 헤더 ── */
+  .header { background: #1a1a2e; padding: 20px 32px; border-bottom: 1px solid #2a2a3e;
+             display: flex; align-items: center; gap: 24px; flex-wrap: wrap; }
+  .header-title { font-size: 20px; font-weight: 700; color: #fff; }
+  .header-sub { color: #888; font-size: 12px; margin-top: 2px; }
+  .completion-ring { display: flex; align-items: center; gap: 12px; margin-left: auto; }
+  .completion-pct { font-size: 36px; font-weight: 800; color: #4CAF50; line-height: 1; }
+  .completion-label { font-size: 12px; color: #888; margin-top: 2px; }
+  .generated { font-size: 11px; color: #555; }
+
+  /* ── 탭 ── */
+  .tabs { display: flex; background: #13131e; border-bottom: 1px solid #2a2a3e; padding: 0 32px; }
+  .tab { padding: 14px 20px; cursor: pointer; font-size: 13px; color: #888;
+          border-bottom: 2px solid transparent; transition: all .2s; user-select: none; }
+  .tab:hover { color: #ccc; }
+  .tab.active { color: #fff; border-bottom-color: #5c6bc0; }
+
+  /* ── 콘텐츠 ── */
+  .content { padding: 24px 32px; }
+  .panel { display: none; }
+  .panel.active { display: block; }
+
+  /* ── 요약 카드 ── */
+  .summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px,1fr));
+                   gap: 16px; margin-bottom: 24px; }
+  .summary-card { background: #1a1a2e; border-radius: 10px; padding: 18px; border: 1px solid #2a2a3e; }
+  .summary-card h4 { font-size: 11px; color: #888; letter-spacing: .06em; margin-bottom: 12px; }
+  .stat-row { display: flex; align-items: center; gap: 8px; margin-bottom: 7px; }
+  .stat-label { min-width: 80px; font-size: 12px; color: #bbb; }
+  .stat-bar-bg { flex: 1; height: 6px; background: #2a2a3e; border-radius: 3px; overflow: hidden; }
+  .stat-bar-fill { height: 100%; border-radius: 3px; }
+  .stat-count { font-size: 12px; color: #ccc; min-width: 22px; text-align: right; }
+  .big-num { font-size: 40px; font-weight: 800; color: #fff; line-height: 1; }
+  .big-sub { font-size: 12px; color: #888; margin-top: 6px; }
+
+  /* ── 블로커 ── */
+  .blockers { background: #1f1215; border-radius: 10px; padding: 18px;
+               border: 1px solid #3a2020; margin-bottom: 24px; }
+  .blockers h4 { font-size: 12px; color: #f44336; letter-spacing: .06em; margin-bottom: 10px; }
+  .blocker-item { padding: 7px 0; font-size: 13px; color: #ddd;
+                   border-bottom: 1px solid #2a1a1a; list-style: none; }
+  .blocker-item::before { content: "⚠ "; color: #FF9800; }
+  .blocker-item:last-child { border-bottom: none; }
+
+  /* ── 필터 ── */
+  .filters { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
+  .filter-btn { padding: 6px 14px; border-radius: 20px; border: 1px solid #2a2a3e;
+                 background: #1a1a2e; color: #888; cursor: pointer; font-size: 12px;
+                 transition: all .15s; }
+  .filter-btn:hover { color: #ccc; border-color: #5c6bc0; }
+  .filter-btn.active { background: #5c6bc0; color: #fff; border-color: #5c6bc0; }
+
+  /* ── 칸반 ── */
+  .kanban { display: flex; gap: 14px; overflow-x: auto; padding-bottom: 16px; align-items: flex-start; }
+  .kanban-col { min-width: 230px; flex: 1; }
+  .kanban-header { background: #1a1a2e; border-radius: 8px 8px 0 0; padding: 10px 14px;
+                    font-size: 12px; font-weight: 700; color: #bbb;
+                    display: flex; justify-content: space-between; align-items: center; }
+  .col-count { background: #2a2a3e; border-radius: 10px; padding: 1px 8px; font-size: 11px; }
+  .card { background: #1a1a2e; border: 1px solid #2a2a3e; border-radius: 0 0 6px 6px;
+           padding: 12px; margin-bottom: 8px; transition: border-color .15s; }
+  .card:hover { border-color: #5c6bc0; }
+  .p0-card { border-left: 3px solid #f44336; }
+  .card-route { font-family: monospace; font-size: 10px; color: #666; margin-bottom: 4px; }
+  .card-label { font-size: 13px; font-weight: 600; color: #e8e8e8; margin-bottom: 8px; }
+  .card-meta { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; flex-wrap: wrap; }
+  .card-owner { font-size: 11px; color: #666; }
+  .card-date { font-size: 10px; color: #555; margin-top: 4px; }
+  .parity-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
+  .parity-tag { background: #22223a; color: #9c9ccc; border-radius: 5px; padding: 3px 7px;
+                 font-size: 9px; font-family: monospace; cursor: default;
+                 display: inline-flex; flex-direction: column; gap: 1px; }
+  .parity-tag small { font-size: 8px; color: #7777aa; font-family: sans-serif; }
+  .empty-col { padding: 24px 8px; text-align: center; color: #444; font-size: 12px; }
+
+  /* ── 배지 ── */
+  .badge { display: inline-block; padding: 2px 9px; border-radius: 4px;
+            font-size: 11px; font-weight: 600; color: #fff; white-space: nowrap; }
+
+  /* ── 테이블 ── */
+  .table-wrap { background: #16161f; border-radius: 10px; overflow: hidden; border: 1px solid #2a2a3e; }
+  .data-table { width: 100%; border-collapse: collapse; }
+  .data-table th { background: #13131e; color: #888; font-size: 11px; letter-spacing: .05em;
+                    padding: 11px 14px; text-align: left; border-bottom: 1px solid #2a2a3e; }
+  .data-table td { padding: 11px 14px; border-bottom: 1px solid #1e1e30;
+                    font-size: 13px; vertical-align: top; }
+  .data-table tr:last-child td { border-bottom: none; }
+  .data-table tr:hover td { background: #1a1a2e; }
+  .feat-label { color: #9c9ccc; font-size: 11px; display: block; margin-top: 2px; }
+  .feat-desc { color: #666; font-size: 10px; margin-top: 3px; }
+  .notes-cell { min-width: 180px; }
+  .memo-cell { color: #777; max-width: 220px; }
+
+  /* ── 진행률 바 (체크리스트) ── */
+  .checklist-wrap { }
+  .prog-bar { height: 5px; background: #2a2a3e; border-radius: 3px; overflow: hidden; margin-bottom: 4px; }
+  .prog-fill { height: 100%; background: #4CAF50; border-radius: 3px; }
+  .prog-text { font-size: 11px; color: #888; margin-bottom: 6px; }
+  .remaining-list { padding-left: 14px; }
+  .remaining-list li { font-size: 10px; color: #666; margin-bottom: 2px; line-height: 1.4; }
+  .notes-empty { font-size: 11px; color: #555; }
+
+  /* ── 반응형 ── */
+  @media (max-width: 640px) {
+    .header { padding: 16px; }
+    .completion-ring { margin-left: 0; width: 100%; }
+    .content { padding: 14px; }
+    .kanban { flex-direction: column; }
+    .kanban-col { min-width: unset; }
+    .tabs { padding: 0 16px; }
+    .tab { padding: 12px 14px; font-size: 12px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <div class="header-title">🐾 TaillogToss 현황판</div>
+    <div class="header-sub">DogCoach PWA → 토스 미니앱 전환 프로젝트</div>
+  </div>
+  <div class="completion-ring">
+    <div>
+      <div class="completion-pct">88%</div>
+      <div class="completion-label">전체 완성도</div>
+    </div>
+    <div class="generated">생성: 2026-05-19 09:55</div>
+  </div>
+</div>
+
+<div class="tabs">
+  <div class="tab active" onclick="showTab('board', this)">📄 페이지 현황</div>
+  <div class="tab" onclick="showTab('features', this)">✨ 기능 완성도</div>
+  <div class="tab" onclick="showTab('automations', this)">⚙️ 자동화</div>
+</div>
+
+<div class="content">
+
+  <!-- ── 페이지 현황 탭 ── -->
+  <div id="panel-board" class="panel active">
+
+    <div class="summary-grid">
+      <div class="summary-card">
+        <h4>📊 페이지 완성도</h4>
+        <div class="stat-row">  <span class="stat-label">✅ 완료</span>  <div class="stat-bar-bg"><div class="stat-bar-fill" style="width:76%;background:#4CAF50"></div></div>  <span class="stat-count">19</span></div><div class="stat-row">  <span class="stat-label">🔍 검토중</span>  <div class="stat-bar-bg"><div class="stat-bar-fill" style="width:24%;background:#FF9800"></div></div>  <span class="stat-count">6</span></div>
+      </div>
+      <div class="summary-card">
+        <h4>📍 추적 페이지</h4>
+        <div class="big-num">25</div>
+        <div class="big-sub">개 페이지 관리중</div>
+      </div>
+    </div>
+
+    <div class="blockers"><h4>🚨 현재 출시 차단 항목</h4><ul><li class="blocker-item">인증서 만료일 캘린더 등록</li><li class="blocker-item">실기기 E2E 통합 검증</li><li class="blocker-item">퍼블리싱 심사 준비</li><li class="blocker-item">QR 테스트 최소 1회 완료 (심사 요청 버튼 활성화 조건)</li></ul></div>
+
+    <div class="filters" id="group-filters">
+      <button class="filter-btn active" onclick="filterGroup('all',this)">전체</button>
+      <button class="filter-btn" onclick="filterGroup('Onboarding',this)">온보딩</button>
+      <button class="filter-btn" onclick="filterGroup('Main',this)">메인</button>
+      <button class="filter-btn" onclick="filterGroup('Training',this)">훈련</button>
+      <button class="filter-btn" onclick="filterGroup('Dog',this)">강아지</button>
+      <button class="filter-btn" onclick="filterGroup('Settings',this)">설정</button>
+      <button class="filter-btn" onclick="filterGroup('B2B',this)">B2B (기관용)</button>
+    </div>
+
+    <div class="kanban" id="kanban-board">
+      <div class="kanban-col">  <div class="kanban-header" style="border-top:3px solid #4CAF50">    ✅ 완료 <span class="col-count">19</span></div>  <div class="card p0-card" data-group="Onboarding" data-route="/onboarding/stage1-form">  <div class="card-route">/onboarding/stage1-form</div>  <div class="card-label">Stage 1 설문 (필수)</div>  <div class="card-meta"><span class="badge" style="background:#f44336" title="P0">🔴 긴급</span>    <span class="card-owner">claude</span></div>  <div class="parity-tags"><span class="parity-tag" title="APP-001: 23개 라우트 + 레이아웃 + 딥링크">APP-001<small>앱셸</small></span></div>  <div class="card-date" title="2026-05-11">1주 전</div></div><div class="card p0-card" data-group="Onboarding" data-route="/onboarding/stage2-form">  <div class="card-route">/onboarding/stage2-form</div>  <div class="card-label">Stage 2 설문 (소프트 인터셉트)</div>  <div class="card-meta"><span class="badge" style="background:#f44336" title="P0">🔴 긴급</span>    <span class="card-owner">claude</span></div>  <div class="parity-tags"><span class="parity-tag" title="APP-001: 23개 라우트 + 레이아웃 + 딥링크">APP-001<small>앱셸</small></span></div>  <div class="card-date" title="2026-05-05">2주 전</div></div><div class="card p0-card" data-group="Onboarding" data-route="/onboarding/stage3-form">  <div class="card-route">/onboarding/stage3-form</div>  <div class="card-label">Stage 3 Pro 상담지</div>  <div class="card-meta"><span class="badge" style="background:#f44336" title="P0">🔴 긴급</span>    <span class="card-owner">codex</span></div>  <div class="parity-tags"><span class="parity-tag" title="APP-001: 23개 라우트 + 레이아웃 + 딥링크">APP-001<small>앱셸</small></span><span class="parity-tag" title="AI-001: 코칭 6블록 + 피드백 + BE">AI-001<small>AI코칭</small></span><span class="parity-tag" title="PRO-INTAKE-001: PRO 구독 퍼널 + 상담지">PRO-INTAKE-001<small>PRO유입</small></span></div>  <div class="card-date" title="2026-05-12">1주 전</div></div><div class="card p0-card" data-group="Onboarding" data-route="/onboarding/survey">  <div class="card-route">/onboarding/survey</div>  <div class="card-label">Survey</div>  <div class="card-meta"><span class="badge" style="background:#f44336" title="P0">🔴 긴급</span>    <span class="card-owner">claude</span></div>  <div class="parity-tags"><span class="parity-tag" title="UIUX-004: survey parity with web baseline">UIUX-004<small>온보딩</small></span></div>  <div class="card-date" title="2026-03-02">2개월 전</div></div><div class="card " data-group="Onboarding" data-route="/onboarding/survey-result">  <div class="card-route">/onboarding/survey-result</div>  <div class="card-label">Survey Result</div>  <div class="card-meta"><span class="badge" style="background:#FF9800" title="P1">🟠 높음</span>    <span class="card-owner">claude</span></div>  <div class="parity-tags"><span class="parity-tag" title="UI-001: TDS 컴포넌트 + 디자인 토큰 + 화면">UI-001<small>디자인</small></span></div>  <div class="card-date" title="2026-05-05">2주 전</div></div><div class="card " data-group="Onboarding" data-route="/onboarding/notification">  <div class="card-route">/onboarding/notification</div>  <div class="card-label">Notification</div>  <div class="card-meta"><span class="badge" style="background:#FF9800" title="P1">🟠 높음</span>    <span class="card-owner">claude</span></div>  <div class="parity-tags"><span class="parity-tag" title="APP-001: 23개 라우트 + 레이아웃 + 딥링크">APP-001<small>앱셸</small></span></div>  <div class="card-date" title="2026-05-05">2주 전</div></div><div class="card p0-card" data-group="Main" data-route="/dashboard/analysis">  <div class="card-route">/dashboard/analysis</div>  <div class="card-label">Analysis</div>  <div class="card-meta"><span class="badge" style="background:#f44336" title="P0">🔴 긴급</span>    <span class="card-owner">claude</span></div>  <div class="parity-tags"><span class="parity-tag" title="UIUX-001: 대시보드 empty-state + skeleton 안정화">UIUX-001<small>대시보드UX</small></span><span class="parity-tag" title="UIUX-005: coaching result + training detail 완성도">UIUX-005<small>결과상세</small></span></div>  <div class="card-date" title="2026-05-11">1주 전</div></div><div class="card p0-card" data-group="Main" data-route="/coaching/result">  <div class="card-route">/coaching/result</div>  <div class="card-label">Coaching Result</div>  <div class="card-meta"><span class="badge" style="background:#f44336" title="P0">🔴 긴급</span>    <span class="card-owner">codex</span></div>  <div class="parity-tags"><span class="parity-tag" title="UIUX-005: coaching result + training detail 완성도">UIUX-005<small>결과상세</small></span><span class="parity-tag" title="AI-001: 코칭 6블록 + 피드백 + BE">AI-001<small>AI코칭</small></span><span class="parity-tag" title="AI-COACHING-ANALYTICS-001: 코칭 analytics 트래킹">AI-COACHING-ANALYTICS-001<small>코칭분석</small></span><span class="parity-tag" title="UI-TRAINING-PERSONALIZATION-001: 훈련 개인화 UI">UI-TRAINING-PERSONALIZATION-001<small>개인화UX</small></span><span class="parity-tag" title="PRO-INTAKE-001: PRO 구독 퍼널 + 상담지">PRO-INTAKE-001<small>PRO유입</small></span></div>  <div class="card-date" title="2026-05-13">6일 전</div></div><div class="card p0-card" data-group="Dog" data-route="/dog/profile">  <div class="card-route">/dog/profile</div>  <div class="card-label">Dog Profile</div>  <div class="card-meta"><span class="badge" style="background:#f44336" title="P0">🔴 긴급</span>    <span class="card-owner">codex</span></div>  <div class="parity-tags"><span class="parity-tag" title="UIUX-006: dog profile 실데이터 + dog switcher UX">UIUX-006<small>강아지프로필</small></span><span class="parity-tag" title="PRO-INTAKE-001: PRO 구독 퍼널 + 상담지">PRO-INTAKE-001<small>PRO유입</small></span></div>  <div class="card-date" title="2026-05-12">1주 전</div></div><div class="card " data-group="Dog" data-route="/dog/add">  <div class="card-route">/dog/add</div>  <div class="card-label">Dog Add</div>  <div class="card-meta"><span class="badge" style="background:#FF9800" title="P1">🟠 높음</span>    <span class="card-owner">claude</span></div>  <div class="parity-tags"><span class="parity-tag" title="APP-001: 23개 라우트 + 레이아웃 + 딥링크">APP-001<small>앱셸</small></span></div>  <div class="card-date" title="2026-05-05">2주 전</div></div><div class="card p0-card" data-group="Dog" data-route="/dog/switcher">  <div class="card-route">/dog/switcher</div>  <div class="card-label">Dog Switcher</div>  <div class="card-meta"><span class="badge" style="background:#f44336" title="P0">🔴 긴급</span>    <span class="card-owner">claude</span></div>  <div class="parity-tags"><span class="parity-tag" title="UIUX-006: dog profile 실데이터 + dog switcher UX">UIUX-006<small>강아지프로필</small></span></div>  <div class="card-date" title="2026-05-05">2주 전</div></div><div class="card " data-group="Settings" data-route="/settings">  <div class="card-route">/settings</div>  <div class="card-label">Settings</div>  <div class="card-meta"><span class="badge" style="background:#FF9800" title="P1">🟠 높음</span>    <span class="card-owner">claude</span></div>  <div class="parity-tags"><span class="parity-tag" title="APP-001: 23개 라우트 + 레이아웃 + 딥링크">APP-001<small>앱셸</small></span></div>  <div class="card-date" title="2026-05-11">1주 전</div></div><div class="card " data-group="Settings" data-route="/settings/subscription">  <div class="card-route">/settings/subscription</div>  <div class="card-label">Subscription</div>  <div class="card-meta"><span class="badge" style="background:#FF9800" title="P1">🟠 높음</span>    <span class="card-owner">claude</span></div>  <div class="parity-tags"><span class="parity-tag" title="IAP-001: 구독 + verify-iap + grant">IAP-001<small>인앱결제</small></span></div>  <div class="card-date" title="2026-05-15">4일 전</div></div><div class="card " data-group="Legal" data-route="/legal/terms">  <div class="card-route">/legal/terms</div>  <div class="card-label">Terms</div>  <div class="card-meta"><span class="badge" style="background:#2196F3" title="P2">🔵 보통</span>    <span class="card-owner">claude</span></div>  <div class="parity-tags"><span class="parity-tag" title="APP-001: 23개 라우트 + 레이아웃 + 딥링크">APP-001<small>앱셸</small></span></div>  <div class="card-date" title="2026-04-02">1개월 전</div></div><div class="card " data-group="Legal" data-route="/legal/privacy">  <div class="card-route">/legal/privacy</div>  <div class="card-label">Privacy</div>  <div class="card-meta"><span class="badge" style="background:#2196F3" title="P2">🔵 보통</span>    <span class="card-owner">claude</span></div>  <div class="parity-tags"><span class="parity-tag" title="APP-001: 23개 라우트 + 레이아웃 + 딥링크">APP-001<small>앱셸</small></span></div>  <div class="card-date" title="2026-04-27">3주 전</div></div><div class="card " data-group="B2B" data-route="/ops/setup">  <div class="card-route">/ops/setup</div>  <div class="card-label">Ops Setup</div>  <div class="card-meta"><span class="badge" style="background:#FF9800" title="P1">🟠 높음</span>    <span class="card-owner">claude</span></div>  <div class="parity-tags"><span class="parity-tag" title="B2B-001: B2B 운영 + 강아지 관리 + 리포트">B2B-001<small>기관용</small></span></div>  <div class="card-date" title="2026-04-21">4주 전</div></div><div class="card " data-group="B2B" data-route="/ops/dog-add">  <div class="card-route">/ops/dog-add</div>  <div class="card-label">Ops Dog Add</div>  <div class="card-meta"><span class="badge" style="background:#FF9800" title="P1">🟠 높음</span>    <span class="card-owner">claude</span></div>  <div class="parity-tags"><span class="parity-tag" title="B2B-001: B2B 운영 + 강아지 관리 + 리포트">B2B-001<small>기관용</small></span></div>  <div class="card-date" title="2026-04-21">4주 전</div></div><div class="card " data-group="B2B" data-route="/ops/today">  <div class="card-route">/ops/today</div>  <div class="card-label">Ops Today</div>  <div class="card-meta"><span class="badge" style="background:#2196F3" title="P2">🔵 보통</span>    <span class="card-owner">codex</span></div>  <div class="parity-tags"><span class="parity-tag" title="B2B-001: B2B 운영 + 강아지 관리 + 리포트">B2B-001<small>기관용</small></span><span class="parity-tag" title="PRO-INTAKE-001: PRO 구독 퍼널 + 상담지">PRO-INTAKE-001<small>PRO유입</small></span></div>  <div class="card-date" title="2026-05-12">1주 전</div></div><div class="card " data-group="B2B" data-route="/ops/settings">  <div class="card-route">/ops/settings</div>  <div class="card-label">Ops Settings</div>  <div class="card-meta"><span class="badge" style="background:#2196F3" title="P2">🔵 보통</span>    <span class="card-owner">claude</span></div>  <div class="parity-tags"><span class="parity-tag" title="B2B-001: B2B 운영 + 강아지 관리 + 리포트">B2B-001<small>기관용</small></span><span class="parity-tag" title="B2B-002: 센터정보 + 멤버관리 + 플랜">B2B-002<small>기관설정</small></span></div>  <div class="card-date" title="2026-04-21">4주 전</div></div></div><div class="kanban-col">  <div class="kanban-header" style="border-top:3px solid #FF9800">    🔍 검토중 <span class="col-count">6</span></div>  <div class="card p0-card" data-group="Onboarding" data-route="/onboarding/welcome">  <div class="card-route">/onboarding/welcome</div>  <div class="card-label">Welcome (로그인 통합)</div>  <div class="card-meta"><span class="badge" style="background:#f44336" title="P0">🔴 긴급</span>    <span class="card-owner">codex</span></div>  <div class="parity-tags"><span class="parity-tag" title="AUTH-001: Toss 로그인 + 세션 브릿지 + 가드">AUTH-001<small>인증</small></span><span class="parity-tag" title="UIUX-004: survey parity with web baseline">UIUX-004<small>온보딩</small></span><span class="parity-tag" title="B2B-001: B2B 운영 + 강아지 관리 + 리포트">B2B-001<small>기관용</small></span></div>  <div class="card-date" title="2026-05-14">5일 전</div></div><div class="card " data-group="Main" data-route="/dashboard">  <div class="card-route">/dashboard</div>  <div class="card-label">Dashboard</div>  <div class="card-meta"><span class="badge" style="background:#FF9800" title="P1">🟠 높음</span>    <span class="card-owner">codex</span></div>  <div class="parity-tags"><span class="parity-tag" title="UIUX-001: 대시보드 empty-state + skeleton 안정화">UIUX-001<small>대시보드UX</small></span><span class="parity-tag" title="AD-001: Ads SDK 2.0 + R/B/I 슬롯">AD-001<small>광고</small></span><span class="parity-tag" title="B2B-001: B2B 운영 + 강아지 관리 + 리포트">B2B-001<small>기관용</small></span><span class="parity-tag" title="UIUX-006: dog profile 실데이터 + dog switcher UX">UIUX-006<small>강아지프로필</small></span></div>  <div class="card-date" title="2026-05-14">5일 전</div></div><div class="card " data-group="Main" data-route="/dashboard/quick-log">  <div class="card-route">/dashboard/quick-log</div>  <div class="card-label">Quick Log</div>  <div class="card-meta"><span class="badge" style="background:#FF9800" title="P1">🟠 높음</span>    <span class="card-owner">codex</span></div>  <div class="parity-tags"><span class="parity-tag" title="LOG-001: ABC 로그 + 빠른기록 + 분석">LOG-001<small>행동기록</small></span><span class="parity-tag" title="AD-001: Ads SDK 2.0 + R/B/I 슬롯">AD-001<small>광고</small></span></div>  <div class="card-date" title="2026-05-14">5일 전</div></div><div class="card p0-card" data-group="Training" data-route="/training/academy">  <div class="card-route">/training/academy</div>  <div class="card-label">Academy</div>  <div class="card-meta"><span class="badge" style="background:#f44336" title="P0">🔴 긴급</span>    <span class="card-owner">codex</span></div>  <div class="parity-tags"><span class="parity-tag" title="UIUX-002: training academy AI 생성 느낌 UX 재설계">UIUX-002<small>아카데미UX</small></span><span class="parity-tag" title="UIUX-003: curriculum 가시성 + 네비게이션 편의성">UIUX-003<small>커리큘럼</small></span><span class="parity-tag" title="UI-TRAINING-PERSONALIZATION-001: 훈련 개인화 UI">UI-TRAINING-PERSONALIZATION-001<small>개인화UX</small></span><span class="parity-tag" title="AD-001: Ads SDK 2.0 + R/B/I 슬롯">AD-001<small>광고</small></span><span class="parity-tag" title="MEMO-001: 훈련 메모 기능">MEMO-001<small>메모</small></span></div>  <div class="card-date" title="2026-05-15">4일 전</div></div><div class="card p0-card" data-group="Training" data-route="/training/detail">  <div class="card-route">/training/detail</div>  <div class="card-label">Training Detail</div>  <div class="card-meta"><span class="badge" style="background:#f44336" title="P0">🔴 긴급</span>    <span class="card-owner">codex</span></div>  <div class="parity-tags"><span class="parity-tag" title="UIUX-005: coaching result + training detail 완성도">UIUX-005<small>결과상세</small></span><span class="parity-tag" title="UI-TRAINING-DETAIL-001: 훈련 상세 화면 UI">UI-TRAINING-DETAIL-001<small>훈련상세UX</small></span><span class="parity-tag" title="AD-001: Ads SDK 2.0 + R/B/I 슬롯">AD-001<small>광고</small></span></div>  <div class="card-date" title="2026-05-15">4일 전</div></div><div class="card " data-group="B2B" data-route="/parent/reports">  <div class="card-route">/parent/reports</div>  <div class="card-label">Parent Reports</div>  <div class="card-meta"><span class="badge" style="background:#2196F3" title="P2">🔵 보통</span>    <span class="card-owner">codex</span></div>  <div class="parity-tags"><span class="parity-tag" title="B2B-001: B2B 운영 + 강아지 관리 + 리포트">B2B-001<small>기관용</small></span></div>  <div class="card-date" title="2026-05-14">5일 전</div></div></div><div class="kanban-col">  <div class="kanban-header" style="border-top:3px solid #2196F3">    🔄 진행중 <span class="col-count">0</span></div>  <div class="empty-col">해당 없음</div></div><div class="kanban-col">  <div class="kanban-header" style="border-top:3px solid #BDBDBD">    📋 준비 <span class="col-count">0</span></div>  <div class="empty-col">해당 없음</div></div><div class="kanban-col">  <div class="kanban-header" style="border-top:3px solid #9E9E9E">    ⏸ 대기 <span class="col-count">0</span></div>  <div class="empty-col">해당 없음</div></div>
+    </div>
+  </div>
+
+  <!-- ── 기능 완성도 탭 ── -->
+  <div id="panel-features" class="panel">
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>기능 코드</th><th>분류</th><th>상태</th><th>위험도</th><th>진행 상황</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>  <td><strong>AUTH-001</strong><br>      <small class="feat-label">인증</small>      <div class="feat-desc">Toss 로그인 + 세션 브릿지 + 가드</div></td>  <td><small>Auth</small></td>  <td><span class="badge" style="background:#2196F3" title="In Progress">🔄 진행중</span></td>  <td><span class="badge" style="background:#f44336">High</span></td>  <td class="notes-cell"><div class="checklist-wrap"><div class="prog-bar"><div class="prog-fill" style="width:94%"></div></div><div class="prog-text">15/16 완료 (94%)</div><ul class="remaining-list"><li>fresh authCode로 happy-path 200 실기기 최종 증적</li></ul></div></td></tr><tr>  <td><strong>APP-001</strong><br>      <small class="feat-label">앱셸</small>      <div class="feat-desc">23개 라우트 + 레이아웃 + 딥링크</div></td>  <td><small>App Shell</small></td>  <td><span class="badge" style="background:#2196F3" title="In Progress">🔄 진행중</span></td>  <td><span class="badge" style="background:#FF9800">Medium</span></td>  <td class="notes-cell"><div class="checklist-wrap"><div class="prog-bar"><div class="prog-fill" style="width:91%"></div></div><div class="prog-text">21/23 완료 (91%)</div><ul class="remaining-list"><li>실제 사진 선택은 새 AIT 업로드 후 production Toss 앱에서 최종 검증</li><li>실기기 라우팅 전체 sweep</li></ul></div></td></tr><tr>  <td><strong>UI-001</strong><br>      <small class="feat-label">디자인</small>      <div class="feat-desc">TDS 컴포넌트 + 디자인 토큰 + 화면</div></td>  <td><small>Design System</small></td>  <td><span class="badge" style="background:#2196F3" title="In Progress">🔄 진행중</span></td>  <td><span class="badge" style="background:#f44336">High</span></td>  <td class="notes-cell"><div class="checklist-wrap"><div class="prog-bar"><div class="prog-fill" style="width:92%"></div></div><div class="prog-text">11/12 완료 (92%)</div><ul class="remaining-list"><li>실기기 비주얼 QA</li></ul></div></td></tr><tr>  <td><strong>LOG-001</strong><br>      <small class="feat-label">행동기록</small>      <div class="feat-desc">ABC 로그 + 빠른기록 + 분석</div></td>  <td><small>Behavior Log</small></td>  <td><span class="badge" style="background:#2196F3" title="In Progress">🔄 진행중</span></td>  <td><span class="badge" style="background:#FF9800">Medium</span></td>  <td class="notes-cell"><div class="checklist-wrap"><div class="prog-bar"><div class="prog-fill" style="width:88%"></div></div><div class="prog-text">7/8 완료 (88%)</div><ul class="remaining-list"><li>FastAPI 로그 API 실기기(앱) E2E 검증</li></ul></div></td></tr><tr>  <td><strong>AI-001</strong><br>      <small class="feat-label">AI코칭</small>      <div class="feat-desc">코칭 6블록 + 피드백 + BE</div></td>  <td><small>AI Coaching</small></td>  <td><span class="badge" style="background:#2196F3" title="In Progress">🔄 진행중</span></td>  <td><span class="badge" style="background:#f44336">High</span></td>  <td class="notes-cell"><div class="checklist-wrap"><div class="prog-bar"><div class="prog-fill" style="width:93%"></div></div><div class="prog-text">13/14 완료 (93%)</div><ul class="remaining-list"><li>FastAPI 코칭 API 실기기(앱) E2E 검증</li></ul></div></td></tr><tr>  <td><strong>IAP-001</strong><br>      <small class="feat-label">인앱결제</small>      <div class="feat-desc">구독 + verify-iap + grant</div></td>  <td><small>Billing</small></td>  <td><span class="badge" style="background:#4CAF50" title="Done">✅ 완료</span></td>  <td><span class="badge" style="background:#f44336">High</span></td>  <td class="notes-cell"><div class="checklist-wrap"><div class="prog-bar"><div class="prog-fill" style="width:100%"></div></div><div class="prog-text">35/35 완료 (100%)</div></div></td></tr><tr>  <td><strong>MSG-001</strong><br>      <small class="feat-label">알림</small>      <div class="feat-desc">Smart Message + 쿨다운 + noti_history</div></td>  <td><small>Notification</small></td>  <td><span class="badge" style="background:#FF9800" title="QA">🔍 검토중</span></td>  <td><span class="badge" style="background:#f44336">High</span></td>  <td class="notes-cell"><div class="checklist-wrap"><div class="prog-bar"><div class="prog-fill" style="width:89%"></div></div><div class="prog-text">17/19 완료 (89%)</div><ul class="remaining-list"><li>coaching_ready/training_reminder/streak_alert/surge_alert 캠페인 콘솔 등록</li><li>promo 광고성 캠페인 등록 (앱 제출 후)</li></ul></div></td></tr><tr>  <td><strong>AD-001</strong><br>      <small class="feat-label">광고</small>      <div class="feat-desc">Ads SDK 2.0 + R/B/I 슬롯</div></td>  <td><small>Ads</small></td>  <td><span class="badge" style="background:#FF9800" title="QA">🔍 검토중</span></td>  <td><span class="badge" style="background:#FF9800">Medium</span></td>  <td class="notes-cell"><div class="checklist-wrap"><div class="prog-bar"><div class="prog-fill" style="width:94%"></div></div><div class="prog-text">16/17 완료 (94%)</div><ul class="remaining-list"><li>Toss 지원 환경에서 render success 또는 no-fill 최종 판정</li></ul></div></td></tr><tr>  <td><strong>B2B-001</strong><br>      <small class="feat-label">기관용</small>      <div class="feat-desc">B2B 운영 + 강아지 관리 + 리포트</div></td>  <td><small>B2B Ops</small></td>  <td><span class="badge" style="background:#2196F3" title="In Progress">🔄 진행중</span></td>  <td><span class="badge" style="background:#f44336">High</span></td>  <td class="notes-cell"><div class="checklist-wrap"><div class="prog-bar"><div class="prog-fill" style="width:76%"></div></div><div class="prog-text">13/17 완료 (76%)</div><ul class="remaining-list"><li>B2C 회귀 테스트</li><li>40마리 FlatList 성능 실측</li><li>공유 링크 실기기 검증</li><li>외 1개...</li></ul></div></td></tr><tr>  <td><strong>PRO-INTAKE-001</strong><br>      <small class="feat-label">PRO유입</small>      <div class="feat-desc">PRO 구독 퍼널 + 상담지</div></td>  <td><small>Pro Intake</small></td>  <td><span class="badge" style="background:#4CAF50" title="Done">✅ 완료</span></td>  <td><span class="badge" style="background:#FF9800">Medium</span></td>  <td class="notes-cell"><div class="checklist-wrap"><div class="prog-bar"><div class="prog-fill" style="width:100%"></div></div><div class="prog-text">10/10 완료 (100%)</div></div></td></tr><tr>  <td><strong>REG-001</strong><br>      <small class="feat-label">등록</small>      <div class="feat-desc">법무 + 배포 + 약관</div></td>  <td><small>Registration</small></td>  <td><span class="badge" style="background:#4CAF50" title="Done">✅ 완료</span></td>  <td><span class="badge" style="background:#FF9800">Medium</span></td>  <td class="notes-cell"><div class="checklist-wrap"><div class="prog-bar"><div class="prog-fill" style="width:93%"></div></div><div class="prog-text">13/14 완료 (93%)</div><ul class="remaining-list"><li>콘솔 테스트 버튼 콜백 검증 최종 통과</li></ul></div></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ── 자동화 탭 ── -->
+  <div id="panel-automations" class="panel">
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>자동화 이름</th><th>실행 일정</th><th>상태</th><th>최근 실행</th><th>메모</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>  <td><strong>taillog-morning-orchestrator</strong></td>  <td><small>매일 02:00</small></td>  <td><span class="badge" style="background:#4CAF50" title="READY">✅ 정상운영</span></td>  <td><small>문서 정렬 완료</small></td>  <td class="memo-cell"><small>drift/code-doc/arch/health만 실행</small></td></tr><tr>  <td><strong>taillog-ai-data-orchestrator</strong></td>  <td><small>매일 09:00</small></td>  <td><span class="badge" style="background:#4CAF50" title="READY">✅ 정상운영</span></td>  <td><small>수동 실발송 PASS</small></td>  <td class="memo-cell"><small>synthetic gen → Telegram review</small></td></tr><tr>  <td><strong>taillog-nightly-orchestrator</strong></td>  <td><small>매일 22:00</small></td>  <td><span class="badge" style="background:#4CAF50" title="READY">✅ 정상운영</span></td>  <td><small>문서 정렬 완료</small></td>  <td class="memo-cell"><small>docs organizer만 실행</small></td></tr><tr>  <td><strong>taillog-weekly-orchestrator</strong></td>  <td><small>매주 금 10:00</small></td>  <td><span class="badge" style="background:#4CAF50" title="READY">✅ 정상운영</span></td>  <td><small>문서 정렬 완료</small></td>  <td class="memo-cell"><small>training maintenance + finetune review</small></td></tr><tr>  <td><strong>skills-web-enrichment-7day</strong></td>  <td><small>수동 실행 전용</small></td>  <td><span class="badge" style="background:#FF9800" title="MANUAL_ONLY">🖱 수동전용</span></td>  <td><small>03-02 08:21</small></td>  <td class="memo-cell"><small>`DRY_RUN=true` 후 주인님 승인 시 단독 실행</small></td></tr><tr>  <td><strong>daily-coaching-synthetic-gen</strong></td>  <td><small>AI data TASK 1</small></td>  <td><span class="badge" style="background:#66BB6A" title="SUBTASK">📎 서브태스크</span></td>  <td><small>05-13 수동 성공</small></td>  <td class="memo-cell"><small>단독 스케줄 금지, 오케스트레이터에서 호출</small></td></tr><tr>  <td><strong>coaching-review-telegram-daily</strong></td>  <td><small>AI data TASK 2</small></td>  <td><span class="badge" style="background:#66BB6A" title="SUBTASK">📎 서브태스크</span></td>  <td><small>05-13 반려 시나리오 PASS</small></td>  <td class="memo-cell"><small>단독 스케줄 금지, 오케스트레이터에서 호출</small></td></tr><tr>  <td><strong>code-doc-align</strong></td>  <td><small>morning TASK 2</small></td>  <td><span class="badge" style="background:#66BB6A" title="SUBTASK">📎 서브태스크</span></td>  <td><small>03-02 03:06</small></td>  <td class="memo-cell"><small>단독 실행 가능</small></td></tr><tr>  <td><strong>architecture-diagrams-sync</strong></td>  <td><small>morning TASK 3</small></td>  <td><span class="badge" style="background:#66BB6A" title="SUBTASK">📎 서브태스크</span></td>  <td><small>03-02 19:22</small></td>  <td class="memo-cell"><small>단독 실행 가능</small></td></tr><tr>  <td><strong>automation-health-monitor</strong></td>  <td><small>morning TASK 4</small></td>  <td><span class="badge" style="background:#66BB6A" title="SUBTASK">📎 서브태스크</span></td>  <td><small>05-13 문서 정렬</small></td>  <td class="memo-cell"><small>health report만 갱신</small></td></tr><tr>  <td><strong>docs-nightly-organizer</strong></td>  <td><small>nightly TASK 1</small></td>  <td><span class="badge" style="background:#66BB6A" title="SUBTASK">📎 서브태스크</span></td>  <td><small>03-01 22:02</small></td>  <td class="memo-cell"><small>Mac 경로로 수정됨</small></td></tr><tr>  <td><strong>training-data-maintenance</strong></td>  <td><small>weekly TASK 1</small></td>  <td><span class="badge" style="background:#66BB6A" title="SUBTASK">📎 서브태스크</span></td>  <td><small>문서 정렬 완료</small></td>  <td class="memo-cell"><small>초안/리포트 중심</small></td></tr><tr>  <td><strong>weekly-coaching-finetune-review</strong></td>  <td><small>weekly TASK 2</small></td>  <td><span class="badge" style="background:#66BB6A" title="SUBTASK">📎 서브태스크</span></td>  <td><small>문서 정렬 완료</small></td>  <td class="memo-cell"><small>approved >= 50 readiness 보고</small></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<script>
+function showTab(tab, el) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('panel-' + tab).classList.add('active');
+  el.classList.add('active');
+}
+
+function filterGroup(group, btn) {
+  document.querySelectorAll('#group-filters .filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  const groupMap = {
+    'Onboarding': ['Onboarding'],
+    'Main': ['Main'],
+    'Training': ['Training'],
+    'Dog': ['Dog'],
+    'Settings': ['Settings'],
+    'B2B': ['B2B'],
+  };
+  document.querySelectorAll('.card').forEach(card => {
+    if (group === 'all') { card.style.display = ''; return; }
+    const g = card.dataset.group || '';
+    card.style.display = (groupMap[group] || []).includes(g) ? '' : 'none';
+  });
+}
+</script>
+
+</body>
+</html>

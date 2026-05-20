@@ -4,9 +4,11 @@
  */
 import { createRoute, useNavigation } from '@granite-js/react-native';
 import React from 'react';
-import { View, Text, ScrollView, StyleSheet ,TouchableOpacity  } from 'react-native';
+import { View, Text, ScrollView, StyleSheet } from 'react-native';
 import { SafeAreaView } from '@granite-js/native/react-native-safe-area-context';
+import { BackButton, BackButtonSpacer } from 'components/shared/BackButton';
 import { colors, typography } from 'styles/tokens';
+import { IAP_PRODUCTS, formatKRW } from 'types/subscription';
 
 export const Route = createRoute('/legal/terms', {
   component: LegalTermsPage,
@@ -15,15 +17,16 @@ export const Route = createRoute('/legal/terms', {
 
 function LegalTermsPage() {
   const navigation = useNavigation();
+  const proProduct = IAP_PRODUCTS['PRO_MONTHLY']!;
+  const token10Product = IAP_PRODUCTS['AI_TOKEN_10']!;
+  const token30Product = IAP_PRODUCTS['AI_TOKEN_30']!;
 
   return (
     <SafeAreaView style={styles.safe}>
       <View style={styles.navbar}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Text style={styles.backText}>{'←'}</Text>
-        </TouchableOpacity>
+        <BackButton onPress={() => navigation.goBack()} />
         <Text style={styles.navTitle}>서비스 이용약관</Text>
-        <View style={styles.backButton} />
+        <BackButtonSpacer />
       </View>
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
         <Text style={styles.meta}>최종 수정일: 2026년 2월 27일 | 시행일: 2026년 2월 27일</Text>
@@ -59,8 +62,9 @@ function LegalTermsPage() {
 
         <Text style={styles.h2}>제 5 조 (유료 서비스 및 결제)</Text>
         <Text style={styles.p}>
-          1. 회사는 다음과 같은 유료 서비스를 제공합니다:{'\n'}  - PRO 구독: 월 4,900원{'\n'}  - 토큰 10회:
-          1,900원{'\n'}  - 토큰 30회: 4,900원{'\n'}  - B2B 플랜: 별도 가격{'\n'}2. 결제는 토스 인앱
+          1. 회사는 다음과 같은 유료 서비스를 제공합니다:{'\n'}  - PRO 구독: 월 {formatKRW(proProduct.price)}{'\n'}  -
+          토큰 10회: {formatKRW(token10Product.price)}{'\n'}  - 토큰 30회: {formatKRW(token30Product.price)}{'\n'}  - B2B
+          플랜: 별도 가격{'\n'}2. 결제는 토스 인앱
           결제(IAP)를 통해 이루어지며, 환불은 토스 인앱 결제 정책에 따릅니다.{'\n'}3. 유료 서비스의 가격은 변경될
           수 있으며, 변경 시 사전에 공지합니다.
         </Text>
@@ -116,8 +120,6 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: colors.surfaceTertiary,
   },
-  backButton: { width: 40 },
-  backText: { ...typography.sectionTitle, color: colors.grey950 },
   navTitle: { ...typography.body, fontWeight: '600', color: colors.grey950 },
   scroll: { flex: 1 },
   content: { padding: 20, paddingBottom: 48 },

@@ -13,6 +13,7 @@ import {
 import {
   evaluateCooldown,
   type CooldownRecord,
+  type QuietHoursConfig,
 } from '../_shared/cooldownPolicy.ts';
 import {
   createNotiHistoryRepository,
@@ -27,6 +28,20 @@ type NotificationType =
   | 'training_reminder'
   | 'surge_alert'
   | 'promo';
+
+interface NotificationPreference {
+  channels: {
+    smart_message: boolean;
+    push: boolean;
+  };
+  types: Record<NotificationType, boolean>;
+  marketing_agreed: boolean;
+  quiet_hours: {
+    enabled: boolean;
+    start_hour: number;
+    end_hour: number;
+  };
+}
 
 export interface SendSmartMessageRequest {
   userId: string;
@@ -58,9 +73,24 @@ interface SendSmartMessageDeps {
   history: CooldownRecord[];
   notiHistoryRepository: NotiHistoryRepository;
   resolveTossUserKey: (userId: string) => Promise<string>;
+  resolveNotificationPref: (userId: string) => Promise<NotificationPreference>;
 }
 
 const historyStore: CooldownRecord[] = [];
+
+const DEFAULT_NOTIFICATION_PREF: NotificationPreference = {
+  channels: { smart_message: true, push: true },
+  types: {
+    log_reminder: true,
+    streak_alert: true,
+    coaching_ready: true,
+    training_reminder: true,
+    surge_alert: true,
+    promo: false,
+  },
+  marketing_agreed: false,
+  quiet_hours: { enabled: true, start_hour: 22, end_hour: 8 },
+};
 
 function defaultDeps(): SendSmartMessageDeps {
   return {
@@ -70,6 +100,7 @@ function defaultDeps(): SendSmartMessageDeps {
     history: historyStore,
     notiHistoryRepository: createNotiHistoryRepository({ history: historyStore }),
     resolveTossUserKey,
+    resolveNotificationPref,
   };
 }
 
@@ -111,6 +142,91 @@ async function resolveTossUserKey(userId: string): Promise<string> {
     throw new Error('Missing toss_user_key');
   }
   return tossUserKey;
+}
+
+function mergeNotificationPref(value: unknown, marketingAgreed?: unknown): NotificationPreference {
+  const input = value && typeof value === 'object'
+    ? value as Partial<NotificationPreference>
+    : {};
+  const inputChannels = input.channels && typeof input.channels === 'object' ? input.channels : {};
+  const inputTypes = input.types && typeof input.types === 'object' ? input.types : {};
+  const inputQuietHours = input.quiet_hours && typeof input.quiet_hours === 'object' ? input.quiet_hours : {};
+
+  return {
+    channels: {
+      smart_message: inputChannels.smart_message ?? DEFAULT_NOTIFICATION_PREF.channels.smart_message,
+      push: inputChannels.push ?? DEFAULT_NOTIFICATION_PREF.channels.push,
+    },
+    types: {
+      log_reminder: inputTypes.log_reminder ?? DEFAULT_NOTIFICATION_PREF.types.log_reminder,
+      streak_alert: inputTypes.streak_alert ?? DEFAULT_NOTIFICATION_PREF.types.streak_alert,
+      coaching_ready: inputTypes.coaching_ready ?? DEFAULT_NOTIFICATION_PREF.types.coaching_ready,
+      training_reminder: inputTypes.training_reminder ?? DEFAULT_NOTIFICATION_PREF.types.training_reminder,
+      surge_alert: inputTypes.surge_alert ?? DEFAULT_NOTIFICATION_PREF.types.surge_alert,
+      promo: inputTypes.promo ?? DEFAULT_NOTIFICATION_PREF.types.promo,
+    },
+    marketing_agreed:
+      typeof marketingAgreed === 'boolean'
+        ? marketingAgreed
+        : input.marketing_agreed ?? DEFAULT_NOTIFICATION_PREF.marketing_agreed,
+    quiet_hours: {
+      enabled: inputQuietHours.enabled ?? DEFAULT_NOTIFICATION_PREF.quiet_hours.enabled,
+      start_hour: inputQuietHours.start_hour ?? DEFAULT_NOTIFICATION_PREF.quiet_hours.start_hour,
+      end_hour: inputQuietHours.end_hour ?? DEFAULT_NOTIFICATION_PREF.quiet_hours.end_hour,
+    },
+  };
+}
+
+async function resolveNotificationPref(userId: string): Promise<NotificationPreference> {
+  const supabaseUrl = readEnv('SUPABASE_URL');
+  const serviceRoleKey = readEnv('SUPABASE_SERVICE_ROLE_KEY') ?? readEnv('SERVICE_ROLE_KEY');
+  if (!supabaseUrl || !serviceRoleKey) return DEFAULT_NOTIFICATION_PREF;
+
+  const response = await fetch(
+    `${supabaseUrl}/rest/v1/user_settings?user_id=eq.${encodeURIComponent(userId)}&select=notification_pref,marketing_agreed&limit=1`,
+    {
+      method: 'GET',
+      headers: {
+        apikey: serviceRoleKey,
+        Authorization: `Bearer ${serviceRoleKey}`,
+      },
+    },
+  );
+
+  if (!response.ok) {
+    throw new Error(`Failed to resolve notification_pref: ${response.status}`);
+  }
+
+  const rows = await response.json() as Array<{
+    notification_pref?: unknown;
+    marketing_agreed?: unknown;
+  }>;
+  const row = rows[0];
+  return mergeNotificationPref(row?.notification_pref, row?.marketing_agreed);
+}
+
+function toQuietHoursConfig(pref: NotificationPreference): QuietHoursConfig {
+  return {
+    enabled: pref.quiet_hours.enabled,
+    startHour: pref.quiet_hours.start_hour,
+    endHour: pref.quiet_hours.end_hour,
+  };
+}
+
+function evaluateNotificationPreference(pref: NotificationPreference, type: NotificationType): EdgeResult<never> | null {
+  if (!pref.channels.smart_message) {
+    return fail('NOTIFICATION_OPTED_OUT', 'Smart Message channel is disabled for this user', 403);
+  }
+
+  if (!pref.types[type]) {
+    return fail('NOTIFICATION_OPTED_OUT', `${type} notifications are disabled for this user`, 403);
+  }
+
+  if (type === 'promo' && !pref.marketing_agreed) {
+    return fail('MARKETING_CONSENT_REQUIRED', 'Marketing consent is required for promo notifications', 403);
+  }
+
+  return null;
 }
 
 function resolveIdempotentResponse(
@@ -178,6 +294,22 @@ export function createSendSmartMessageHandler(overrides?: Partial<SendSmartMessa
     const replay = resolveIdempotentResponse(begin);
     if (replay) return replay;
 
+    let notificationPref: NotificationPreference;
+    try {
+      notificationPref = await deps.resolveNotificationPref(request.userId);
+    } catch {
+      deps.idempotency.fail('send-smart-message', request.idempotencyKey);
+      return fail('PREFERENCE_LOOKUP_FAILED', 'Failed to load user notification preferences', 502, {
+        retryable: true,
+      });
+    }
+
+    const preferenceBlock = evaluateNotificationPreference(notificationPref, request.notificationType);
+    if (preferenceBlock) {
+      deps.idempotency.fail('send-smart-message', request.idempotencyKey);
+      return preferenceBlock;
+    }
+
     const now = deps.getNow();
     let cooldownHistory = deps.history;
     try {
@@ -186,12 +318,20 @@ export function createSendSmartMessageHandler(overrides?: Partial<SendSmartMessa
       cooldownHistory = deps.history;
     }
 
-    const cooldown = evaluateCooldown(cooldownHistory, request.userId, now.getTime());
+    const cooldown = evaluateCooldown(
+      cooldownHistory,
+      request.userId,
+      now.getTime(),
+      toQuietHoursConfig(notificationPref)
+    );
     if (!cooldown.allowed) {
       deps.idempotency.fail('send-smart-message', request.idempotencyKey);
       return fail('RATE_LIMITED', `Smart message blocked: ${cooldown.reason ?? 'UNKNOWN'}`, 429, {
         retryable: true,
-        details: { retryAfterSeconds: cooldown.retryAfterSeconds ?? 0 },
+        details: {
+          reason: cooldown.reason ?? 'UNKNOWN',
+          retryAfterSeconds: cooldown.retryAfterSeconds ?? 0,
+        },
       });
     }
 

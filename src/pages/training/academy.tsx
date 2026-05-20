@@ -5,7 +5,7 @@
  * Parity: UI-001
  */
 import { createRoute, useNavigation } from '@granite-js/react-native';
-import React, { useMemo, useCallback, useRef } from 'react';
+import React, { useMemo, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { ListLayout } from 'components/shared/layouts/ListLayout';
 import { AIPersonalizedHero } from 'components/features/training/AIPersonalizedHero';
@@ -23,7 +23,6 @@ import { getRecommendations, getRecommendationsV2 } from 'lib/data/recommendatio
 import { useTrainingProgress, useStepFeedback, useBehaviorAnalytics } from 'lib/hooks/useTraining';
 import { useIsPro } from 'lib/hooks/useSubscription';
 import { usePageGuard } from 'lib/hooks/usePageGuard';
-import { useInterstitialAd } from 'lib/hooks/useInterstitialAd';
 import { useActiveDog } from 'stores/ActiveDogContext';
 import { useAuth } from 'stores/AuthContext';
 import { useSurvey } from 'stores/SurveyContext';
@@ -114,13 +113,25 @@ function TrainingAcademyPage() {
       [];
     if (behaviors.length === 0) return '문제';
     const BEHAVIOR_LABEL: Record<string, string> = {
-      barking: '짖음', biting: '무는', jumping: '점프',
-      pulling: '당김', anxiety: '불안', aggression: '공격',
-      fear: '두려움', destruction: '파괴', toilet: '배변',
-      leash_pulling: '산책 당김', reactivity: '반응성', separation: '분리불안',
-      resource_guarding: '자원 보호', destructive: '파괴', other: '기타',
+      barking: '짖음',
+      biting: '무는 행동',
+      jumping: '점프',
+      pulling: '산책 당김',
+      anxiety: '불안',
+      aggression: '공격성',
+      fear: '두려움',
+      destruction: '파괴 행동',
+      destructive: '파괴 행동',
+      toilet: '배변',
+      bathroom_miss: '배변 실수',
+      leash_pulling: '산책 당김',
+      reactivity: '반응성',
+      separation: '분리불안',
+      separation_anxiety: '분리불안',
+      resource_guarding: '자원 보호',
+      other: '기타',
     };
-    return behaviors.slice(0, 2).map((b: string) => BEHAVIOR_LABEL[b] ?? b).join('·');
+    return behaviors.slice(0, 2).map((b: string) => BEHAVIOR_LABEL[b] ?? '기타').join('·');
   }, [surveyData, dogEnv]);
 
   const navigation = useNavigation();
@@ -228,25 +239,9 @@ function TrainingAcademyPage() {
     },
   ]);
 
-  // I1: 무료 사용자 커리큘럼 진입 시 전면 광고
-  const pendingCurriculumRef = useRef<CurriculumId | null>(null);
-  const handleInterstitialDismissed = useCallback(() => {
-    const id = pendingCurriculumRef.current;
-    if (id) {
-      navigation.navigate('/training/detail', { curriculum_id: id });
-      pendingCurriculumRef.current = null;
-    }
-  }, [navigation]);
-  const { showAd: showInterstitialAd } = useInterstitialAd('I1', handleInterstitialDismissed);
-
   const handleCardPress = useCallback((curriculum: Curriculum) => {
-    if (isPro) {
-      navigation.navigate('/training/detail', { curriculum_id: curriculum.id });
-      return;
-    }
-    pendingCurriculumRef.current = curriculum.id;
-    showInterstitialAd();
-  }, [isPro, navigation, showInterstitialAd]);
+    navigation.navigate('/training/detail', { curriculum_id: curriculum.id });
+  }, [navigation]);
 
   const handleProCTA = useCallback(() => {
     showProUpgrade();
@@ -289,6 +284,10 @@ function TrainingAcademyPage() {
           <AIPersonalizedHero
             dogName={activeDog?.name ?? '강아지'}
             behaviorText={behaviorText}
+            onPress={() => {
+              const c = CURRICULUMS.find((cur) => cur.id === recommendation.primary);
+              if (c) handleCardPress(c);
+            }}
           />
 
           {/* 오늘의 훈련 카드 (현재 진행 중 커리큘럼 하이라이트) */}
@@ -376,7 +375,7 @@ function TodayTrainingCard({
     <View style={styles.todayCard}>
       <View style={styles.todayHeader}>
         <Text style={styles.todayLabel}>오늘의 훈련</Text>
-        <Text style={styles.todayDay}>Day {progress.current_day}</Text>
+        <Text style={styles.todayDay}>{progress.current_day}일차</Text>
       </View>
       <Text style={styles.todayTitle}>{curriculum.title}</Text>
       <View style={styles.todayProgress}>

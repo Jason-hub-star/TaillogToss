@@ -1,0 +1,1251 @@
+{
+  "project": "TaillogToss",
+  "description": "DogCoach Next.js PWA → Toss mini-app (React Native) migration",
+  "last_update": "2026-05-19 17:35",
+  "session_context": {
+    "current_date": "2026-05-19",
+    "completion": "89%",
+    "active_blockers": [
+      "인증서 만료일 캘린더 등록",
+      "실기기 E2E 통합 검증 (Wave 1~9 로컬 완료, 실기기 검증 필요)",
+      "퍼블리싱 심사 준비",
+      "QR 테스트 최소 1회 완료 (심사 요청 버튼 활성화 조건)"
+    ],
+    "current_priorities": [
+      {
+        "rank": 1,
+        "id": "UIUX-001",
+        "label": "대시보드UX",
+        "goal": "대시보드 분석/훈련 empty-state 및 skeleton 안정화"
+      },
+      {
+        "rank": 2,
+        "id": "UIUX-002",
+        "label": "아카데미UX",
+        "goal": "training academy AI 생성 느낌 UX 재설계"
+      },
+      {
+        "rank": 3,
+        "id": "UIUX-003",
+        "label": "커리큘럼",
+        "goal": "curriculum 가시성 및 네비게이션 편의성"
+      },
+      {
+        "rank": 4,
+        "id": "UIUX-004",
+        "label": "온보딩",
+        "goal": "onboarding survey parity with web baseline"
+      },
+      {
+        "rank": 5,
+        "id": "UIUX-005",
+        "label": "결과상세",
+        "goal": "coaching result and training detail completeness"
+      },
+      {
+        "rank": 6,
+        "id": "UIUX-006",
+        "label": "강아지프로필",
+        "goal": "dog profile 실데이터 복원 + dog switcher UX"
+      }
+    ],
+    "qa_pages": [
+      "/onboarding/welcome",
+      "/dashboard",
+      "/dashboard/quick-log",
+      "/training/academy",
+      "/training/detail",
+      "/parent/reports"
+    ],
+    "done_pages": [
+      "/onboarding/stage1-form",
+      "/onboarding/stage2-form",
+      "/onboarding/stage3-form",
+      "/onboarding/survey",
+      "/onboarding/survey-result",
+      "/onboarding/notification",
+      "/dashboard/analysis",
+      "/coaching/result",
+      "/dog/profile",
+      "/dog/add",
+      "/dog/switcher",
+      "/settings",
+      "/settings/subscription",
+      "/legal/terms",
+      "/legal/privacy",
+      "/ops/setup",
+      "/ops/dog-add",
+      "/ops/today",
+      "/ops/settings"
+    ]
+  },
+  "architecture": {
+    "frontend": "React Native (@granite-js/react-native) + TDS RN 2.0.2",
+    "backend": "FastAPI (Railway) + Supabase Edge Functions",
+    "auth": "Toss Login → login-with-toss → Supabase Auth bridge",
+    "payments": "Toss IAP (verify-iap-order)",
+    "ads": "Toss Ads SDK 2.0",
+    "state": "React + TanStack Query",
+    "design_tokens": "src/styles/tokens.ts"
+  },
+  "status_summary": {
+    "Done": 19,
+    "QA": 6
+  },
+  "pages": [
+    {
+      "route": "/onboarding/stage1-form",
+      "label": "Stage 1 설문 (필수)",
+      "group": "Onboarding",
+      "status": "Done",
+      "priority": "P0",
+      "parity_ids": [
+        "APP-001"
+      ],
+      "parity_labels": [
+        {
+          "id": "APP-001",
+          "label": "앱셸"
+        }
+      ]
+    },
+    {
+      "route": "/onboarding/stage2-form",
+      "label": "Stage 2 설문 (소프트 인터셉트)",
+      "group": "Onboarding",
+      "status": "Done",
+      "priority": "P0",
+      "parity_ids": [
+        "APP-001"
+      ],
+      "parity_labels": [
+        {
+          "id": "APP-001",
+          "label": "앱셸"
+        }
+      ]
+    },
+    {
+      "route": "/onboarding/stage3-form",
+      "label": "Stage 3 Pro 상담지",
+      "group": "Onboarding",
+      "status": "Done",
+      "priority": "P0",
+      "parity_ids": [
+        "APP-001",
+        "AI-001",
+        "PRO-INTAKE-001"
+      ],
+      "parity_labels": [
+        {
+          "id": "APP-001",
+          "label": "앱셸"
+        },
+        {
+          "id": "AI-001",
+          "label": "AI코칭"
+        },
+        {
+          "id": "PRO-INTAKE-001",
+          "label": "PRO유입"
+        }
+      ]
+    },
+    {
+      "route": "/onboarding/welcome",
+      "label": "Welcome (로그인 통합)",
+      "group": "Onboarding",
+      "status": "QA",
+      "priority": "P0",
+      "parity_ids": [
+        "AUTH-001",
+        "UIUX-004",
+        "B2B-001"
+      ],
+      "parity_labels": [
+        {
+          "id": "AUTH-001",
+          "label": "인증"
+        },
+        {
+          "id": "UIUX-004",
+          "label": "온보딩"
+        },
+        {
+          "id": "B2B-001",
+          "label": "기관용"
+        }
+      ]
+    },
+    {
+      "route": "/onboarding/survey",
+      "label": "Survey",
+      "group": "Onboarding",
+      "status": "Done",
+      "priority": "P0",
+      "parity_ids": [
+        "UIUX-004"
+      ],
+      "parity_labels": [
+        {
+          "id": "UIUX-004",
+          "label": "온보딩"
+        }
+      ]
+    },
+    {
+      "route": "/onboarding/survey-result",
+      "label": "Survey Result",
+      "group": "Onboarding",
+      "status": "Done",
+      "priority": "P1",
+      "parity_ids": [
+        "UI-001"
+      ],
+      "parity_labels": [
+        {
+          "id": "UI-001",
+          "label": "디자인"
+        }
+      ]
+    },
+    {
+      "route": "/onboarding/notification",
+      "label": "Notification",
+      "group": "Onboarding",
+      "status": "Done",
+      "priority": "P1",
+      "parity_ids": [
+        "APP-001"
+      ],
+      "parity_labels": [
+        {
+          "id": "APP-001",
+          "label": "앱셸"
+        }
+      ]
+    },
+    {
+      "route": "/dashboard",
+      "label": "Dashboard",
+      "group": "Main",
+      "status": "QA",
+      "priority": "P1",
+      "parity_ids": [
+        "UIUX-001",
+        "AD-001",
+        "B2B-001",
+        "UIUX-006"
+      ],
+      "parity_labels": [
+        {
+          "id": "UIUX-001",
+          "label": "대시보드UX"
+        },
+        {
+          "id": "AD-001",
+          "label": "광고"
+        },
+        {
+          "id": "B2B-001",
+          "label": "기관용"
+        },
+        {
+          "id": "UIUX-006",
+          "label": "강아지프로필"
+        }
+      ]
+    },
+    {
+      "route": "/dashboard/quick-log",
+      "label": "Quick Log",
+      "group": "Main",
+      "status": "QA",
+      "priority": "P1",
+      "parity_ids": [
+        "LOG-001",
+        "AD-001"
+      ],
+      "parity_labels": [
+        {
+          "id": "LOG-001",
+          "label": "행동기록"
+        },
+        {
+          "id": "AD-001",
+          "label": "광고"
+        }
+      ]
+    },
+    {
+      "route": "/dashboard/analysis",
+      "label": "Analysis",
+      "group": "Main",
+      "status": "Done",
+      "priority": "P0",
+      "parity_ids": [
+        "UIUX-001",
+        "UIUX-005"
+      ],
+      "parity_labels": [
+        {
+          "id": "UIUX-001",
+          "label": "대시보드UX"
+        },
+        {
+          "id": "UIUX-005",
+          "label": "결과상세"
+        }
+      ]
+    },
+    {
+      "route": "/coaching/result",
+      "label": "Coaching Result",
+      "group": "Main",
+      "status": "Done",
+      "priority": "P0",
+      "parity_ids": [
+        "UIUX-005",
+        "AI-001",
+        "AI-COACHING-ANALYTICS-001",
+        "UI-TRAINING-PERSONALIZATION-001",
+        "PRO-INTAKE-001"
+      ],
+      "parity_labels": [
+        {
+          "id": "UIUX-005",
+          "label": "결과상세"
+        },
+        {
+          "id": "AI-001",
+          "label": "AI코칭"
+        },
+        {
+          "id": "AI-COACHING-ANALYTICS-001",
+          "label": "코칭분석"
+        },
+        {
+          "id": "UI-TRAINING-PERSONALIZATION-001",
+          "label": "개인화UX"
+        },
+        {
+          "id": "PRO-INTAKE-001",
+          "label": "PRO유입"
+        }
+      ]
+    },
+    {
+      "route": "/training/academy",
+      "label": "Academy",
+      "group": "Training",
+      "status": "QA",
+      "priority": "P0",
+      "parity_ids": [
+        "UIUX-002",
+        "UIUX-003",
+        "UI-TRAINING-PERSONALIZATION-001",
+        "AD-001",
+        "MEMO-001"
+      ],
+      "parity_labels": [
+        {
+          "id": "UIUX-002",
+          "label": "아카데미UX"
+        },
+        {
+          "id": "UIUX-003",
+          "label": "커리큘럼"
+        },
+        {
+          "id": "UI-TRAINING-PERSONALIZATION-001",
+          "label": "개인화UX"
+        },
+        {
+          "id": "AD-001",
+          "label": "광고"
+        },
+        {
+          "id": "MEMO-001",
+          "label": "메모"
+        }
+      ]
+    },
+    {
+      "route": "/training/detail",
+      "label": "Training Detail",
+      "group": "Training",
+      "status": "QA",
+      "priority": "P0",
+      "parity_ids": [
+        "UIUX-005",
+        "UI-TRAINING-DETAIL-001",
+        "AD-001"
+      ],
+      "parity_labels": [
+        {
+          "id": "UIUX-005",
+          "label": "결과상세"
+        },
+        {
+          "id": "UI-TRAINING-DETAIL-001",
+          "label": "훈련상세UX"
+        },
+        {
+          "id": "AD-001",
+          "label": "광고"
+        }
+      ]
+    },
+    {
+      "route": "/dog/profile",
+      "label": "Dog Profile",
+      "group": "Dog",
+      "status": "Done",
+      "priority": "P0",
+      "parity_ids": [
+        "UIUX-006",
+        "PRO-INTAKE-001"
+      ],
+      "parity_labels": [
+        {
+          "id": "UIUX-006",
+          "label": "강아지프로필"
+        },
+        {
+          "id": "PRO-INTAKE-001",
+          "label": "PRO유입"
+        }
+      ]
+    },
+    {
+      "route": "/dog/add",
+      "label": "Dog Add",
+      "group": "Dog",
+      "status": "Done",
+      "priority": "P1",
+      "parity_ids": [
+        "APP-001"
+      ],
+      "parity_labels": [
+        {
+          "id": "APP-001",
+          "label": "앱셸"
+        }
+      ]
+    },
+    {
+      "route": "/dog/switcher",
+      "label": "Dog Switcher",
+      "group": "Dog",
+      "status": "Done",
+      "priority": "P0",
+      "parity_ids": [
+        "UIUX-006"
+      ],
+      "parity_labels": [
+        {
+          "id": "UIUX-006",
+          "label": "강아지프로필"
+        }
+      ]
+    },
+    {
+      "route": "/settings",
+      "label": "Settings",
+      "group": "Settings",
+      "status": "Done",
+      "priority": "P1",
+      "parity_ids": [
+        "APP-001"
+      ],
+      "parity_labels": [
+        {
+          "id": "APP-001",
+          "label": "앱셸"
+        }
+      ]
+    },
+    {
+      "route": "/settings/subscription",
+      "label": "Subscription",
+      "group": "Settings",
+      "status": "Done",
+      "priority": "P1",
+      "parity_ids": [
+        "IAP-001"
+      ],
+      "parity_labels": [
+        {
+          "id": "IAP-001",
+          "label": "인앱결제"
+        }
+      ]
+    },
+    {
+      "route": "/legal/terms",
+      "label": "Terms",
+      "group": "Legal",
+      "status": "Done",
+      "priority": "P2",
+      "parity_ids": [
+        "APP-001"
+      ],
+      "parity_labels": [
+        {
+          "id": "APP-001",
+          "label": "앱셸"
+        }
+      ]
+    },
+    {
+      "route": "/legal/privacy",
+      "label": "Privacy",
+      "group": "Legal",
+      "status": "Done",
+      "priority": "P2",
+      "parity_ids": [
+        "APP-001"
+      ],
+      "parity_labels": [
+        {
+          "id": "APP-001",
+          "label": "앱셸"
+        }
+      ]
+    },
+    {
+      "route": "/ops/setup",
+      "label": "Ops Setup",
+      "group": "B2B",
+      "status": "Done",
+      "priority": "P1",
+      "parity_ids": [
+        "B2B-001"
+      ],
+      "parity_labels": [
+        {
+          "id": "B2B-001",
+          "label": "기관용"
+        }
+      ]
+    },
+    {
+      "route": "/ops/dog-add",
+      "label": "Ops Dog Add",
+      "group": "B2B",
+      "status": "Done",
+      "priority": "P1",
+      "parity_ids": [
+        "B2B-001"
+      ],
+      "parity_labels": [
+        {
+          "id": "B2B-001",
+          "label": "기관용"
+        }
+      ]
+    },
+    {
+      "route": "/ops/today",
+      "label": "Ops Today",
+      "group": "B2B",
+      "status": "Done",
+      "priority": "P2",
+      "parity_ids": [
+        "B2B-001",
+        "PRO-INTAKE-001"
+      ],
+      "parity_labels": [
+        {
+          "id": "B2B-001",
+          "label": "기관용"
+        },
+        {
+          "id": "PRO-INTAKE-001",
+          "label": "PRO유입"
+        }
+      ]
+    },
+    {
+      "route": "/ops/settings",
+      "label": "Ops Settings",
+      "group": "B2B",
+      "status": "Done",
+      "priority": "P2",
+      "parity_ids": [
+        "B2B-001",
+        "B2B-002"
+      ],
+      "parity_labels": [
+        {
+          "id": "B2B-001",
+          "label": "기관용"
+        },
+        {
+          "id": "B2B-002",
+          "label": "기관설정"
+        }
+      ]
+    },
+    {
+      "route": "/parent/reports",
+      "label": "Parent Reports",
+      "group": "B2B",
+      "status": "QA",
+      "priority": "P2",
+      "parity_ids": [
+        "B2B-001"
+      ],
+      "parity_labels": [
+        {
+          "id": "B2B-001",
+          "label": "기관용"
+        }
+      ]
+    }
+  ],
+  "features": [
+    {
+      "id": "AUTH-001",
+      "label": "인증",
+      "description": "Toss 로그인 + 세션 브릿지 + 가드",
+      "domain": "Auth",
+      "status": "In Progress",
+      "risk": "High",
+      "checklist_summary": {
+        "done": 15,
+        "total": 16,
+        "pct": 94,
+        "remaining": [
+          "fresh authCode로 happy-path 200 실기기 최종 증적"
+        ]
+      }
+    },
+    {
+      "id": "APP-001",
+      "label": "앱셸",
+      "description": "23개 라우트 + 레이아웃 + 딥링크",
+      "domain": "App Shell",
+      "status": "In Progress",
+      "risk": "Medium",
+      "checklist_summary": {
+        "done": 21,
+        "total": 23,
+        "pct": 91,
+        "remaining": [
+          "실제 사진 선택은 새 AIT 업로드 후 production Toss 앱에서 최종 검증",
+          "실기기 라우팅 전체 sweep"
+        ]
+      }
+    },
+    {
+      "id": "UI-001",
+      "label": "디자인",
+      "description": "TDS 컴포넌트 + 디자인 토큰 + 화면",
+      "domain": "Design System",
+      "status": "In Progress",
+      "risk": "High",
+      "checklist_summary": {
+        "done": 11,
+        "total": 12,
+        "pct": 92,
+        "remaining": [
+          "실기기 비주얼 QA"
+        ]
+      }
+    },
+    {
+      "id": "LOG-001",
+      "label": "행동기록",
+      "description": "ABC 로그 + 빠른기록 + 분석",
+      "domain": "Behavior Log",
+      "status": "In Progress",
+      "risk": "Medium",
+      "checklist_summary": {
+        "done": 7,
+        "total": 8,
+        "pct": 88,
+        "remaining": [
+          "FastAPI 로그 API 실기기(앱) E2E 검증"
+        ]
+      }
+    },
+    {
+      "id": "AI-001",
+      "label": "AI코칭",
+      "description": "코칭 6블록 + 피드백 + BE",
+      "domain": "AI Coaching",
+      "status": "In Progress",
+      "risk": "High",
+      "checklist_summary": {
+        "done": 13,
+        "total": 14,
+        "pct": 93,
+        "remaining": [
+          "FastAPI 코칭 API 실기기(앱) E2E 검증"
+        ]
+      }
+    },
+    {
+      "id": "IAP-001",
+      "label": "인앱결제",
+      "description": "구독 + verify-iap + grant",
+      "domain": "Billing",
+      "status": "Done",
+      "risk": "High",
+      "checklist_summary": {
+        "done": 35,
+        "total": 35,
+        "pct": 100,
+        "remaining": []
+      }
+    },
+    {
+      "id": "MSG-001",
+      "label": "알림",
+      "description": "Smart Message + 쿨다운 + noti_history",
+      "domain": "Notification",
+      "status": "QA",
+      "risk": "High",
+      "checklist_summary": {
+        "done": 17,
+        "total": 19,
+        "pct": 89,
+        "remaining": [
+          "coaching_ready/training_reminder/streak_alert/surge_alert 캠페인 콘솔 등록",
+          "promo 광고성 캠페인 등록 (앱 제출 후)"
+        ]
+      }
+    },
+    {
+      "id": "AD-001",
+      "label": "광고",
+      "description": "Ads SDK 2.0 + R/B/I 슬롯",
+      "domain": "Ads",
+      "status": "QA",
+      "risk": "Medium",
+      "checklist_summary": {
+        "done": 16,
+        "total": 17,
+        "pct": 94,
+        "remaining": [
+          "Toss 지원 환경에서 render success 또는 no-fill 최종 판정"
+        ]
+      }
+    },
+    {
+      "id": "B2B-001",
+      "label": "기관용",
+      "description": "B2B 운영 + 강아지 관리 + 리포트",
+      "domain": "B2B Ops",
+      "status": "In Progress",
+      "risk": "High",
+      "checklist_summary": {
+        "done": 13,
+        "total": 17,
+        "pct": 76,
+        "remaining": [
+          "B2C 회귀 테스트",
+          "40마리 FlatList 성능 실측",
+          "공유 링크 실기기 검증",
+          "verify_parent_phone_last4 RPC 서버 구현"
+        ]
+      }
+    },
+    {
+      "id": "PRO-INTAKE-001",
+      "label": "PRO유입",
+      "description": "PRO 구독 퍼널 + 상담지",
+      "domain": "Pro Intake",
+      "status": "Done",
+      "risk": "Medium",
+      "checklist_summary": {
+        "done": 10,
+        "total": 10,
+        "pct": 100,
+        "remaining": []
+      }
+    },
+    {
+      "id": "REG-001",
+      "label": "등록",
+      "description": "법무 + 배포 + 약관",
+      "domain": "Registration",
+      "status": "Done",
+      "risk": "Medium",
+      "checklist_summary": {
+        "done": 13,
+        "total": 14,
+        "pct": 93,
+        "remaining": [
+          "콘솔 테스트 버튼 콜백 검증 최종 통과"
+        ]
+      }
+    }
+  ],
+  "cross_references": {
+    "parity_to_pages": {
+      "APP-001": [
+        "/onboarding/stage1-form",
+        "/onboarding/stage2-form",
+        "/onboarding/stage3-form",
+        "/onboarding/notification",
+        "/dog/add",
+        "/settings",
+        "/legal/terms",
+        "/legal/privacy"
+      ],
+      "AI-001": [
+        "/onboarding/stage3-form",
+        "/coaching/result"
+      ],
+      "PRO-INTAKE-001": [
+        "/onboarding/stage3-form",
+        "/coaching/result",
+        "/dog/profile",
+        "/ops/today"
+      ],
+      "AUTH-001": [
+        "/onboarding/welcome"
+      ],
+      "UIUX-004": [
+        "/onboarding/welcome",
+        "/onboarding/survey"
+      ],
+      "B2B-001": [
+        "/onboarding/welcome",
+        "/dashboard",
+        "/ops/setup",
+        "/ops/dog-add",
+        "/ops/today",
+        "/ops/settings",
+        "/parent/reports"
+      ],
+      "UI-001": [
+        "/onboarding/survey-result"
+      ],
+      "UIUX-001": [
+        "/dashboard",
+        "/dashboard/analysis"
+      ],
+      "AD-001": [
+        "/dashboard",
+        "/dashboard/quick-log",
+        "/training/academy",
+        "/training/detail"
+      ],
+      "UIUX-006": [
+        "/dashboard",
+        "/dog/profile",
+        "/dog/switcher"
+      ],
+      "LOG-001": [
+        "/dashboard/quick-log"
+      ],
+      "UIUX-005": [
+        "/dashboard/analysis",
+        "/coaching/result",
+        "/training/detail"
+      ],
+      "AI-COACHING-ANALYTICS-001": [
+        "/coaching/result"
+      ],
+      "UI-TRAINING-PERSONALIZATION-001": [
+        "/coaching/result",
+        "/training/academy"
+      ],
+      "UIUX-002": [
+        "/training/academy"
+      ],
+      "UIUX-003": [
+        "/training/academy"
+      ],
+      "MEMO-001": [
+        "/training/academy"
+      ],
+      "UI-TRAINING-DETAIL-001": [
+        "/training/detail"
+      ],
+      "IAP-001": [
+        "/settings/subscription"
+      ],
+      "B2B-002": [
+        "/ops/settings"
+      ]
+    },
+    "pages_to_parity": {
+      "/onboarding/stage1-form": [
+        {
+          "id": "APP-001",
+          "label": "앱셸",
+          "description": "23개 라우트 + 레이아웃 + 딥링크"
+        }
+      ],
+      "/onboarding/stage2-form": [
+        {
+          "id": "APP-001",
+          "label": "앱셸",
+          "description": "23개 라우트 + 레이아웃 + 딥링크"
+        }
+      ],
+      "/onboarding/stage3-form": [
+        {
+          "id": "APP-001",
+          "label": "앱셸",
+          "description": "23개 라우트 + 레이아웃 + 딥링크"
+        },
+        {
+          "id": "AI-001",
+          "label": "AI코칭",
+          "description": "코칭 6블록 + 피드백 + BE"
+        },
+        {
+          "id": "PRO-INTAKE-001",
+          "label": "PRO유입",
+          "description": "PRO 구독 퍼널 + 상담지"
+        }
+      ],
+      "/onboarding/welcome": [
+        {
+          "id": "AUTH-001",
+          "label": "인증",
+          "description": "Toss 로그인 + 세션 브릿지 + 가드"
+        },
+        {
+          "id": "UIUX-004",
+          "label": "온보딩",
+          "description": "survey parity with web baseline"
+        },
+        {
+          "id": "B2B-001",
+          "label": "기관용",
+          "description": "B2B 운영 + 강아지 관리 + 리포트"
+        }
+      ],
+      "/onboarding/survey": [
+        {
+          "id": "UIUX-004",
+          "label": "온보딩",
+          "description": "survey parity with web baseline"
+        }
+      ],
+      "/onboarding/survey-result": [
+        {
+          "id": "UI-001",
+          "label": "디자인",
+          "description": "TDS 컴포넌트 + 디자인 토큰 + 화면"
+        }
+      ],
+      "/onboarding/notification": [
+        {
+          "id": "APP-001",
+          "label": "앱셸",
+          "description": "23개 라우트 + 레이아웃 + 딥링크"
+        }
+      ],
+      "/dashboard": [
+        {
+          "id": "UIUX-001",
+          "label": "대시보드UX",
+          "description": "대시보드 empty-state + skeleton 안정화"
+        },
+        {
+          "id": "AD-001",
+          "label": "광고",
+          "description": "Ads SDK 2.0 + R/B/I 슬롯"
+        },
+        {
+          "id": "B2B-001",
+          "label": "기관용",
+          "description": "B2B 운영 + 강아지 관리 + 리포트"
+        },
+        {
+          "id": "UIUX-006",
+          "label": "강아지프로필",
+          "description": "dog profile 실데이터 + dog switcher UX"
+        }
+      ],
+      "/dashboard/quick-log": [
+        {
+          "id": "LOG-001",
+          "label": "행동기록",
+          "description": "ABC 로그 + 빠른기록 + 분석"
+        },
+        {
+          "id": "AD-001",
+          "label": "광고",
+          "description": "Ads SDK 2.0 + R/B/I 슬롯"
+        }
+      ],
+      "/dashboard/analysis": [
+        {
+          "id": "UIUX-001",
+          "label": "대시보드UX",
+          "description": "대시보드 empty-state + skeleton 안정화"
+        },
+        {
+          "id": "UIUX-005",
+          "label": "결과상세",
+          "description": "coaching result + training detail 완성도"
+        }
+      ],
+      "/coaching/result": [
+        {
+          "id": "UIUX-005",
+          "label": "결과상세",
+          "description": "coaching result + training detail 완성도"
+        },
+        {
+          "id": "AI-001",
+          "label": "AI코칭",
+          "description": "코칭 6블록 + 피드백 + BE"
+        },
+        {
+          "id": "AI-COACHING-ANALYTICS-001",
+          "label": "코칭분석",
+          "description": "코칭 analytics 트래킹"
+        },
+        {
+          "id": "UI-TRAINING-PERSONALIZATION-001",
+          "label": "개인화UX",
+          "description": "훈련 개인화 UI"
+        },
+        {
+          "id": "PRO-INTAKE-001",
+          "label": "PRO유입",
+          "description": "PRO 구독 퍼널 + 상담지"
+        }
+      ],
+      "/training/academy": [
+        {
+          "id": "UIUX-002",
+          "label": "아카데미UX",
+          "description": "training academy AI 생성 느낌 UX 재설계"
+        },
+        {
+          "id": "UIUX-003",
+          "label": "커리큘럼",
+          "description": "curriculum 가시성 + 네비게이션 편의성"
+        },
+        {
+          "id": "UI-TRAINING-PERSONALIZATION-001",
+          "label": "개인화UX",
+          "description": "훈련 개인화 UI"
+        },
+        {
+          "id": "AD-001",
+          "label": "광고",
+          "description": "Ads SDK 2.0 + R/B/I 슬롯"
+        },
+        {
+          "id": "MEMO-001",
+          "label": "메모",
+          "description": "훈련 메모 기능"
+        }
+      ],
+      "/training/detail": [
+        {
+          "id": "UIUX-005",
+          "label": "결과상세",
+          "description": "coaching result + training detail 완성도"
+        },
+        {
+          "id": "UI-TRAINING-DETAIL-001",
+          "label": "훈련상세UX",
+          "description": "훈련 상세 화면 UI"
+        },
+        {
+          "id": "AD-001",
+          "label": "광고",
+          "description": "Ads SDK 2.0 + R/B/I 슬롯"
+        }
+      ],
+      "/dog/profile": [
+        {
+          "id": "UIUX-006",
+          "label": "강아지프로필",
+          "description": "dog profile 실데이터 + dog switcher UX"
+        },
+        {
+          "id": "PRO-INTAKE-001",
+          "label": "PRO유입",
+          "description": "PRO 구독 퍼널 + 상담지"
+        }
+      ],
+      "/dog/add": [
+        {
+          "id": "APP-001",
+          "label": "앱셸",
+          "description": "23개 라우트 + 레이아웃 + 딥링크"
+        }
+      ],
+      "/dog/switcher": [
+        {
+          "id": "UIUX-006",
+          "label": "강아지프로필",
+          "description": "dog profile 실데이터 + dog switcher UX"
+        }
+      ],
+      "/settings": [
+        {
+          "id": "APP-001",
+          "label": "앱셸",
+          "description": "23개 라우트 + 레이아웃 + 딥링크"
+        }
+      ],
+      "/settings/subscription": [
+        {
+          "id": "IAP-001",
+          "label": "인앱결제",
+          "description": "구독 + verify-iap + grant"
+        }
+      ],
+      "/legal/terms": [
+        {
+          "id": "APP-001",
+          "label": "앱셸",
+          "description": "23개 라우트 + 레이아웃 + 딥링크"
+        }
+      ],
+      "/legal/privacy": [
+        {
+          "id": "APP-001",
+          "label": "앱셸",
+          "description": "23개 라우트 + 레이아웃 + 딥링크"
+        }
+      ],
+      "/ops/setup": [
+        {
+          "id": "B2B-001",
+          "label": "기관용",
+          "description": "B2B 운영 + 강아지 관리 + 리포트"
+        }
+      ],
+      "/ops/dog-add": [
+        {
+          "id": "B2B-001",
+          "label": "기관용",
+          "description": "B2B 운영 + 강아지 관리 + 리포트"
+        }
+      ],
+      "/ops/today": [
+        {
+          "id": "B2B-001",
+          "label": "기관용",
+          "description": "B2B 운영 + 강아지 관리 + 리포트"
+        },
+        {
+          "id": "PRO-INTAKE-001",
+          "label": "PRO유입",
+          "description": "PRO 구독 퍼널 + 상담지"
+        }
+      ],
+      "/ops/settings": [
+        {
+          "id": "B2B-001",
+          "label": "기관용",
+          "description": "B2B 운영 + 강아지 관리 + 리포트"
+        },
+        {
+          "id": "B2B-002",
+          "label": "기관설정",
+          "description": "센터정보 + 멤버관리 + 플랜"
+        }
+      ],
+      "/parent/reports": [
+        {
+          "id": "B2B-001",
+          "label": "기관용",
+          "description": "B2B 운영 + 강아지 관리 + 리포트"
+        }
+      ]
+    }
+  },
+  "automations": {
+    "taillog-morning-orchestrator": {
+      "schedule": "매일 02:00",
+      "status": "READY",
+      "status_label": "✅ 정상운영",
+      "last_run": "문서 정렬 완료"
+    },
+    "taillog-ai-data-orchestrator": {
+      "schedule": "매일 09:00",
+      "status": "READY",
+      "status_label": "✅ 정상운영",
+      "last_run": "수동 실발송 PASS"
+    },
+    "taillog-nightly-orchestrator": {
+      "schedule": "매일 22:00",
+      "status": "READY",
+      "status_label": "✅ 정상운영",
+      "last_run": "문서 정렬 완료"
+    },
+    "taillog-weekly-orchestrator": {
+      "schedule": "매주 금 10:00",
+      "status": "READY",
+      "status_label": "✅ 정상운영",
+      "last_run": "문서 정렬 완료"
+    },
+    "skills-web-enrichment-7day": {
+      "schedule": "수동 실행 전용",
+      "status": "MANUAL_ONLY",
+      "status_label": "🖱 수동전용",
+      "last_run": "03-02 08:21"
+    },
+    "daily-coaching-synthetic-gen": {
+      "schedule": "AI data TASK 1",
+      "status": "SUBTASK",
+      "status_label": "📎 서브태스크",
+      "last_run": "05-13 수동 성공"
+    },
+    "coaching-review-telegram-daily": {
+      "schedule": "AI data TASK 2",
+      "status": "SUBTASK",
+      "status_label": "📎 서브태스크",
+      "last_run": "05-13 반려 시나리오 PASS"
+    },
+    "code-doc-align": {
+      "schedule": "morning TASK 2",
+      "status": "SUBTASK",
+      "status_label": "📎 서브태스크",
+      "last_run": "03-02 03:06"
+    },
+    "architecture-diagrams-sync": {
+      "schedule": "morning TASK 3",
+      "status": "SUBTASK",
+      "status_label": "📎 서브태스크",
+      "last_run": "03-02 19:22"
+    },
+    "automation-health-monitor": {
+      "schedule": "morning TASK 4",
+      "status": "SUBTASK",
+      "status_label": "📎 서브태스크",
+      "last_run": "05-13 문서 정렬"
+    },
+    "docs-nightly-organizer": {
+      "schedule": "nightly TASK 1",
+      "status": "SUBTASK",
+      "status_label": "📎 서브태스크",
+      "last_run": "03-01 22:02"
+    },
+    "training-data-maintenance": {
+      "schedule": "weekly TASK 1",
+      "status": "SUBTASK",
+      "status_label": "📎 서브태스크",
+      "last_run": "문서 정렬 완료"
+    },
+    "weekly-coaching-finetune-review": {
+      "schedule": "weekly TASK 2",
+      "status": "SUBTASK",
+      "status_label": "📎 서브태스크",
+      "last_run": "문서 정렬 완료"
+    }
+  },
+  "source_of_truth": {
+    "page_board": "docs/status/PAGE-UPGRADE-BOARD.md",
+    "feature_parity": "docs/status/11-FEATURE-PARITY-MATRIX.md",
+    "progress": "docs/status/PROGRESS-CHECKLIST.md",
+    "automation_health": "docs/status/AUTOMATION-HEALTH.md",
+    "project_status": "docs/status/PROJECT-STATUS.md"
+  }
+}

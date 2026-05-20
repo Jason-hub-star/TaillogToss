@@ -4,10 +4,13 @@
  * @apps-in-toss/framework 확인 후 실 SDK로 교체 예정
  * Parity: IAP-001, B2B-001
  */
+import { Storage } from '@apps-in-toss/framework';
 import { IAP } from '@apps-in-toss/native-modules';
 import { requestBackend } from './backend';
 import { getSupabasePublicConfig, supabase } from './supabase';
 import { tracker } from '../analytics/tracker';
+import { B2B_IAP_PRODUCTS } from 'types/b2b';
+import { IAP_PRODUCTS } from 'types/subscription';
 import {
   resolveAccessToken,
   normalizeJwtToken,
@@ -86,15 +89,22 @@ export function createOneTimePurchaseOrder({
   const emitGrantFailed = () => {
     if (!active || settled) return;
     settled = true;
+    console.log('[IAP-001] grant event', { type: 'GRANT_FAILED', sku });
     onEvent?.({ type: 'GRANT_FAILED' });
   };
 
   const emitGrantCompleted = (result?: PurchaseResult) => {
     if (!active || settled) return;
     settled = true;
+    console.log('[IAP-001] grant event', {
+      type: 'GRANT_COMPLETED',
+      sku,
+      orderId: result?.orderId,
+    });
     onEvent?.({ type: 'GRANT_COMPLETED', result });
   };
 
+  console.log('[IAP-001] createOneTimePurchaseOrder start', { sku });
   onEvent?.({ type: 'PURCHASE_STARTED' });
 
   const cleanup = IAP.createOneTimePurchaseOrder({
@@ -102,26 +112,34 @@ export function createOneTimePurchaseOrder({
       sku,
       processProductGrant: async ({ orderId }) => {
         let granted = false;
+        console.log('[IAP-001] processProductGrant start', { sku, orderId });
         try {
           granted = await processProductGrant({ orderId });
         } catch (e) {
-          if (__DEV__) {
-            console.warn('[IAP-001] processProductGrant failed:', e);
-          }
+          console.warn('[IAP-001] processProductGrant failed', {
+            sku,
+            orderId,
+            message: e instanceof Error ? e.message : String(e),
+          });
         }
         if (!active) return false;
         grantApproved = granted;
+        console.log('[IAP-001] processProductGrant done', { sku, orderId, granted });
         if (!granted) {
           emitGrantFailed();
           return false;
         }
         // 서버 지급 완료 후 SDK에 영수증 소비 신호 전달
         try {
+          console.log('[IAP-001] completeProductGrant start', { sku, orderId });
           await IAP.completeProductGrant({ params: { orderId } });
+          console.log('[IAP-001] completeProductGrant done', { sku, orderId });
         } catch (e) {
-          if (__DEV__) {
-            console.warn('[IAP-001] completeProductGrant failed (non-fatal):', e);
-          }
+          console.warn('[IAP-001] completeProductGrant failed (non-fatal)', {
+            sku,
+            orderId,
+            message: e instanceof Error ? e.message : String(e),
+          });
         }
         emitGrantCompleted(lastPaymentResult);
         return granted;
@@ -130,6 +148,7 @@ export function createOneTimePurchaseOrder({
     onEvent: (event) => {
       if (!active || settled) return;
       const sdkEventType = String((event as { type?: unknown }).type ?? '');
+      console.log('[IAP-001] sdk event', { sku, type: sdkEventType });
       if (sdkEventType === 'GRANT_FAILED' || sdkEventType === 'failed') {
         emitGrantFailed();
         return;
@@ -143,6 +162,11 @@ export function createOneTimePurchaseOrder({
     onError: (error) => {
       if (!active || settled) return;
       const code = (error as { code?: string })?.code;
+      console.warn('[IAP-001] sdk error', {
+        sku,
+        code,
+        message: error instanceof Error ? error.message : String(error),
+      });
       if (code === 'PRODUCT_NOT_GRANTED_BY_PARTNER' || code === 'USER_CANCELED') {
         // 지급 실패 또는 사용자 취소 → 에러 없이 GRANT_FAILED로 처리
         emitGrantFailed();
@@ -296,13 +320,38 @@ export async function verifyAndGrant(
     | undefined;
 
   const grantStatus = payload?.grant_status ?? payload?.data?.grant_status;
-  if (grantStatus) return grantStatus === 'granted';
+  if (grantStatus) {
+    const granted = grantStatus === 'granted';
+    console.log('[IAP-001] verifyAndGrant result', {
+      orderId: receipt.orderId,
+      productId: receipt.productId,
+      grantStatus,
+      granted,
+    });
+    return granted;
+  }
 
   const tossStatus = payload?.toss_status ?? payload?.data?.toss_status;
-  if (tossStatus) return tossStatus === 'PAYMENT_COMPLETED';
+  if (tossStatus) {
+    const granted = tossStatus === 'PAYMENT_COMPLETED';
+    console.log('[IAP-001] verifyAndGrant result', {
+      orderId: receipt.orderId,
+      productId: receipt.productId,
+      tossStatus,
+      granted,
+    });
+    return granted;
+  }
 
   const okFlag = payload?.ok ?? payload?.data?.ok;
-  return okFlag === true;
+  const granted = okFlag === true;
+  console.log('[IAP-001] verifyAndGrant result', {
+    orderId: receipt.orderId,
+    productId: receipt.productId,
+    ok: okFlag,
+    granted,
+  });
+  return granted;
 }
 
 // ──────────────────────────────────────
@@ -315,26 +364,153 @@ export interface PendingOrder {
   transactionId: string;
 }
 
+interface PendingOrderTerminalRecord {
+  product_id: string;
+  grant_status: string;
+  toss_status: string;
+}
+
+const KNOWN_IAP_PRODUCT_IDS = new Set(
+  [...Object.values(IAP_PRODUCTS), ...Object.values(B2B_IAP_PRODUCTS)].map((product) => product.product_id)
+);
+
+const TERMINAL_GRANT_STATUSES = new Set(['grant_failed', 'refunded']);
+const TERMINAL_TOSS_STATUSES = new Set(['NOT_FOUND', 'FAILED', 'REFUNDED']);
+const STALE_PENDING_SUPPRESSION_PREFIX = 'iap_stale_pending_suppress_v1';
+
+function isKnownIapProductId(productId: string): boolean {
+  return KNOWN_IAP_PRODUCT_IDS.has(productId);
+}
+
+function stalePendingSuppressionKey(userId: string): string {
+  return `${STALE_PENDING_SUPPRESSION_PREFIX}:${userId}`;
+}
+
+function stalePendingFingerprint(order: PendingOrder): string {
+  return `${order.orderId}:${order.productId}`;
+}
+
+async function loadSuppressedStalePendingOrders(userId: string): Promise<Record<string, string>> {
+  try {
+    const raw = await Storage.getItem(stalePendingSuppressionKey(userId));
+    if (!raw) return {};
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object') return {};
+    return Object.fromEntries(
+      Object.entries(parsed).filter(
+        (entry): entry is [string, string] => typeof entry[0] === 'string' && typeof entry[1] === 'string'
+      )
+    );
+  } catch {
+    return {};
+  }
+}
+
+async function rememberSuppressedStalePendingOrder(
+  userId: string,
+  order: PendingOrder,
+  reason: string,
+): Promise<void> {
+  try {
+    const current = await loadSuppressedStalePendingOrders(userId);
+    current[stalePendingFingerprint(order)] = reason;
+    await Storage.setItem(stalePendingSuppressionKey(userId), JSON.stringify(current));
+  } catch {
+    // suppression marker 실패는 non-fatal
+  }
+}
+
+async function getSuppressedStalePendingReason(
+  userId: string,
+  order: PendingOrder,
+): Promise<string | null> {
+  const suppressed = await loadSuppressedStalePendingOrders(userId);
+  return suppressed[stalePendingFingerprint(order)] ?? null;
+}
+
+async function resolveStalePendingOrderReason(
+  userId: string,
+  order: PendingOrder,
+): Promise<string | null> {
+  if (!isKnownIapProductId(order.productId)) {
+    return 'unknown_product';
+  }
+
+  const { data, error } = await supabase
+    .from('toss_orders')
+    .select('product_id, grant_status, toss_status')
+    .eq('user_id', userId)
+    .eq('toss_order_id', order.orderId)
+    .order('created_at', { ascending: false })
+    .limit(1);
+
+  if (error) {
+    console.warn('[IAP-001] stale pending lookup failed', {
+      orderId: order.orderId,
+      productId: order.productId,
+      message: error instanceof Error ? error.message : String(error),
+    });
+    return null;
+  }
+
+  const record = (Array.isArray(data) ? data[0] : null) as PendingOrderTerminalRecord | null;
+  if (!record || record.product_id !== order.productId) {
+    return null;
+  }
+  if (
+    TERMINAL_GRANT_STATUSES.has(record.grant_status) &&
+    TERMINAL_TOSS_STATUSES.has(record.toss_status)
+  ) {
+    return `${record.grant_status}:${record.toss_status}`;
+  }
+  return null;
+}
+
+async function dismissStalePendingOrder(order: PendingOrder, reason: string): Promise<void> {
+  console.warn('[IAP-001] dismissing stale pending order', {
+    orderId: order.orderId,
+    productId: order.productId,
+    reason,
+  });
+  try {
+    await IAP.completeProductGrant({ params: { orderId: order.orderId } });
+    console.log('[IAP-001] stale pending order dismissed', {
+      orderId: order.orderId,
+      productId: order.productId,
+      reason,
+    });
+  } catch (error) {
+    console.warn('[IAP-001] stale pending dismiss failed', {
+      orderId: order.orderId,
+      productId: order.productId,
+      reason,
+      message: error instanceof Error ? error.message : String(error),
+    });
+  }
+}
+
 /**
  * getPendingOrders — 미완료 주문 조회
  * 실 SDK(IAP.getPendingOrders)를 우선 조회하고, 미지원/실패 시 DB pending 이력으로 폴백한다.
  */
 export async function getPendingOrders(userId: string): Promise<PendingOrder[]> {
+  console.log('[IAP-001] getPendingOrders start', { userId });
   try {
     const pending = typeof IAP.getPendingOrders === 'function'
       ? await IAP.getPendingOrders()
       : undefined;
     if (pending?.orders?.length) {
-      return pending.orders.map((order) => ({
+      const orders = pending.orders.map((order) => ({
         orderId: order.orderId,
         productId: order.sku,
         transactionId: order.orderId,
       }));
+      console.log('[IAP-001] getPendingOrders sdk result', { count: orders.length });
+      return orders;
     }
+    console.log('[IAP-001] getPendingOrders sdk result', { count: 0 });
   } catch (error) {
-    if (__DEV__) {
-      console.warn('[IAP-001] getPendingOrders SDK failed, falling back to DB', error);
-    }
+    console.warn('[IAP-001] getPendingOrders SDK failed, falling back to DB', error);
   }
 
   const { data, error } = await supabase
@@ -344,13 +520,20 @@ export async function getPendingOrders(userId: string): Promise<PendingOrder[]> 
     .eq('grant_status', 'pending')
     .order('created_at', { ascending: true });
 
-  if (error || !data) return [];
+  if (error || !data) {
+    console.warn('[IAP-001] getPendingOrders db failed', {
+      message: error instanceof Error ? error.message : String(error),
+    });
+    return [];
+  }
 
-  return data.map((row) => ({
+  const orders = data.map((row) => ({
     orderId: row.toss_order_id ?? row.id,
     productId: row.product_id,
     transactionId: row.toss_order_id ?? row.id,
   }));
+  console.log('[IAP-001] getPendingOrders db result', { count: orders.length });
+  return orders;
 }
 
 /**
@@ -358,6 +541,10 @@ export async function getPendingOrders(userId: string): Promise<PendingOrder[]> 
  * 서버 검증/지급 후 실 SDK completeProductGrant로 Toss pending 상태를 닫는다.
  */
 export async function completeProductGrant(order: PendingOrder): Promise<boolean> {
+  console.log('[IAP-001] pending completeProductGrant start', {
+    orderId: order.orderId,
+    productId: order.productId,
+  });
   const granted = await verifyAndGrant({
     orderId: order.orderId,
     productId: order.productId,
@@ -365,13 +552,24 @@ export async function completeProductGrant(order: PendingOrder): Promise<boolean
   });
   if (granted) {
     try {
+      console.log('[IAP-001] completeProductGrant start', {
+        orderId: order.orderId,
+        productId: order.productId,
+      });
       await IAP.completeProductGrant({ params: { orderId: order.orderId } });
+      console.log('[IAP-001] completeProductGrant done', {
+        orderId: order.orderId,
+        productId: order.productId,
+      });
     } catch (error) {
-      if (__DEV__) {
-        console.warn('[IAP-001] completeProductGrant SDK failed after server grant', error);
-      }
+      console.warn('[IAP-001] completeProductGrant SDK failed after server grant', error);
     }
     tracker.iapPurchaseSuccess(order.productId);
+  } else {
+    console.warn('[IAP-001] pending completeProductGrant skipped: server grant failed', {
+      orderId: order.orderId,
+      productId: order.productId,
+    });
   }
   return granted;
 }
@@ -380,12 +578,33 @@ export async function completeProductGrant(order: PendingOrder): Promise<boolean
  * recoverPendingOrders — 앱 시작 시 미완료 주문 일괄 복구
  */
 export async function recoverPendingOrders(userId: string): Promise<number> {
+  console.log('[IAP-001] recoverPendingOrders start', { userId });
   const pending = await getPendingOrders(userId);
   let recovered = 0;
   for (const order of pending) {
+    const suppressedReason = await getSuppressedStalePendingReason(userId, order);
+    if (suppressedReason) {
+      console.log('[IAP-001] stale pending order suppressed', {
+        orderId: order.orderId,
+        productId: order.productId,
+        reason: suppressedReason,
+      });
+      continue;
+    }
+    const staleReason = await resolveStalePendingOrderReason(userId, order);
+    if (staleReason) {
+      await dismissStalePendingOrder(order, staleReason);
+      await rememberSuppressedStalePendingOrder(userId, order, staleReason);
+      continue;
+    }
     const ok = await completeProductGrant(order);
     if (ok) recovered++;
   }
+  console.log('[IAP-001] recoverPendingOrders done', {
+    userId,
+    pending: pending.length,
+    recovered,
+  });
   return recovered;
 }
 

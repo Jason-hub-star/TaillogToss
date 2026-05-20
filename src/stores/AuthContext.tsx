@@ -19,6 +19,7 @@ import { clearPersistedQueryCache, setQueryCacheOwner } from 'lib/queryPersisten
 import { queryClient } from './queryClient';
 import { clearPostLoginRedirect } from 'stores/postLoginRedirect';
 import type { AuthState, User } from 'types/auth';
+import type { AuthEntryFlow } from 'lib/api/auth';
 
 interface SessionUserLike {
   id: string;
@@ -37,14 +38,15 @@ interface AuthContextValue extends AuthState {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
-function buildUserFromSession(sessionUser: SessionUserLike): User {
+function buildUserFromSession(sessionUser: SessionUserLike, preferredFlow?: AuthEntryFlow | null): User {
   const metadata = sessionUser.user_metadata ?? {};
   const now = new Date().toISOString();
+  const sessionRole = (metadata.role as User['role']) ?? 'user';
 
   return {
     id: sessionUser.id,
     toss_user_key: String(metadata.toss_user_key ?? sessionUser.id),
-    role: (metadata.role as User['role']) ?? 'user',
+    role: preferredFlow === 'B2C' ? 'user' : sessionRole,
     status: (metadata.status as User['status']) ?? 'active',
     pepper_version: Number(metadata.pepper_version ?? 1),
     timezone: String(metadata.timezone ?? 'Asia/Seoul'),
@@ -66,6 +68,12 @@ async function getHasCompletedOnboarding(userId: string | undefined): Promise<bo
   } catch {
     return false;
   }
+}
+
+function deferAuthWork(work: () => Promise<void>) {
+  setTimeout(() => {
+    void work();
+  }, 0);
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -120,7 +128,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           return;
         }
 
-        const user = buildUserFromSession(session.user as SessionUserLike);
+        const preferredFlow = await authApi.getPreferredAuthEntryFlow();
+        const user = buildUserFromSession(session.user as SessionUserLike, preferredFlow);
         await setQueryCacheOwner(user.id);
         const hasCompletedOnboarding = await getHasCompletedOnboarding(user.id);
         if (!mounted) return;
@@ -139,20 +148,37 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     void bootstrap();
 
-    // IAP 등 앱 재진입 시 Supabase 세션 변경 이벤트 감지
-    const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
+    const syncSessionUser = async (sessionUser: SessionUserLike) => {
+      const preferredFlow = await authApi.getPreferredAuthEntryFlow();
+      const user = buildUserFromSession(sessionUser, preferredFlow);
+      await setQueryCacheOwner(user.id);
+      const hasCompletedOnboarding = await getHasCompletedOnboarding(user.id);
       if (!mounted) return;
-      if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
+      setState({ user, isAuthenticated: true, isLoading: false, hasCompletedOnboarding });
+    };
+
+    // IAP 등 앱 재진입 시 Supabase 세션 변경 이벤트 감지
+    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+      if (!mounted) return;
+      if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION' || event === 'USER_UPDATED') {
         if (session?.user) {
-          const user = buildUserFromSession(session.user as SessionUserLike);
-          await setQueryCacheOwner(user.id);
-          const hasCompletedOnboarding = await getHasCompletedOnboarding(user.id);
-          if (!mounted) return;
-          setState({ user, isAuthenticated: true, isLoading: false, hasCompletedOnboarding });
+          const applySessionState = async () => {
+            const preferredFlow = await authApi.getPreferredAuthEntryFlow();
+            const user = buildUserFromSession(session.user as SessionUserLike, preferredFlow);
+            if (!mounted) return;
+            setState((prev) => ({
+              user,
+              isAuthenticated: true,
+              isLoading: false,
+              hasCompletedOnboarding: prev.user?.id === user.id ? prev.hasCompletedOnboarding : false,
+            }));
+          };
+          void applySessionState();
+          deferAuthWork(() => syncSessionUser(session.user as SessionUserLike));
         }
       } else if (event === 'SIGNED_OUT') {
         if (mounted) {
-          await clearPersistedQueryCache();
+          void clearPersistedQueryCache();
           setState({ user: null, isAuthenticated: false, isLoading: false, hasCompletedOnboarding: false });
         }
       }

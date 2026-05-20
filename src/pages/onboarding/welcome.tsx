@@ -39,6 +39,98 @@ interface EdgeFailureMeta {
   upstreamMessage?: string;
 }
 
+const APP_LOGIN_TIMEOUT_MS = 20_000;
+const AUTH_BRIDGE_TIMEOUT_MS = 25_000;
+const SESSION_BRIDGE_TIMEOUT_MS = 15_000;
+const ONBOARDING_SYNC_TIMEOUT_MS = 10_000;
+
+async function appLoginWithTimeout(flow: 'B2B' | 'B2C') {
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
+  console.log('[AUTH-001] appLogin start', { flow });
+
+  try {
+    const result = await Promise.race([
+      appLogin(),
+      new Promise<never>((_, reject) => {
+        timeoutId = setTimeout(() => {
+          reject(new Error('APP_LOGIN_TIMEOUT'));
+        }, APP_LOGIN_TIMEOUT_MS);
+      }),
+    ]);
+    console.log('[AUTH-001] appLogin referrer', { flow, referrer: result.referrer });
+    return result;
+  } finally {
+    if (timeoutId) clearTimeout(timeoutId);
+  }
+}
+
+async function loginWithTossWithTimeout(
+  authorizationCode: string,
+  referrer: string | undefined,
+  flow: 'B2B' | 'B2C',
+) {
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
+  console.log('[AUTH-001] login-with-toss start', { flow, referrer });
+
+  try {
+    const result = await Promise.race([
+      authApi.loginWithToss(authorizationCode, referrer, flow),
+      new Promise<never>((_, reject) => {
+        timeoutId = setTimeout(() => {
+          reject(new Error('AUTH_BRIDGE_TIMEOUT'));
+        }, AUTH_BRIDGE_TIMEOUT_MS);
+      }),
+    ]);
+    console.log('[AUTH-001] login-with-toss success', { flow, userId: result.user?.id });
+    return result;
+  } finally {
+    if (timeoutId) clearTimeout(timeoutId);
+  }
+}
+
+async function setSessionWithTimeout(loginResult: Awaited<ReturnType<typeof authApi.loginWithToss>>, flow: 'B2B' | 'B2C') {
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
+  console.log('[AUTH-001] session bridge start', { flow, userId: loginResult.user?.id });
+
+  try {
+    const result = await Promise.race([
+      authApi.setSessionFromBridgeResponse(loginResult),
+      new Promise<never>((_, reject) => {
+        timeoutId = setTimeout(() => {
+          reject(new Error('SESSION_BRIDGE_TIMEOUT'));
+        }, SESSION_BRIDGE_TIMEOUT_MS);
+      }),
+    ]);
+    console.log('[AUTH-001] session bridge done', { flow, sessionEstablished: result });
+    return result;
+  } finally {
+    if (timeoutId) clearTimeout(timeoutId);
+  }
+}
+
+async function syncOnboardingWithTimeout(
+  syncOnboardingStatus: (userId: string | undefined) => Promise<boolean>,
+  userId: string,
+) {
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
+  console.log('[AUTH-001] onboarding sync start', { userId });
+
+  try {
+    const result = await Promise.race([
+      syncOnboardingStatus(userId),
+      new Promise<never>((_, reject) => {
+        timeoutId = setTimeout(() => {
+          reject(new Error('ONBOARDING_SYNC_TIMEOUT'));
+        }, ONBOARDING_SYNC_TIMEOUT_MS);
+      }),
+    ]);
+    console.log('[AUTH-001] onboarding sync success', { userId, hasCompletedOnboarding: result });
+    return result;
+  } finally {
+    if (timeoutId) clearTimeout(timeoutId);
+  }
+}
+
 function WelcomePage() {
   const { isReady } = usePageGuard({
     currentPath: '/onboarding/welcome',
@@ -87,11 +179,15 @@ function WelcomePage() {
       if (edgeMeta.upstreamMessage) return `${parts.join(' ')}: ${edgeMeta.upstreamMessage}`;
       return `${parts.join(' ')}.`;
     }
-    if (normalized.includes('cancel')) return '로그인이 취소되었어요. 다시 시도해주세요.';
-    if (normalized.includes('oauth2clientid')) return '토스 로그인 설정이 필요해요. 콘솔 설정을 확인해주세요.';
-    if (normalized.includes('schema')) return '토스 앱 스킴 열기에 실패했어요. 다시 시도해주세요.';
-    if (normalized.includes('bridge_session_not_established')) return '로그인 세션 생성에 실패했어요. 앱을 재시작해주세요.';
-    return '로그인에 실패했어요. 다시 시도해주세요.';
+    if (normalized.includes('cancel')) return '로그인을 취소했어요. 다시 시도해주세요.';
+    if (normalized.includes('oauth2clientid')) return '토스 로그인을 준비하고 있어요. 잠시 후 다시 시도해주세요.';
+    if (normalized.includes('schema')) return '토스 로그인을 열지 못했어요. 앱을 다시 열고 시도해주세요.';
+    if (normalized.includes('bridge_session_not_established')) return '로그인을 완료하지 못했어요. 앱을 다시 열고 시도해주세요.';
+    if (normalized.includes('app_login_timeout')) return '토스 로그인 응답이 늦어지고 있어요. 잠시 후 다시 시도해주세요.';
+    if (normalized.includes('auth_bridge_timeout')) return '로그인 확인이 늦어지고 있어요. 네트워크 확인 후 다시 시도해주세요.';
+    if (normalized.includes('session_bridge_timeout')) return '로그인 저장이 늦어지고 있어요. 앱을 다시 열고 시도해주세요.';
+    if (normalized.includes('onboarding_sync_timeout')) return '로그인은 완료됐어요. 홈으로 이동할게요.';
+    return '로그인을 완료하지 못했어요. 다시 시도해주세요.';
   }, [readEdgeFailureMeta]);
 
   /**
@@ -102,9 +198,10 @@ function WelcomePage() {
     setIsB2BLoading(true);
     setError(null);
     try {
-      const { authorizationCode, referrer } = await appLogin();
-      const loginResult = await authApi.loginWithToss(authorizationCode, referrer);
-      const sessionEstablished = await authApi.setSessionFromBridgeResponse(loginResult);
+      await authApi.setPreferredAuthEntryFlow('B2B');
+      const { authorizationCode, referrer } = await appLoginWithTimeout('B2B');
+      const loginResult = await loginWithTossWithTimeout(authorizationCode, referrer, 'B2B');
+      const sessionEstablished = await setSessionWithTimeout(loginResult, 'B2B');
       if (!sessionEstablished) throw new Error('BRIDGE_SESSION_NOT_ESTABLISHED');
 
       // 이미 B2B 역할이면 역할 부여 생략
@@ -139,14 +236,24 @@ function WelcomePage() {
     tracker.onboardingStarted();
 
     try {
-      const { authorizationCode, referrer } = await appLogin();
-      const loginResult = await authApi.loginWithToss(authorizationCode, referrer);
-      const sessionEstablished = await authApi.setSessionFromBridgeResponse(loginResult);
+      const { authorizationCode, referrer } = await appLoginWithTimeout('B2C');
+      const loginResult = await loginWithTossWithTimeout(authorizationCode, referrer, 'B2C');
+      const sessionEstablished = await setSessionWithTimeout(loginResult, 'B2C');
       if (!sessionEstablished) throw new Error('BRIDGE_SESSION_NOT_ESTABLISHED');
+      await authApi.setPreferredAuthEntryFlow('B2C');
+      await authApi.normalizeCurrentSessionAsB2C();
 
-      login(loginResult.user);
+      login({ ...loginResult.user, role: 'user' });
 
-      const hasCompletedOnboarding = await syncOnboardingStatus(loginResult.user.id);
+      let hasCompletedOnboarding = false;
+      try {
+        hasCompletedOnboarding = await syncOnboardingWithTimeout(syncOnboardingStatus, loginResult.user.id);
+      } catch (syncCause) {
+        console.error('[AUTH-001] onboarding sync failed', syncCause);
+        const pending = consumePostLoginRedirect();
+        navigation.navigate(pending ?? '/dashboard');
+        return;
+      }
       if (hasCompletedOnboarding) {
         const pending = consumePostLoginRedirect();
         navigation.navigate(pending ?? '/dashboard');

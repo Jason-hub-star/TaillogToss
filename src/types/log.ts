@@ -47,6 +47,8 @@ export interface BehaviorLog {
 
   // 공통 필드
   intensity: IntensityLevel;
+  occurrence_count: number | null;
+  occurrence_count_is_minimum: boolean | null;
   duration_minutes: number | null;
   location: string | null;
   memo: string | null;
@@ -73,6 +75,8 @@ export interface QuickLogInput {
   dog_id: string;
   category: QuickLogCategory | DailyActivityCategory;
   intensity: IntensityLevel;
+  occurrence_count?: number;
+  occurrence_count_is_minimum?: boolean;
   occurred_at: string;
   memo?: string;
   location?: string;
@@ -88,6 +92,8 @@ export interface DetailedLogInput {
   behavior: string;
   consequence: string;
   intensity: IntensityLevel;
+  occurrence_count?: number;
+  occurrence_count_is_minimum?: boolean;
   duration_minutes?: number;
   location?: string;
   memo?: string;

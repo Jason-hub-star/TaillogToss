@@ -446,16 +446,16 @@ function Stage3FormPage() {
       title={`${displayDogName} Pro 상담지`}
       onBack={() => navigation.goBack()}
       bottomCTA={{
-        label: submitStage3.isPending ? '저장 중...' : params.mode === 'edit' ? '저장하기' : '상담지 저장',
+        label: submitStage3.isPending ? '저장하고 있어요' : params.mode === 'edit' ? '저장하기' : '상담지 저장',
         onPress: handleSubmit,
         disabled: submitStage3.isPending,
       }}
     >
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         <View style={styles.summaryBox}>
-          <Text style={styles.summaryTitle}>고급 AI 리포트 준비도 {coreCompleted}/3</Text>
+          <Text style={styles.summaryTitle}>정밀 코칭 준비 {coreCompleted}/3</Text>
           <Text style={styles.summaryText}>
-            핵심 3섹션만 저장해도 리포트 생성 전 확인이 가능하고, 나머지는 전문가 메모처럼 천천히 보강할 수 있어요.
+            꼭 필요한 정보만 먼저 저장해도 코칭 전에 확인할 수 있어요. 나머지는 생각날 때 천천히 더해도 좋아요.
           </Text>
         </View>
 
@@ -714,7 +714,7 @@ function Stage3FormPage() {
                 />
               ))}
             </ChipGroup>
-            <TextInput style={[styles.input, styles.textArea]} value={temperamentMemo} onChangeText={setTemperamentMemo} placeholder="전문가 메모/기질 세부 관찰" placeholderTextColor={colors.textSecondary} multiline />
+            <TextInput style={[styles.input, styles.textArea]} value={temperamentMemo} onChangeText={setTemperamentMemo} placeholder="기질이나 행동을 더 적어주세요" placeholderTextColor={colors.textSecondary} multiline />
           </Section>
         </OptionalSection>
       </ScrollView>

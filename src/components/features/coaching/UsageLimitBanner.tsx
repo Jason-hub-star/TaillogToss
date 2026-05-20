@@ -19,7 +19,9 @@ export function UsageLimitBanner({ isPro, limit }: UsageLimitBannerProps) {
       <Text style={styles.text}>
         {isPro
           ? `오늘 ${limit}회 사용 완료. 내일 다시 가능해요!`
-          : '무료 한도 도달. Pro 구독으로 하루 10회 사용 가능'}
+          : limit > 1
+            ? '오늘 토큰 추가 한도까지 사용했어요. 내일 다시 가능해요'
+            : '오늘 무료 1회를 사용했어요. 토큰 충전 또는 PRO로 계속 받을 수 있어요'}
       </Text>
     </View>
   );

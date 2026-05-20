@@ -1,6 +1,6 @@
 /**
- * ProUpgradeBanner — PRO 구독 유도 시각적 카드
- * "광고 없이, 더 깊이 분석해보세요"
+ * ProUpgradeBanner — PRO 구독 유도 보조 카드
+ * academy 하단에서 추가 기능을 부드럽게 소개한다.
  * Parity: UI-001
  */
 import React from 'react';
@@ -16,18 +16,19 @@ export function ProUpgradeBanner() {
     <View style={styles.container}>
       <View style={styles.content}>
         <Image source={{ uri: ICONS['badge-pro'] }} style={styles.icon} resizeMode="contain" />
-        <Text style={styles.title}>광고 없이, 더 깊이 분석해보세요</Text>
+        <Text style={styles.eyebrow}>더 필요한 순간에 이어서 볼 수 있어요</Text>
+        <Text style={styles.title}>문제행동 분석과 추가 훈련은 PRO에서 천천히 확장할 수 있어요</Text>
         <View style={styles.benefitList}>
-          <Text style={styles.benefit}>{'•'} 광고 없이 이용</Text>
           <Text style={styles.benefit}>{'•'} 심화 인사이트 리포트</Text>
-          <Text style={styles.benefit}>{'•'} 하루 코칭 10회 (무료 3회)</Text>
+          <Text style={styles.benefit}>{'•'} 시도 이력과 추가 훈련 열기</Text>
+          <Text style={styles.benefit}>{'•'} 하루 코칭 10회까지 확장</Text>
         </View>
         <TouchableOpacity
           style={styles.ctaButton}
           onPress={() => navigation.navigate('/settings/subscription')}
           activeOpacity={0.8}
         >
-          <Text style={styles.ctaText}>PRO 시작하기</Text>
+          <Text style={styles.ctaText}>추가 기능 보기</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -40,7 +41,9 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     marginTop: spacing.sectionGap,
     marginBottom: spacing.lg,
-    backgroundColor: colors.blue900,
+    backgroundColor: colors.blue50,
+    borderWidth: 1,
+    borderColor: colors.divider,
   },
   content: {
     padding: spacing.xl,
@@ -50,10 +53,16 @@ const styles = StyleSheet.create({
     height: 32,
     marginBottom: spacing.md,
   },
+  eyebrow: {
+    ...typography.caption,
+    fontWeight: '700',
+    color: colors.primaryBlue,
+    marginBottom: spacing.xs,
+  },
   title: {
     ...typography.subtitle,
     fontWeight: '700',
-    color: colors.white,
+    color: colors.textPrimary,
     marginBottom: spacing.md,
   },
   benefitList: {
@@ -62,17 +71,21 @@ const styles = StyleSheet.create({
   },
   benefit: {
     ...typography.detail,
-    color: `${colors.white}CC`,
+    color: colors.textSecondary,
   },
   ctaButton: {
+    alignSelf: 'flex-start',
     backgroundColor: colors.white,
+    borderWidth: 1,
+    borderColor: colors.divider,
     borderRadius: spacing.md,
-    paddingVertical: spacing.lg,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
     alignItems: 'center',
   },
   ctaText: {
     ...typography.label,
     fontWeight: '700',
-    color: colors.blue900,
+    color: colors.primaryBlue,
   },
 });

@@ -47,6 +47,8 @@ function buildOptimisticLog(input: QuickLogInput): BehaviorLog {
     behavior: null,
     consequence: null,
     intensity: input.intensity,
+    occurrence_count: input.occurrence_count ?? 1,
+    occurrence_count_is_minimum: input.occurrence_count_is_minimum ?? false,
     duration_minutes: input.duration_minutes ?? null,
     location: input.location ?? null,
     memo: input.memo ?? null,

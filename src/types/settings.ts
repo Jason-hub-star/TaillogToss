@@ -33,6 +33,8 @@ export interface AiPersona {
 export interface UserSettings {
   notification_pref: NotificationPref;
   ai_persona: AiPersona;
+  marketing_agreed: boolean;
+  marketing_agreed_at?: string | null;
   language: 'ko'; // v1: 한국어 전용
 }
 

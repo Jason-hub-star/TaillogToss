@@ -201,7 +201,7 @@ function Stage2FormPage() {
       title={`${displayDogName}에 대해 더 알려줘요`}
       onBack={() => navigation.goBack()}
       bottomCTA={{
-        label: submitStage2.isPending ? '저장 중...' : 'AI 코칭 활성화',
+        label: submitStage2.isPending ? '저장하고 있어요' : 'AI 코칭 시작하기',
         onPress: handleSubmit,
         disabled: submitStage2.isPending,
       }}
@@ -230,7 +230,7 @@ function Stage2FormPage() {
             style={[styles.input, styles.mt8]}
             value={issueOther}
             onChangeText={setIssueOther}
-            placeholder="직접 입력..."
+            placeholder="직접 입력"
             placeholderTextColor={colors.textSecondary}
             maxLength={100}
           />

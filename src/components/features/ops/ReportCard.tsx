@@ -14,11 +14,11 @@ interface ReportCardProps {
 }
 
 const STATUS_CONFIG: Record<ReportStatus, { label: string; color: string; bg: string }> = {
-  pending: { label: '생성 대기', color: colors.badgeGrey, bg: colors.badgeGreyBg },
-  generating: { label: '생성 중', color: colors.badgeAmber, bg: colors.badgeAmberBg },
-  generated: { label: '생성 완료', color: colors.badgeBlue, bg: colors.badgeBlueBg },
-  failed: { label: '생성 실패', color: colors.badgeRed, bg: colors.badgeRedBg },
-  sent: { label: '발송 완료', color: colors.badgeGreen, bg: colors.badgeGreenBg },
+  pending: { label: '대기 중', color: colors.badgeGrey, bg: colors.badgeGreyBg },
+  generating: { label: '만드는 중', color: colors.badgeAmber, bg: colors.badgeAmberBg },
+  generated: { label: '완료', color: colors.badgeBlue, bg: colors.badgeBlueBg },
+  failed: { label: '다시 필요', color: colors.badgeRed, bg: colors.badgeRedBg },
+  sent: { label: '보냄', color: colors.badgeGreen, bg: colors.badgeGreenBg },
 };
 
 export function ReportCard({ report, dogName, onPress }: ReportCardProps) {

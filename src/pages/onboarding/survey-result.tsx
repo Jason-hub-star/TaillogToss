@@ -104,7 +104,7 @@ function SurveyResultPage() {
           <View style={styles.aiIcon}>
             <Image source={{ uri: ICONS['ic-coaching'] }} style={styles.aiIconImage} />
           </View>
-          <Text style={styles.resultTitle}>{dogName}의 행동 분석{'\n'}결과입니다</Text>
+          <Text style={styles.resultTitle}>{dogName}의 행동 분석{'\n'}결과예요</Text>
         </View>
 
         {/* 행동 유형 + 위험도 */}
@@ -116,7 +116,7 @@ function SurveyResultPage() {
           />
 
           <Text style={styles.summaryText}>
-            설문 기반 초기 분석입니다.{'\n'}
+            설문을 바탕으로 먼저 분석했어요.{'\n'}
             기록이 쌓이면 더 정확한 분석이 가능해요.
           </Text>
         </View>
@@ -137,7 +137,7 @@ function SurveyResultPage() {
             <View style={styles.unlockedContent}>
               <Text style={styles.detailText}>
                 {analysis.summaryParagraph}
-                {'\n'}꾸준한 기록과 맞춤 훈련을 통해 개선할 수 있습니다.
+                {'\n'}꾸준히 기록하고 훈련하면 더 좋아질 수 있어요.
               </Text>
               <Text style={styles.detailText}>
                 추천 커리큘럼: {analysis.recommendedCurriculum}{'\n'}

@@ -49,6 +49,12 @@ const defineEnv: Record<string, string> = {
 };
 
 const brandIcon = 'https://static.toss.im/appsintoss/24957/82272792-1628-40f1-abbd-fd4be9e657e0.png';
+const appPermissions = [
+  {
+    name: 'photos' as const,
+    access: 'read' as const,
+  },
+];
 
 export default defineConfig({
   appName: 'taillog-app',
@@ -67,7 +73,7 @@ export default defineConfig({
         primaryColor: '#3182F6',
         icon: brandIcon,
       },
-      permissions: [],
+      permissions: appPermissions,
     }),
   ],
 });

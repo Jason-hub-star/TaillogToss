@@ -5,6 +5,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView ,TouchableOpacity  } from 'react-native';
 import { SafeAreaView } from '@granite-js/native/react-native-safe-area-context';
+import { BackButton, BackButtonSpacer } from 'components/shared/BackButton';
 import { colors, typography, spacing } from '../../../styles/tokens';
 
 export interface DetailLayoutProps {
@@ -18,11 +19,7 @@ export function DetailLayout({ title, onBack, children, bottomCTA }: DetailLayou
   return (
     <SafeAreaView style={styles.safe}>
       <View style={styles.header}>
-        {onBack && (
-          <TouchableOpacity onPress={onBack} style={styles.backBtn}>
-            <Text style={styles.backIcon}>{'<'}</Text>
-          </TouchableOpacity>
-        )}
+        {onBack ? <BackButton onPress={onBack} /> : <BackButtonSpacer />}
         <Text style={styles.title}>{title}</Text>
         <View style={styles.spacer} />
       </View>
@@ -50,10 +47,8 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: colors.divider,
   },
-  backBtn: { paddingRight: spacing.md },
-  backIcon: { ...typography.sectionTitle, color: colors.textDark },
   title: { ...typography.subtitle, fontWeight: '600', color: colors.textPrimary, flex: 1, textAlign: 'center' },
-  spacer: { width: 32 },
+  spacer: { width: 40 },
   body: { flex: 1 },
   content: { paddingHorizontal: spacing.screenHorizontal, paddingTop: spacing.screenHorizontal, paddingBottom: 100 },
   bottomBar: {

@@ -72,10 +72,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: colors.surfaceTertiary,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
     marginHorizontal: 20,
-    marginTop: 12,
+    marginTop: 8,
     borderRadius: 10,
   },
   badgeImg: {

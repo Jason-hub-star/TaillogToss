@@ -5,6 +5,7 @@
 import React, { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, ScrollView ,TouchableOpacity  } from 'react-native';
 import { SafeAreaView } from '@granite-js/native/react-native-safe-area-context';
+import { BackButton, BackButtonSpacer } from 'components/shared/BackButton';
 import { colors, typography, spacing } from '../../../styles/tokens';
 
 export interface FormLayoutProps {
@@ -26,11 +27,7 @@ export function FormLayout({ title, step, onBack, children, bottomCTA }: FormLay
   return (
     <SafeAreaView style={styles.safe}>
       <View style={styles.header}>
-        {onBack && (
-          <TouchableOpacity onPress={onBack} style={styles.backBtn}>
-            <Text style={styles.backIcon}>{'<'}</Text>
-          </TouchableOpacity>
-        )}
+        {onBack ? <BackButton onPress={onBack} /> : <BackButtonSpacer />}
         <Text style={styles.title}>{title}</Text>
         {step && <Text style={styles.stepText}>{step.current}/{step.total}</Text>}
       </View>
@@ -72,8 +69,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.screenHorizontal,
     paddingVertical: spacing.md,
   },
-  backBtn: { paddingRight: spacing.md },
-  backIcon: { ...typography.sectionTitle, color: colors.textDark },
   title: { ...typography.subtitle, fontWeight: '600', color: colors.textPrimary, flex: 1 },
   stepText: { ...typography.detail, color: colors.textSecondary },
   progressBar: {

@@ -29,7 +29,11 @@
   - [x] BUG-05: `DailyReport.behavior_summary` Text→JSONB, `highlight_photo_urls` JSONB→ARRAY(String)
   - [x] pytest 74→75 passed (JSONB 회귀 테스트 추가)
 - [x] ✅ **로컬 E2E 개발모드 완전 검증** — Wave 1~9 전체 기록 완료 (2026-05-19)
-- [ ] 🔴 **실기기 E2E 통합 검증** — 23화면 + 핵심 플로우 실기기 테스트 (최신 AIT 배포 후)
+- [ ] 🔴 **실기기 E2E 통합 검증** — 23화면 + 핵심 플로우 실기기 테스트 (**검증예정** 2026-05-19, ADB R3CXB0QH0LY 연결됨)
+  - [ ] dev 모드 20개 화면 adb screencap 루프 (AIT 불필요 화면)
+  - [ ] AIT 전용 3개 — 실Toss로그인(`/onboarding/welcome`), 광고render(`/dashboard`·`/training/academy`·`/training/detail`), IAP(`/settings/subscription`)
+  - [ ] PRELAUNCH-QA 8개 핫픽스 실기기 재확인 (LOCAL PASS → 기기 미검증)
+  - [ ] QR 테스트 최소 1회 (심사 요청 버튼 활성화 조건)
 - [x] ~~🔴 **번들 크기 100MB 미만 확인**~~ — ✅ 4.9MB (100MB 한도 대비 5%)
 - [x] ~~🟠 **Ads SDK 콜백 패턴 리팩토링**~~ — ✅ `loadFullScreenAd`/`showFullScreenAd` 이벤트 콜백 경로 확인 (2026-05-12)
 - [x] ~~🟠 **IAP `completeProductGrant()` 호출 누락**~~ — ✅ 서버 grant 성공 후 `completeProductGrant()` 호출 확인 (2026-05-12)
@@ -52,8 +56,8 @@
 - [x] `/onboarding/survey-result` — UI-001 | 2026-04-02
 - [x] `/onboarding/notification` — APP-001 | 2026-04-20
 - [x] `/dashboard` — UIUX-001 | 2026-03-01
-- [x] `/dashboard/quick-log` — LOG-001 | 2026-03-01
-- [x] `/dashboard/analysis` — UIUX-001 | 2026-03-02
+- [x] `/dashboard/quick-log` — LOG-001 | 2026-05-19 (QA hotfix: intensity/occurrence/time UX)
+- [x] `/dashboard/analysis` — UIUX-001 | 2026-05-19 (QA hotfix: Korean labels/occurrence charts/share)
 - [x] `/coaching/result` — UIUX-005, AI-001 | 2026-04-20
 - [x] `/training/academy` — UIUX-002, UIUX-003 | 2026-03-01
 - [x] `/training/detail` — UIUX-005 | 2026-04-20

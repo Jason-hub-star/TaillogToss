@@ -33,7 +33,7 @@ export function DaySummarySheet({ visible, dayNumber, reactions, isLastDay, onNe
 
   return (
     <Modal visible={visible} transparent animationType="fade">
-      <ModalLayout title={`Day ${dayNumber} 완료!`}>
+      <ModalLayout title={`${dayNumber}일차를 마쳤어요`}>
         <View style={styles.content}>
           <View style={styles.lottieWrap}>
             <LottieAnimation asset="cute-doggie" size={100} loop={false} />
@@ -58,7 +58,7 @@ export function DaySummarySheet({ visible, dayNumber, reactions, isLastDay, onNe
           )}
 
           <TouchableOpacity style={styles.nextButton} onPress={onNext} activeOpacity={0.8}>
-            <Text style={styles.nextText}>{isLastDay ? '미션 완료!' : '다음 Day로'}</Text>
+            <Text style={styles.nextText}>{isLastDay ? '미션 완료!' : '다음 날로'}</Text>
           </TouchableOpacity>
         </View>
       </ModalLayout>

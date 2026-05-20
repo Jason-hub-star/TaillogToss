@@ -8,7 +8,7 @@ import { View, Text, TouchableOpacity, StyleSheet, Modal, Alert, Image } from 'r
 import { ModalLayout } from 'components/shared/layouts/ModalLayout';
 import { usePurchaseIAP } from 'lib/hooks/useSubscription';
 import { ICONS } from 'lib/data/iconSources';
-import { IAP_PRODUCTS } from 'types/subscription';
+import { IAP_PRODUCTS, formatKRW, getDiscountPercent } from 'types/subscription';
 import { colors, typography, spacing } from 'styles/tokens';
 
 interface Props {
@@ -20,11 +20,12 @@ const BENEFITS = [
   { icon: ICONS['ic-analysis'], text: '심화 인사이트 리포트' },
   { icon: ICONS['badge-pro'], text: '광고 없이 이용' },
   { icon: ICONS['ic-report'], text: '시도 이력 상세 조회' },
-  { icon: ICONS['ic-coaching'], text: '하루 코칭 10회 (무료 3회)' },
-  { icon: ICONS['ic-training'], text: '훈련 Plan B/C 전체 접근' },
+  { icon: ICONS['ic-coaching'], text: '하루 코칭 10회 (무료 1회)' },
+  { icon: ICONS['ic-training'], text: '다양한 훈련 방법 모두 이용' },
 ];
 
 const proProduct = IAP_PRODUCTS.PRO_MONTHLY!;
+const proDiscount = getDiscountPercent(proProduct);
 
 export function ProUpgradeSheet({ visible, onClose }: Props) {
   const purchaseMutation = usePurchaseIAP();
@@ -38,14 +39,14 @@ export function ProUpgradeSheet({ visible, onClose }: Props) {
         setIsPurchasing(false);
         if (granted) {
           onClose();
-          Alert.alert('구독 완료', 'PRO 구독이 시작되었어요!');
+          Alert.alert('구독 완료', 'PRO를 시작했어요!');
         } else {
-          Alert.alert('결제 실패', '결제 처리 중 문제가 발생했습니다. 다시 시도해주세요.');
+          Alert.alert('결제를 완료하지 못했어요', '잠시 후 다시 시도해주세요.');
         }
       },
       onError: () => {
         setIsPurchasing(false);
-        Alert.alert('결제 실패', '결제 처리 중 문제가 발생했습니다. 다시 시도해주세요.');
+        Alert.alert('결제를 완료하지 못했어요', '잠시 후 다시 시도해주세요.');
       },
     });
   };
@@ -55,10 +56,16 @@ export function ProUpgradeSheet({ visible, onClose }: Props) {
       <ModalLayout title="PRO 전용 기능" onClose={onClose}>
         <View style={styles.content}>
           <Image source={{ uri: ICONS['badge-pro'] }} style={styles.icon} resizeMode="contain" />
-          <Text style={styles.title}>PRO 구독으로 더 깊이 분석하세요</Text>
+          <Text style={styles.title}>PRO로 더 자세히 볼 수 있어요</Text>
 
           <View style={styles.priceRow}>
-            <Text style={styles.price}>₩{proProduct.price.toLocaleString()}</Text>
+            {proProduct.list_price && (
+              <Text style={styles.listPrice}>{formatKRW(proProduct.list_price)}</Text>
+            )}
+            {proDiscount !== null && (
+              <Text style={styles.discountText}>{proDiscount}% 할인</Text>
+            )}
+            <Text style={styles.price}>{formatKRW(proProduct.price)}</Text>
             <Text style={styles.period}>/월</Text>
           </View>
 
@@ -78,7 +85,7 @@ export function ProUpgradeSheet({ visible, onClose }: Props) {
             disabled={isPurchasing}
           >
             <Text style={styles.ctaText}>
-              {isPurchasing ? '처리 중...' : 'PRO 시작하기'}
+              {isPurchasing ? '처리하고 있어요' : 'PRO 시작하기'}
             </Text>
           </TouchableOpacity>
 
@@ -111,7 +118,22 @@ const styles = StyleSheet.create({
   priceRow: {
     flexDirection: 'row',
     alignItems: 'flex-end',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    gap: 6,
     marginBottom: spacing.xl,
+  },
+  listPrice: {
+    ...typography.detail,
+    color: colors.grey400,
+    textDecorationLine: 'line-through',
+    marginBottom: 4,
+  },
+  discountText: {
+    ...typography.badge,
+    fontWeight: '700',
+    color: colors.orange700,
+    marginBottom: 5,
   },
   price: {
     ...typography.heroTitle,

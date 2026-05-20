@@ -86,7 +86,7 @@ function DogSwitcherPage() {
 
           {!canAdd && (
             <Text style={styles.limitHint}>
-              {isPro ? '최대 5마리까지 등록할 수 있어요' : 'PRO 구독으로 최대 5마리까지 등록하세요'}
+              {isPro ? '최대 5마리까지 등록할 수 있어요' : 'PRO로 최대 5마리까지 등록할 수 있어요'}
             </Text>
           )}
         </>

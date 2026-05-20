@@ -5,7 +5,7 @@
  * Parity: UI-001
  */
 import { logsToSmartBar, logsToWeeklyBar, logsToMonthlyBar } from '../transformers';
-import { computeTrainingEffects, buildAnalysisShareText } from '../filters';
+import { computeTrainingEffects, buildAnalysisShareText, countByCategory } from '../filters';
 import type { BehaviorLog } from 'types/log';
 import type { TrainingProgress } from 'types/training';
 
@@ -22,6 +22,8 @@ function makeLog(overrides: Partial<BehaviorLog> = {}): BehaviorLog {
     behavior: null,
     consequence: null,
     intensity: 5 as BehaviorLog['intensity'],
+    occurrence_count: 1,
+    occurrence_count_is_minimum: false,
     duration_minutes: null,
     location: null,
     memo: null,
@@ -123,6 +125,27 @@ describe('G. WeeklyBar/MonthlyBar 상세', () => {
     const total = result.datasets[0]!.data.reduce((a, b) => a + b, 0);
     expect(total).toBe(6);
   });
+
+  test('7-1. 횟수 기록은 집계에 반영', () => {
+    const logs = [
+      makeLog({ occurred_at: daysAgo(1), occurrence_count: 5, occurrence_count_is_minimum: true }),
+      makeLog({ occurred_at: daysAgo(1), occurrence_count: 2 }),
+    ];
+    const result = logsToSmartBar(logs, 7);
+    const total = result.data.datasets[0]!.data.reduce((a, b) => a + b, 0);
+    expect(total).toBe(7);
+  });
+
+  test('7-2. 미등록 카테고리 fallback은 영어 키를 노출하지 않는다', () => {
+    const result = countByCategory([
+      makeLog({ quick_category: null, type_id: 'manual' }),
+      makeLog({ quick_category: null, type_id: 'unknown_code' }),
+      makeLog({ quick_category: null, daily_activity: 'grooming' }),
+    ]);
+
+    expect(result.map((item) => item.label)).toEqual(expect.arrayContaining(['직접 기록', '기타', '미용']));
+    expect(result.map((item) => item.label)).not.toEqual(expect.arrayContaining(['manual', 'unknown_code', 'grooming']));
+  });
 });
 
 // ──────────────────────────────────────────────
@@ -213,7 +236,7 @@ describe('I. buildAnalysisShareText', () => {
 
     expect(text).toContain('메이');
     expect(text).toContain('전체');
-    expect(text).toContain('40건');
+    expect(text).toContain('40회');
     expect(text).toContain('짖음/울음');
     expect(text).toContain('14회');
     expect(text).toContain('↓40%');
@@ -233,7 +256,7 @@ describe('I. buildAnalysisShareText', () => {
     });
 
     expect(text).toContain('댕댕이');
-    expect(text).toContain('0건');
+    expect(text).toContain('0회');
     expect(text).not.toContain('[주요 행동]');
     expect(text).not.toContain('[훈련 현황]');
   });

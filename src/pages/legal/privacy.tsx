@@ -4,8 +4,9 @@
  */
 import { createRoute, useNavigation } from '@granite-js/react-native';
 import React from 'react';
-import { View, Text, ScrollView, StyleSheet ,TouchableOpacity  } from 'react-native';
+import { View, Text, ScrollView, StyleSheet } from 'react-native';
 import { SafeAreaView } from '@granite-js/native/react-native-safe-area-context';
+import { BackButton, BackButtonSpacer } from 'components/shared/BackButton';
 import { colors, typography } from 'styles/tokens';
 
 export const Route = createRoute('/legal/privacy', {
@@ -19,11 +20,9 @@ function LegalPrivacyPage() {
   return (
     <SafeAreaView style={styles.safe}>
       <View style={styles.navbar}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Text style={styles.backText}>{'←'}</Text>
-        </TouchableOpacity>
+        <BackButton onPress={() => navigation.goBack()} />
         <Text style={styles.navTitle}>개인정보 수집·이용 동의</Text>
-        <View style={styles.backButton} />
+        <BackButtonSpacer />
       </View>
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
         <Text style={styles.meta}>최종 수정일: 2026년 2월 27일 | 시행일: 2026년 2월 27일</Text>
@@ -111,8 +110,6 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: colors.surfaceTertiary,
   },
-  backButton: { width: 40 },
-  backText: { ...typography.sectionTitle, color: colors.grey950 },
   navTitle: { ...typography.body, fontWeight: '600', color: colors.grey950 },
   scroll: { flex: 1 },
   content: { padding: 20, paddingBottom: 48 },

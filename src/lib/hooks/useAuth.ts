@@ -11,12 +11,14 @@ export function useLogin() {
 
   const loginWithToss = useCallback(
     async (authCode: string) => {
-      const result = await authApi.loginWithToss(authCode);
+      const result = await authApi.loginWithToss(authCode, undefined, 'B2C');
       const sessionEstablished = await authApi.setSessionFromBridgeResponse(result);
       if (!sessionEstablished) {
         throw new Error('BRIDGE_SESSION_NOT_ESTABLISHED');
       }
-      login(result.user);
+      await authApi.setPreferredAuthEntryFlow('B2C');
+      await authApi.normalizeCurrentSessionAsB2C();
+      login({ ...result.user, role: 'user' });
       return result;
     },
     [login]

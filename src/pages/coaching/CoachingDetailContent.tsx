@@ -41,6 +41,7 @@ export interface CoachingDetailContentProps {
   isGenerating: boolean;
   generateError: string | null;
   usage?: { used: number; limit: number } | null;
+  isLatestTab: boolean;
   selectedSituations: string[];
   onSituationToggle: (id: string) => void;
   userContext: string;
@@ -62,6 +63,7 @@ export function CoachingDetailContent({
   isGenerating,
   generateError,
   usage,
+  isLatestTab,
   selectedSituations,
   onSituationToggle,
   userContext,
@@ -144,7 +146,7 @@ export function CoachingDetailContent({
       {/* AI 생성물 명시 */}
       <View style={styles.aiDisclaimer}>
         <Text style={styles.aiDisclaimerText}>
-          이 코칭 결과는 AI가 생성한 내용으로, 전문 수의사 또는 훈련사의 조언을 대체하지 않습니다.
+          이 코칭 결과는 AI가 만든 내용이라, 전문 수의사나 훈련사의 조언을 대신하지는 않아요.
         </Text>
       </View>
 
@@ -157,7 +159,7 @@ export function CoachingDetailContent({
         </View>
       ) : feedbackSubmitted ? (
         <View style={styles.feedbackSection}>
-          <Text style={styles.feedbackThankTitle}>피드백 감사합니다!</Text>
+          <Text style={styles.feedbackThankTitle}>피드백 고마워요</Text>
           <Text style={styles.feedbackThankDesc}>
             {'★'.repeat(selectedScore)}{'☆'.repeat(5 - selectedScore)} 더 나은 코칭을 위해 반영할게요
           </Text>
@@ -182,10 +184,10 @@ export function CoachingDetailContent({
         </View>
       )}
 
-      {/* 새 코칭 생성 */}
+      {/* 새 코칭 생성 — 최신 탭에서만 표시 */}
       <View style={styles.regenerateSection}>
-        {/* 오늘의 상황 입력 (한도 미도달 시에만 표시) */}
-        {!isLimitReached && (
+        {/* 오늘의 상황 입력 (최신 탭 + 한도 미도달 시에만) */}
+        {isLatestTab && !isLimitReached && (
           <>
             <CoachingPersonalizationBadge
               dogName={activeDog?.name ?? '강아지'}
@@ -203,12 +205,12 @@ export function CoachingDetailContent({
         )}
 
         {/* 한도 배너 */}
-        {isLimitReached && (
+        {isLatestTab && isLimitReached && (
           <UsageLimitBanner isPro={isPro} limit={usage!.limit} />
         )}
 
-        {/* 버튼: 한도 초과 무료 → Pro CTA / 한도 초과 Pro → 안내 / 정상 → 새 코칭 받기 */}
-        {isLimitReached && !isPro ? (
+        {/* 버튼: 최신+한도초과+무료 → Pro CTA / 최신+한도초과+Pro → 내일안내 / 최신+정상 → 새 코칭 받기 */}
+        {isLatestTab && isLimitReached && !isPro ? (
           <TouchableOpacity
             style={styles.proCtaButton}
             onPress={onNavigateToSubscription}
@@ -217,7 +219,11 @@ export function CoachingDetailContent({
             <Text style={styles.proCtaButtonText}>✨ PRO로 무제한 코칭 받기</Text>
             <Text style={styles.proCtaButtonSub}>하루 최대 10회</Text>
           </TouchableOpacity>
-        ) : !isLimitReached ? (
+        ) : isLatestTab && isLimitReached && isPro ? (
+          <View style={styles.proLimitInfo}>
+            <Text style={styles.proLimitInfoText}>오늘 코칭을 모두 사용했어요. 내일 다시 가능해요 🌙</Text>
+          </View>
+        ) : isLatestTab && !isLimitReached ? (
           <TouchableOpacity
             style={[styles.regenerateButton, isGenerating && styles.regenerateButtonDisabled]}
             onPress={onGenerate}
@@ -225,7 +231,7 @@ export function CoachingDetailContent({
             disabled={isGenerating}
           >
             <Text style={styles.regenerateButtonText}>
-              {isGenerating ? '생성 중...' : '새 코칭 받기'}
+              {isGenerating ? '생성하고 있어요' : '새 코칭 받기'}
             </Text>
           </TouchableOpacity>
         ) : null}
@@ -447,6 +453,15 @@ const styles = StyleSheet.create({
     color: colors.white,
     opacity: 0.8,
     marginTop: 2,
+  },
+  proLimitInfo: {
+    alignItems: 'center',
+    paddingVertical: spacing.md,
+  },
+  proLimitInfoText: {
+    ...typography.bodySmall,
+    color: colors.textSecondary,
+    textAlign: 'center',
   },
   usageTextSmall: {
     ...typography.caption,

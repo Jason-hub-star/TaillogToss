@@ -139,7 +139,7 @@ const styles = StyleSheet.create({
     ...typography.bodySmall,
     color: colors.textPrimary,
     minHeight: 72,
-    textAlignVertical: 'top',
+    paddingTop: 0,
   },
   charCount: {
     ...typography.caption,

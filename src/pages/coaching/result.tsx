@@ -242,7 +242,7 @@ function CoachingResultPage() {
       <DetailLayout title="AI 행동 진단" onBack={handleBack}>
         <ErrorState
           title="코칭 결과를 불러올 수 없어요"
-          description="네트워크를 확인하고 다시 시도해 주세요"
+          description="네트워크를 확인하고 다시 시도해주세요"
           onRetry={() => void refetch()}
         />
       </DetailLayout>
@@ -263,7 +263,7 @@ function CoachingResultPage() {
         <View style={styles.errorContainer}>
           <Image source={{ uri: ICONS['ic-coaching'] }} style={styles.errorIcon} resizeMode="contain" />
           <Text style={styles.errorTitle}>{generateError}</Text>
-          <Text style={styles.errorDesc}>잠시 후 다시 시도해 주세요</Text>
+          <Text style={styles.errorDesc}>잠시 후 다시 시도해주세요</Text>
           <TouchableOpacity
             style={styles.retryButton}
             onPress={handleGenerate}
@@ -288,7 +288,7 @@ function CoachingResultPage() {
           <View style={styles.emptyContainer}>
             <EmptyState
               title="아직 코칭 결과가 없어요"
-              description="행동 기록을 기반으로 AI가 맞춤 코칭을 제공합니다"
+              description="행동 기록을 바탕으로 AI가 맞춤 코칭을 보여드려요"
               iconSource={ICONS['illust-empty-coaching']}
             />
             <TouchableOpacity
@@ -378,6 +378,7 @@ function CoachingResultPage() {
             isGenerating={generateCoaching.isPending}
             generateError={generateError}
             usage={usage}
+            isLatestTab={activeTab === 'latest' && !selectedHistoryCoaching}
             selectedSituations={selectedSituations}
             onSituationToggle={handleSituationToggle}
             userContext={userContext}

@@ -128,7 +128,10 @@ async def generate_coaching(
                 logger.warning("budget.record_cost (AI fallback) failed: %s", e)
             analytics_metadata = {"log_count": total_logs, "analysis_days": 30, "top_behavior": None}
 
-    # 5. DB 저장
+    # 5. FREE 기본 한도 초과분은 토큰팩에서 1회 차감 후 DB 저장
+    await budget.consume_token_for_extra_free_coaching(db, str(dog.user_id))
+
+    # 6. DB 저장
     coaching = AICoaching(
         dog_id=dog_id,
         report_type=request.report_type,
@@ -138,7 +141,7 @@ async def generate_coaching(
     db.add(coaching)
     await db.flush()
 
-    # 6. 훈련 후보 품질 태깅 (비동기 — 실패해도 코칭 응답에 영향 없음)
+    # 7. 훈련 후보 품질 태깅 (비동기 — 실패해도 코칭 응답에 영향 없음)
     try:
         from app.features.coaching.training import tag_training_candidate
         await tag_training_candidate(db, coaching)

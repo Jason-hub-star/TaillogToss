@@ -14,6 +14,10 @@ from uuid import UUID
 
 from app.shared.models import AICoaching, AICostUsageDaily, AICostUsageMonthly, Dog
 
+FREE_DAILY_COACHING_LIMIT = 1
+PRO_DAILY_COACHING_LIMIT = 10
+MAX_TOKEN_DAILY_EXTENSION = 7
+
 
 def compute_dedupe_key(dog_id: str, window_days: int, issue: str, summary_hash: str) -> str:
     """중복제거 키 생성 (SHA-256)"""
@@ -71,7 +75,7 @@ async def check_user_burst_limit(db: AsyncSession, user_id: str) -> bool:
 async def check_user_daily_limit(db: AsyncSession, user_id: str) -> tuple[bool, int, int]:
     """사용자 일일 제한 확인 — 구독 차등 적용.
     Returns: (is_allowed, used_count, daily_limit)
-    FREE: 3회/일 (토큰팩 잔여 시 추가 가능)
+    FREE: 1회/일 (토큰팩 잔여 시 추가 가능)
     PRO: 10회/일 (서버 비용 보호)
     """
     from app.shared.models import Subscription
@@ -102,14 +106,56 @@ async def check_user_daily_limit(db: AsyncSession, user_id: str) -> tuple[bool, 
     has_tokens = sub and (sub.ai_tokens_remaining or 0) > 0
 
     if is_pro:
-        daily_limit = 10
+        daily_limit = PRO_DAILY_COACHING_LIMIT
     elif has_tokens:
-        # FREE + 토큰팩 보유: 기본 3 + 토큰 잔여 허용
-        daily_limit = 3 + min((sub.ai_tokens_remaining or 0), 7)
+        # FREE + 토큰팩 보유: 기본 1 + 토큰 잔여 허용
+        daily_limit = FREE_DAILY_COACHING_LIMIT + min(
+            (sub.ai_tokens_remaining or 0),
+            MAX_TOKEN_DAILY_EXTENSION,
+        )
     else:
-        daily_limit = 3
+        daily_limit = FREE_DAILY_COACHING_LIMIT
 
     return count < daily_limit, count, daily_limit
+
+
+async def consume_token_for_extra_free_coaching(db: AsyncSession, user_id: str) -> bool:
+    """FREE 기본 1회를 넘긴 AI 코칭 생성에 토큰 1개를 차감한다.
+
+    PRO 사용자는 토큰을 차감하지 않는다. 호출 시점은 코칭 생성 성공 직후,
+    AICoaching row insert 전이어야 오늘 사용량 count가 현재 생성분을 포함하지 않는다.
+    """
+    from app.shared.models import Subscription
+
+    KST = timezone(timedelta(hours=9))
+    today_kst = datetime.now(KST).date()
+    today_start = datetime.combine(today_kst, datetime.min.time(), tzinfo=KST)
+
+    daily_q = (
+        select(func.count())
+        .select_from(AICoaching)
+        .join(Dog, Dog.id == AICoaching.dog_id)
+        .where(
+            Dog.user_id == UUID(user_id),
+            AICoaching.created_at >= today_start,
+        )
+    )
+    count = (await db.execute(daily_q)).scalar() or 0
+    if count < FREE_DAILY_COACHING_LIMIT:
+        return False
+
+    sub_q = select(Subscription).where(Subscription.user_id == UUID(user_id))
+    sub = (await db.execute(sub_q)).scalar_one_or_none()
+    if not sub:
+        return False
+
+    is_pro = sub.plan_type.value in ("PRO_MONTHLY", "PRO_YEARLY") and sub.is_active
+    if is_pro or (sub.ai_tokens_remaining or 0) <= 0:
+        return False
+
+    sub.ai_tokens_remaining = max(0, (sub.ai_tokens_remaining or 0) - 1)
+    await db.flush()
+    return True
 
 
 async def record_cost(

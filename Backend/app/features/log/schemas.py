@@ -14,6 +14,8 @@ class QuickLogCreate(BaseModel):
     dog_id: UUID
     category: str  # QuickLogCategory | DailyActivityCategory
     intensity: int = Field(..., ge=1, le=10)
+    occurrence_count: int = Field(1, ge=1)
+    occurrence_count_is_minimum: bool = False
     occurred_at: datetime
     memo: Optional[str] = None
     location: Optional[str] = None
@@ -28,6 +30,8 @@ class DetailedLogCreate(BaseModel):
     behavior: str
     consequence: str
     intensity: int = Field(..., ge=1, le=10)
+    occurrence_count: int = Field(1, ge=1)
+    occurrence_count_is_minimum: bool = False
     duration_minutes: Optional[int] = None
     location: Optional[str] = None
     memo: Optional[str] = None
@@ -37,6 +41,8 @@ class DetailedLogCreate(BaseModel):
 class LogUpdate(BaseModel):
     """행동 기록 부분 수정"""
     intensity: Optional[int] = Field(None, ge=1, le=10)
+    occurrence_count: Optional[int] = Field(None, ge=1)
+    occurrence_count_is_minimum: Optional[bool] = None
     antecedent: Optional[str] = None
     behavior: Optional[str] = None
     consequence: Optional[str] = None
@@ -56,6 +62,8 @@ class LogResponse(BaseModel):
     behavior: Optional[str] = None
     consequence: Optional[str] = None
     intensity: int
+    occurrence_count: Optional[int] = 1
+    occurrence_count_is_minimum: Optional[bool] = False
     duration_minutes: Optional[int] = None
     location: Optional[str] = None
     memo: Optional[str] = None

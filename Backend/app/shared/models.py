@@ -299,6 +299,8 @@ class BehaviorLog(Base):
     behavior = Column(Text)
     consequence = Column(Text)
     intensity = Column(Integer)
+    occurrence_count = Column(Integer, default=1)
+    occurrence_count_is_minimum = Column(Boolean, default=False)
     duration_minutes = Column(Integer)
     location = Column(String(255))
     memo = Column(Text)

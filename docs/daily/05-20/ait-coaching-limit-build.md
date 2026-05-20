@@ -26,16 +26,17 @@
 
 - Command: `node_modules/.bin/ait build`
 - Result: PASS
-- Latest deployment ID embedded in artifact: `019e42f0-841c-7952-a119-b44c58e35bee`
-- Artifact: `taillog-app-019e42f0-841c-7952-a119-b44c58e35bee.ait`
-- SHA256: `248280593fefde92d7f6dbb53ecf9cffba78720943dcd560ec64b6a0d1c7fa6f`
+- Latest deployment ID embedded in artifact: `019e431b-e775-7044-ab90-96d92933e91e`
+- Artifact: `taillog-app-019e431b-e775-7044-ab90-96d92933e91e.ait`
+- SHA256: `6f97723c5a521a33ad4fb1e3793419affb91c73cbf4a420dbfea86dab87295f5`
 - Size: ~16 MB
 - RN builds: `0.84.0` and `0.72.6`, both `0 errors / 0 warnings`
 
 ## Bundle Scan
 
 - [x] Supabase markers present
-- [x] Railway production backend marker present
+- [x] DigitalOcean production backend marker present
+- [x] Railway production backend marker absent: `0`
 - [x] HTTPS Toss brand icon marker present
 - [x] Local brand icon path leak: `0`
 - [x] Brand icon data URI marker: `0`
@@ -51,13 +52,12 @@
 - [x] `Backend/venv/bin/python -m py_compile Backend/app/features/coaching/budget.py Backend/app/features/coaching/service.py Backend/app/features/coaching/router.py Backend/app/features/subscription/router.py`
 - [x] Scoped `git diff --check`
 - [x] Local ADB/Meto/FastAPI proof from previous pass: `/api/v1/coaching/usage/daily` reached local FastAPI 200 and UI showed `오늘 0/1회 사용`
-- [x] AIT upload PASS: `intoss-private://taillog-app?_deploymentId=019e42f0-841c-7952-a119-b44c58e35bee`
+- [x] AIT upload PASS: `intoss-private://taillog-app?_deploymentId=019e431b-e775-7044-ab90-96d92933e91e`
 - [x] Metro-off ADB launch PASS: actual Toss app `viva.republica.toss/im.toss.rn.granite.core.GraniteActivity`
-- [x] logcat PASS: `Bundle loading completed successfully`, `Running "shared"`, `[AIT-BUILD] taillog-startup-perf-20260511-1545`
-- [x] Dashboard render proof captured: `/tmp/taillog-qa/ait-019e42f0-dashboard.png`
+- [x] logcat PASS: `[AIT-BUILD] taillog-startup-perf-20260511-1545`, `first_paint_boundary=798ms`, `api_dashboard_backend_done=3202ms`
+- [x] Dashboard render proof captured: `/tmp/taillog-qa/ait-019e431b-do-retry.png`
 
 ## Blocked
 
-- Railway backend deploy is still blocked locally: `railway` OAuth refresh fails and no linked project/token is available in the shell.
-- Production backend URL currently returns Railway fallback `404 Application not found` for `/health`.
-- AIT can launch and render via cached/Supabase fallback, but FastAPI-backed calls log `BACKEND_404` until Railway is restored and redeployed with `FREE_DAILY_COACHING_LIMIT = 1`.
+- Railway remains unavailable, but it is no longer the active production backend for AIT.
+- DigitalOcean App Platform is the current active backend. Monitor 512 MB memory/runtime logs before deciding whether to upgrade to `apps-s-1vcpu-1gb-fixed`.

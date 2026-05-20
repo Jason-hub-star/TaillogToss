@@ -99,6 +99,7 @@ async def generate_coaching(
                 previous_coaching_summary=prev_summary,
                 onboarding_context=onboarding_ctx,
                 ai_persona=ai_persona,
+                user_context=request.user_context or None,
             )
             result = await openai_client.generate(
                 prompts.SYSTEM_PROMPT_6BLOCK, user_prompt,

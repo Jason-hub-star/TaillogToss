@@ -1,6 +1,6 @@
 /**
  * CoachingDetailContent — 코칭 상세 콘텐츠 (최신/히스토리 공용)
- * result.tsx에서 분리. 6블록 + 인사이트 CTA + 피드백 + 재생성
+ * result.tsx에서 분리. 6블록 + 인사이트 CTA + 피드백 + 재생성 + 상황 입력
  * Parity: AI-001
  */
 import React from 'react';
@@ -8,6 +8,8 @@ import { View, Text, Image, StyleSheet, TouchableOpacity } from 'react-native';
 import { colors, typography, spacing } from 'styles/tokens';
 import { CoachingBlockList } from 'components/features/coaching/CoachingBlockList';
 import { UsageLimitBanner } from 'components/features/coaching/UsageLimitBanner';
+import { CoachingPersonalizationBadge } from 'components/features/coaching/CoachingPersonalizationBadge';
+import { CoachingContextInput } from 'components/features/coaching/CoachingContextInput';
 import { RewardedAdButton } from 'components/shared/ads/RewardedAdButton';
 import { ICONS } from 'lib/data/iconSources';
 import type { CoachingResult } from 'types/coaching';
@@ -39,6 +41,10 @@ export interface CoachingDetailContentProps {
   isGenerating: boolean;
   generateError: string | null;
   usage?: { used: number; limit: number } | null;
+  selectedSituations: string[];
+  onSituationToggle: (id: string) => void;
+  userContext: string;
+  onUserContextChange: (text: string) => void;
 }
 
 export function CoachingDetailContent({
@@ -56,9 +62,13 @@ export function CoachingDetailContent({
   isGenerating,
   generateError,
   usage,
+  selectedSituations,
+  onSituationToggle,
+  userContext,
+  onUserContextChange,
 }: CoachingDetailContentProps) {
-  const completedCount = coaching.blocks.action_plan.items.filter((i) => i.is_completed).length;
-  const totalCount = coaching.blocks.action_plan.items.length;
+  const completedCount = (coaching.blocks.action_plan?.items ?? []).filter((i) => i.is_completed).length;
+  const totalCount = coaching.blocks.action_plan?.items?.length ?? 0;
   const trend = coaching.blocks.insight.trend;
   const existingFeedback = coaching.feedback_score;
   const isLimitReached = usage != null && usage.used >= usage.limit;
@@ -121,9 +131,12 @@ export function CoachingDetailContent({
           onPress={onNavigateToSubscription}
           activeOpacity={0.8}
         >
-          <Text style={styles.insightCTAText}>
-            7일 플랜 + 위험신호 분석 + 전문가 상담 잠금 해제
-          </Text>
+          <View style={styles.insightCTACopy}>
+            <Text style={styles.insightCTATitle}>PRO로 더 정밀하게 보기</Text>
+            <Text style={styles.insightCTADesc}>
+              무료 코칭은 일반 설문과 기록 기반이에요. 상담지까지 반영하면 7일 플랜, 위험신호, 전문가 질문을 함께 볼 수 있어요.
+            </Text>
+          </View>
           <Text style={styles.insightCTAArrow}>›</Text>
         </TouchableOpacity>
       )}
@@ -171,19 +184,52 @@ export function CoachingDetailContent({
 
       {/* 새 코칭 생성 */}
       <View style={styles.regenerateSection}>
+        {/* 오늘의 상황 입력 (한도 미도달 시에만 표시) */}
+        {!isLimitReached && (
+          <>
+            <CoachingPersonalizationBadge
+              dogName={activeDog?.name ?? '강아지'}
+              hasUserContext={selectedSituations.length > 0 || userContext.trim().length > 0}
+            />
+            <CoachingContextInput
+              isPro={isPro}
+              selectedSituations={selectedSituations}
+              onSituationToggle={onSituationToggle}
+              userContext={userContext}
+              onUserContextChange={onUserContextChange}
+              disabled={isGenerating}
+            />
+          </>
+        )}
+
+        {/* 한도 배너 */}
         {isLimitReached && (
           <UsageLimitBanner isPro={isPro} limit={usage!.limit} />
         )}
-        <TouchableOpacity
-          style={[styles.regenerateButton, isLimitReached && styles.regenerateButtonDisabled]}
-          onPress={onGenerate}
-          activeOpacity={0.7}
-          disabled={isGenerating || isLimitReached}
-        >
-          <Text style={[styles.regenerateButtonText, isLimitReached && styles.regenerateButtonDisabledText]}>
-            {isGenerating ? '생성 중...' : '새 코칭 받기'}
-          </Text>
-        </TouchableOpacity>
+
+        {/* 버튼: 한도 초과 무료 → Pro CTA / 한도 초과 Pro → 안내 / 정상 → 새 코칭 받기 */}
+        {isLimitReached && !isPro ? (
+          <TouchableOpacity
+            style={styles.proCtaButton}
+            onPress={onNavigateToSubscription}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.proCtaButtonText}>✨ PRO로 무제한 코칭 받기</Text>
+            <Text style={styles.proCtaButtonSub}>하루 최대 10회</Text>
+          </TouchableOpacity>
+        ) : !isLimitReached ? (
+          <TouchableOpacity
+            style={[styles.regenerateButton, isGenerating && styles.regenerateButtonDisabled]}
+            onPress={onGenerate}
+            activeOpacity={0.7}
+            disabled={isGenerating}
+          >
+            <Text style={styles.regenerateButtonText}>
+              {isGenerating ? '생성 중...' : '새 코칭 받기'}
+            </Text>
+          </TouchableOpacity>
+        ) : null}
+
         {usage && (
           <Text style={styles.usageTextSmall}>
             오늘 {usage.used}/{usage.limit}회 사용
@@ -290,11 +336,19 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm,
     marginBottom: spacing.sm,
   },
-  insightCTAText: {
+  insightCTACopy: {
     flex: 1,
+  },
+  insightCTATitle: {
     ...typography.bodySmall,
     fontWeight: '700',
     color: colors.primaryBlue,
+  },
+  insightCTADesc: {
+    ...typography.caption,
+    color: colors.textSecondary,
+    lineHeight: 18,
+    marginTop: 3,
   },
   insightCTAArrow: {
     ...typography.sectionTitle,
@@ -354,12 +408,12 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   regenerateSection: {
-    alignItems: 'center',
-    paddingVertical: spacing.lg,
+    paddingTop: spacing.lg,
     borderTopWidth: 1,
     borderTopColor: colors.divider,
   },
   regenerateButton: {
+    alignSelf: 'center',
     borderWidth: 1,
     borderColor: colors.primaryBlue,
     paddingVertical: 10,
@@ -375,13 +429,30 @@ const styles = StyleSheet.create({
     color: colors.primaryBlue,
     fontWeight: '600',
   },
-  regenerateButtonDisabledText: {
-    color: colors.textSecondary,
+  proCtaButton: {
+    backgroundColor: colors.primaryBlue,
+    borderRadius: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 24,
+    alignItems: 'center',
+    marginBottom: spacing.xs,
+  },
+  proCtaButtonText: {
+    ...typography.body,
+    fontWeight: '700',
+    color: colors.white,
+  },
+  proCtaButtonSub: {
+    ...typography.caption,
+    color: colors.white,
+    opacity: 0.8,
+    marginTop: 2,
   },
   usageTextSmall: {
     ...typography.caption,
     color: colors.textSecondary,
     marginTop: spacing.xs,
+    textAlign: 'center',
   },
   generateErrorText: {
     ...typography.caption,

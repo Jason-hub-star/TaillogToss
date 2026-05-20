@@ -94,6 +94,7 @@ class CoachingRequest(BaseModel):
     dog_id: str
     report_type: str = "DAILY"  # DAILY | WEEKLY | INSIGHT
     window_days: int = 7  # 분석 기간 (7, 15, 30일)
+    user_context: Optional[str] = Field(None, max_length=600)  # 보호자 직접 입력 상황
 
 
 class CoachingResponse(BaseModel):
@@ -148,7 +149,7 @@ class ActionTrackerResponse(BaseModel):
 
 class DailyUsageResponse(BaseModel):
     used: int = 0
-    limit: int = 3
+    limit: int = 1
 
 
 # AI 코치 1:1 질문 (Pro 전용)

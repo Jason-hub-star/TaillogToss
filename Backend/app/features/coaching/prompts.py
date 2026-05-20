@@ -83,6 +83,7 @@ def build_user_prompt(
     previous_coaching_summary: str | None = None,
     onboarding_context: dict | None = None,
     ai_persona: dict | None = None,
+    user_context: str | None = None,
 ) -> str:
     """사용자 프롬프트 생성
 
@@ -105,6 +106,15 @@ Previous Coaching Summary (for continuity):
 Reference previous trends and note improvements or regressions.
 """
 
+    user_context_section = ""
+    if user_context:
+        user_context_section = f"""
+Today's Special Situation (directly reported by the owner):
+{user_context}
+
+Treat this as the PRIMARY context for today's coaching. Include at least one action_plan item directly addressing this situation. If it relates to an existing issue, cross-reference with intake data.
+"""
+
     return f"""Dog Profile:
 - Name: {dog_name}
 - Breed: {breed}
@@ -117,7 +127,7 @@ Report Type: {report_type}
 
 Behavior Analytics:
 {behavior_analytics}
-{persona_section}{onboarding_section}{prev_section}
+{persona_section}{onboarding_section}{prev_section}{user_context_section}
 Generate the 6-block coaching report in Korean (존댓말, 요체)."""
 
 

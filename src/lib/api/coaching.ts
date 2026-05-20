@@ -11,6 +11,7 @@ import type { CoachingResult, ActionTracker, ReportType } from 'types/coaching';
 export interface GenerateCoachingRequest {
   dog_id: string;
   report_type?: ReportType;
+  user_context?: string;
 }
 
 export interface GenerateCoachingError {
@@ -24,13 +25,13 @@ export interface GenerateCoachingError {
 export async function generateCoaching(
   dogId: string,
   reportType: ReportType = 'DAILY',
+  userContext?: string,
 ): Promise<CoachingResult> {
+  const body: GenerateCoachingRequest = { dog_id: dogId, report_type: reportType };
+  if (userContext?.trim()) body.user_context = userContext.trim();
   return requestBackend<CoachingResult, GenerateCoachingRequest>(
     '/api/v1/coaching/generate',
-    {
-      method: 'POST',
-      body: { dog_id: dogId, report_type: reportType },
-    },
+    { method: 'POST', body },
   );
 }
 
@@ -43,7 +44,7 @@ export function parseCoachingError(error: unknown): GenerateCoachingError {
   if (status === 429) {
     return {
       status: 429,
-      remaining: (detail?.remaining as number) ?? 0,
+      remaining: (detail?.remaining as number) ?? (detail?.daily_limit as number) ?? 0,
       retryAfterSec: (detail?.retry_after_sec as number) ?? 60,
       message: '일일 코칭 한도에 도달했어요',
     };

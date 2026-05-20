@@ -62,8 +62,33 @@ function CoachingResultPage() {
   const [selectedScore, setSelectedScore] = useState<number>(0);
   const [feedbackSubmitted, setFeedbackSubmitted] = useState(false);
   const [generateError, setGenerateError] = useState<string | null>(null);
+  const [selectedSituations, setSelectedSituations] = useState<string[]>([]);
+  const [userContext, setUserContext] = useState('');
   const trackedRequestRef = useRef(false);
   const trackedCoachingIdRef = useRef<string | null>(null);
+
+  const handleSituationToggle = useCallback((id: string) => {
+    setSelectedSituations((prev) =>
+      prev.includes(id) ? prev.filter((s) => s !== id) : [...prev, id],
+    );
+  }, []);
+
+  const buildUserContext = useCallback((): string | undefined => {
+    const parts: string[] = [];
+    if (selectedSituations.length > 0) {
+      const LABELS: Record<string, string> = {
+        walk_pulling: '산책 중 줄 당김',
+        stranger_barking: '낯선 사람 방문 시 짖음',
+        other_dog: '다른 강아지 만남',
+        separation: '혼자 있을 때 불안',
+        resource_guarding: '음식 독점 / 자원 지킴',
+        training_focus: '훈련 집중 어려움',
+      };
+      parts.push(`오늘 발생한 상황: ${selectedSituations.map((id) => LABELS[id] ?? id).join(', ')}`);
+    }
+    if (userContext.trim()) parts.push(userContext.trim());
+    return parts.length > 0 ? parts.join('\n') : undefined;
+  }, [selectedSituations, userContext]);
 
   const displayCoaching = activeTab === 'history' && selectedHistoryCoaching
     ? selectedHistoryCoaching
@@ -104,21 +129,27 @@ function CoachingResultPage() {
     setGenerateError(null);
     setActiveTab('latest');
     setSelectedHistoryCoaching(null);
+    const ctx = buildUserContext();
     generateCoaching.mutate(
-      { dogId: activeDog.id },
+      { dogId: activeDog.id, userContext: ctx },
       {
+        onSuccess: () => {
+          // 생성 후 인풋 초기화
+          setSelectedSituations([]);
+          setUserContext('');
+        },
         onError: (err) => {
           const parsed = parseCoachingError(err);
           setGenerateError(parsed.message);
         },
       },
     );
-  }, [activeDog?.id, generateCoaching]);
+  }, [activeDog?.id, generateCoaching, buildUserContext]);
 
   const handleToggleActionItem = useCallback(
     (actionItemId: string) => {
       if (!displayCoaching || !activeDog?.id) return;
-      const item = displayCoaching.blocks.action_plan.items.find((i) => i.id === actionItemId);
+      const item = displayCoaching.blocks.action_plan?.items?.find((i) => i.id === actionItemId);
       if (!item) return;
       toggleAction.mutate({
         coachingId: displayCoaching.id,
@@ -168,8 +199,8 @@ function CoachingResultPage() {
       trend: displayCoaching.blocks.insight.trend,
       reportType: displayCoaching.report_type,
       keyPatterns: displayCoaching.blocks.insight.key_patterns,
-      completedCount: displayCoaching.blocks.action_plan.items.filter((i) => i.is_completed).length,
-      totalCount: displayCoaching.blocks.action_plan.items.length,
+      completedCount: (displayCoaching.blocks.action_plan?.items ?? []).filter((i) => i.is_completed).length,
+      totalCount: displayCoaching.blocks.action_plan?.items?.length ?? 0,
     });
     tracker.coachingShared(displayCoaching.report_type);
     void Share.share({ message });
@@ -246,7 +277,7 @@ function CoachingResultPage() {
   }
 
   if (!coaching) {
-    const dailyLimit = isPro ? 10 : 3;
+    const dailyLimit = usage?.limit ?? (isPro ? 10 : 1);
     const dailyUsed = usage?.used ?? 0;
     const remaining = Math.max(0, dailyLimit - dailyUsed);
 
@@ -347,6 +378,10 @@ function CoachingResultPage() {
             isGenerating={generateCoaching.isPending}
             generateError={generateError}
             usage={usage}
+            selectedSituations={selectedSituations}
+            onSituationToggle={handleSituationToggle}
+            userContext={userContext}
+            onUserContextChange={setUserContext}
           />
         </>
       )}

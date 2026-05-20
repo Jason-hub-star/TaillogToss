@@ -41,15 +41,18 @@ export function useSubmitFeedback() {
 export function useGenerateCoaching() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ dogId, reportType }: { dogId: string; reportType?: ReportType }) =>
-      coachingApi.generateCoaching(dogId, reportType),
+    mutationFn: ({
+      dogId,
+      reportType,
+      userContext,
+    }: {
+      dogId: string;
+      reportType?: ReportType;
+      userContext?: string;
+    }) => coachingApi.generateCoaching(dogId, reportType, userContext),
     onSuccess: (data, variables) => {
-      // 최신 코칭 캐시 즉시 업데이트
-      qc.setQueryData(
-        queryKeys.coaching.latest(variables.dogId),
-        data,
-      );
-      // 목록/전체 캐시 무효화
+      qc.setQueryData(queryKeys.coaching.latest(variables.dogId), data);
+      // coaching.all prefix 무효화 — dailyUsage 포함
       void qc.invalidateQueries({ queryKey: queryKeys.coaching.all });
     },
   });
@@ -82,7 +85,7 @@ export function useToggleActionItem() {
             ...previous.blocks,
             action_plan: {
               ...previous.blocks.action_plan,
-              items: previous.blocks.action_plan.items.map((item) =>
+              items: (previous.blocks.action_plan?.items ?? []).map((item) =>
                 item.id === variables.actionItemId
                   ? { ...item, is_completed: variables.isCompleted }
                   : item,

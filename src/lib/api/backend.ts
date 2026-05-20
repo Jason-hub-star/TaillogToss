@@ -6,7 +6,7 @@
 import { supabase } from './supabase';
 import { NativeModules } from 'react-native';
 
-const PUBLIC_BACKEND_URL = 'https://taillogtoss-backend-production.up.railway.app';
+const PUBLIC_BACKEND_URL = 'https://taillogtoss-backend-l35lj.ondigitalocean.app';
 const DEV_LOOPBACK_BACKEND_URL = 'http://127.0.0.1:8765';
 
 function resolveBackendUrl(): string {

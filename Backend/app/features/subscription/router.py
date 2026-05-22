@@ -17,6 +17,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import settings
 from app.core.database import get_db
 from app.core.security import get_current_user_id
+from app.features.subscription.entitlements import resolve_effective_pro
 from app.shared.models import Subscription, TossOrder
 
 router = APIRouter()
@@ -33,8 +34,42 @@ class SubscriptionResponse(BaseModel):
     next_billing_date: Optional[datetime | date] = None
     created_at: datetime
     updated_at: datetime
+    effective_is_pro: bool = False
+    effective_pro_source: Optional[str] = None
+    effective_pro_expires_at: Optional[datetime | date] = None
 
     model_config = ConfigDict(from_attributes=True)
+
+
+async def build_subscription_response(
+    db: AsyncSession,
+    user_id: str,
+    subscription: Subscription | None,
+) -> SubscriptionResponse | None:
+    state = await resolve_effective_pro(db, user_id, subscription=subscription)
+    if not subscription and not state.entitlement:
+        return None
+
+    if subscription:
+        response = SubscriptionResponse.model_validate(subscription)
+    else:
+        entitlement = state.entitlement
+        response = SubscriptionResponse(
+            id=entitlement.id,
+            user_id=entitlement.user_id,
+            plan_type="FREE",
+            is_active=False,
+            ai_tokens_remaining=0,
+            ai_tokens_total=0,
+            next_billing_date=None,
+            created_at=entitlement.created_at,
+            updated_at=entitlement.updated_at,
+        )
+
+    response.effective_is_pro = state.is_pro
+    response.effective_pro_source = state.source
+    response.effective_pro_expires_at = state.expires_at
+    return response
 
 
 class OrderHistoryResponse(BaseModel):
@@ -56,9 +91,7 @@ async def get_subscription(
     """현재 구독 상태 조회"""
     q = select(Subscription).where(Subscription.user_id == UUID(user_id))
     result = (await db.execute(q)).scalars().first()
-    if not result:
-        return None
-    return SubscriptionResponse.model_validate(result)
+    return await build_subscription_response(db, user_id, result)
 
 
 @router.get("/orders", response_model=list[OrderHistoryResponse])

@@ -20,6 +20,7 @@ import { usePageGuard } from 'lib/hooks/usePageGuard';
 import { ErrorState } from 'components/tds-ext';
 import { SkeletonBox } from 'components/tds-ext/SkeletonBox';
 import { useCurrentSubscription, useIsPro, usePurchaseIAP, useRestoreSubscription } from 'lib/hooks/useSubscription';
+import { useContactsViralReward } from 'lib/hooks/useContactsViralReward';
 import {
   IAP_PRODUCTS,
   DOG_LIMITS,
@@ -92,6 +93,12 @@ function TokenPrice({ product }: { product: IAPProduct }) {
   );
 }
 
+function formatDateTime(value: string): string {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value.slice(0, 16);
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+}
+
 function SubscriptionPage() {
   const navigation = useNavigation();
   const { user } = useAuth();
@@ -101,6 +108,9 @@ function SubscriptionPage() {
   const purchaseMutation = usePurchaseIAP();
   const restoreMutation = useRestoreSubscription();
   const [purchasingId, setPurchasingId] = useState<string | null>(null);
+  const shareReward = useContactsViralReward({
+    onGranted: () => void refetch(),
+  });
 
   const handlePurchase = useCallback((productId: string) => {
     setPurchasingId(productId);
@@ -186,6 +196,11 @@ function SubscriptionPage() {
               다음 결제일: {subscription.next_billing_date.slice(0, 10)}
             </Text>
           )}
+          {isPro && subscription?.effective_pro_source === 'pro_day_pass' && subscription.effective_pro_expires_at && (
+            <Text style={styles.billingDate}>
+              PRO 1일권 만료: {formatDateTime(subscription.effective_pro_expires_at)}
+            </Text>
+          )}
           {!isPro && subscription && subscription.ai_tokens_remaining > 0 && (
             <Text style={styles.tokenInfo}>
               AI 토큰 잔여: {subscription.ai_tokens_remaining}회
@@ -233,6 +248,26 @@ function SubscriptionPage() {
             )}
           </View>
         )}
+
+        {/* contactsViral PRO 1일권 */}
+        <View style={styles.rewardCard}>
+          <View style={styles.rewardCopy}>
+            <Text style={styles.rewardTitle}>친구에게 공유하고 PRO 1일권 받기</Text>
+            <Text style={styles.rewardDescription}>
+              공유 완료 이벤트가 확인되면 초대한 계정에 PRO 기능이 24시간 열려요.
+            </Text>
+          </View>
+          <TouchableOpacity
+            style={[styles.rewardButton, (shareReward.isSharing || !!purchasingId) && styles.buttonDisabled]}
+            onPress={shareReward.startContactsViralReward}
+            disabled={shareReward.isSharing || !!purchasingId}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.rewardButtonText}>
+              {shareReward.isSharing ? '공유 확인 중' : '공유하고 받기'}
+            </Text>
+          </TouchableOpacity>
+        </View>
 
         {/* 토큰 팩 */}
         <Text style={styles.sectionTitle}>AI 토큰 충전</Text>
@@ -502,4 +537,39 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   devBypassText: { ...typography.caption, fontWeight: '700', color: colors.white },
+
+  /* 공유 리워드 */
+  rewardCard: {
+    backgroundColor: colors.surfaceSecondary,
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 28,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  rewardCopy: {
+    marginBottom: 14,
+  },
+  rewardTitle: {
+    ...typography.label,
+    fontWeight: '700',
+    color: colors.textDark,
+    marginBottom: 6,
+  },
+  rewardDescription: {
+    ...typography.caption,
+    color: colors.grey600,
+    lineHeight: 18,
+  },
+  rewardButton: {
+    backgroundColor: colors.textPrimary,
+    borderRadius: 12,
+    paddingVertical: 14,
+    alignItems: 'center',
+  },
+  rewardButtonText: {
+    ...typography.label,
+    fontWeight: '700',
+    color: colors.white,
+  },
 });

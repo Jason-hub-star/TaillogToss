@@ -29,7 +29,7 @@ import type { BehaviorLog } from 'types/log';
 import { colors, typography, spacing } from 'styles/tokens';
 import { useAuth } from 'stores/AuthContext';
 import { isB2BRole } from 'stores/OrgContext';
-import { useIsPro } from 'lib/hooks/useSubscription';
+import { useProStatus } from 'lib/hooks/useSubscription';
 import { useDailyUsage } from 'lib/hooks/useCoaching';
 import { BannerAd } from 'components/shared/ads';
 import { usePageDataPerformance } from 'lib/performance/usePageDataPerformance';
@@ -75,9 +75,10 @@ function DashboardPage() {
   const { user } = useAuth();
   const { isReady } = usePageGuard({ currentPath: '/dashboard' });
   const isB2B = isB2BRole(user?.role);
-  const isPro = useIsPro(user?.id);
+  const { isPro, isEntitlementResolved } = useProStatus(user?.id);
   const { data: dailyUsageData } = useDailyUsage(user?.id);
   const dailyLimit = dailyUsageData?.limit ?? (isPro ? 10 : 1);
+  const shouldShowDashboardAd = isEntitlementResolved && !isPro;
 
   const today = useMemo(() => toLocalDateKey(new Date()), []);
   const {
@@ -221,7 +222,7 @@ function DashboardPage() {
         <StreakBanner logs={recentLogs} streakOverride={dashboardData?.stats.current_streak} />
 
         {/* B1: 배너 광고 — 무료 사용자 대시보드 홈 */}
-        {!isPro && <BannerAd placement="B1" />}
+        {shouldShowDashboardAd && <BannerAd placement="B1" />}
 
         {dashboardLoading && !dashboardData && <SkeletonDashboard />}
 

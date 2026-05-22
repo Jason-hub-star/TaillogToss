@@ -31,6 +31,7 @@ from app.shared.models import (
     TossOrder,
     TrainingBehaviorSnapshot,
     User,
+    UserEntitlement,
     UserSettings,
     UserTrainingStatus,
     AiCostUsageOrg,
@@ -54,6 +55,7 @@ def test_b2c_tables_exist():
         "ai_recommendation_snapshots", "ai_recommendation_feedback",
         "ai_cost_usage_daily", "ai_cost_usage_monthly",
         "training_behavior_snapshots",
+        "user_entitlements",
     ]
     for name in b2c_expected:
         assert name in tables, f"Missing B2C table: {name}"
@@ -109,6 +111,17 @@ def test_case_intake_model_fields():
         "status", "version", "sections", "behavior_episodes", "created_at", "updated_at",
     }
     assert expected.issubset(columns), f"Missing CaseIntake fields: {expected - columns}"
+
+
+def test_user_entitlement_model_fields():
+    """contactsViral PRO 1일권 entitlement 모델 필드."""
+    columns = {c.name for c in UserEntitlement.__table__.columns}
+    expected = {
+        "id", "user_id", "type", "source", "source_module_id",
+        "starts_at", "expires_at", "metadata", "created_at", "updated_at",
+    }
+    assert expected.issubset(columns), f"Missing UserEntitlement fields: {expected - columns}"
+    assert isinstance(UserEntitlement.__table__.columns["metadata"].type, JSONB)
 
 
 def test_coaching_synthetic_log_ids_match_uuid_array_migration():

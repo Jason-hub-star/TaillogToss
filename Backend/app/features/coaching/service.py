@@ -802,17 +802,14 @@ async def ask_coach(
     request: schemas.CoachingQuestionRequest,
 ) -> schemas.CoachingQuestionResponse:
     """Pro 전용 AI 코치 1:1 질문 — Dog+DogEnv+로그 100건 풀 컨텍스트"""
+    from app.features.subscription.entitlements import resolve_effective_pro
     from app.shared.models import CoachingQuestion, Subscription
 
     # 1. Pro 구독 확인
     sub_q = select(Subscription).where(Subscription.user_id == UUID(user_id))
     sub = (await db.execute(sub_q)).scalar_one_or_none()
-    is_pro = (
-        sub is not None
-        and sub.plan_type.value in ("PRO_MONTHLY", "PRO_YEARLY")
-        and sub.is_active
-    )
-    if not is_pro:
+    effective_pro = await resolve_effective_pro(db, user_id, subscription=sub)
+    if not effective_pro.is_pro:
         from app.core.exceptions import ForbiddenException
         raise ForbiddenException("AI 코치 질문은 Pro 구독 전용 기능이에요")
 

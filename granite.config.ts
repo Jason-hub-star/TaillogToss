@@ -46,6 +46,9 @@ const defineEnv: Record<string, string> = {
   'process.env.AIT_AD_I1': JSON.stringify(getEnv('AIT_AD_I1')),
   'process.env.EXPO_PUBLIC_BACKEND_URL': JSON.stringify(getEnv('EXPO_PUBLIC_BACKEND_URL')),
   'process.env.EXPO_PUBLIC_SHOW_DEV_MENU': JSON.stringify(getEnv('EXPO_PUBLIC_SHOW_DEV_MENU')),
+  'process.env.EXPO_PUBLIC_CONTACTS_VIRAL_PRO_DAY_PASS_MODULE_ID': JSON.stringify(
+    getEnv('EXPO_PUBLIC_CONTACTS_VIRAL_PRO_DAY_PASS_MODULE_ID'),
+  ),
 };
 
 const brandIcon = 'https://static.toss.im/appsintoss/24957/82272792-1628-40f1-abbd-fd4be9e657e0.png';

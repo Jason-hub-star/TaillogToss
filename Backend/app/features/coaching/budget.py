@@ -82,6 +82,7 @@ async def check_user_daily_limit(
     FREE: 1회/일 (토큰팩 잔여 시 추가 가능)
     PRO: 10회/일 (서버 비용 보호)
     """
+    from app.features.subscription.entitlements import resolve_effective_pro
     from app.shared.models import Subscription
 
     KST = timezone(timedelta(hours=9))
@@ -110,11 +111,12 @@ async def check_user_daily_limit(
         count += active_count
 
     # 구독 상태 조회 → 제한 분기
-    sub_q = select(Subscription).where(Subscription.user_id == user_id)
+    sub_q = select(Subscription).where(Subscription.user_id == UUID(user_id))
     sub_result = await db.execute(sub_q)
     sub = sub_result.scalar_one_or_none()
 
-    is_pro = sub and sub.plan_type.value in ("PRO_MONTHLY", "PRO_YEARLY") and sub.is_active
+    effective_pro = await resolve_effective_pro(db, user_id, subscription=sub)
+    is_pro = effective_pro.is_pro
     has_tokens = sub and (sub.ai_tokens_remaining or 0) > 0
 
     if is_pro:
@@ -137,6 +139,7 @@ async def consume_token_for_extra_free_coaching(db: AsyncSession, user_id: str) 
     PRO 사용자는 토큰을 차감하지 않는다. 호출 시점은 코칭 생성 성공 직후,
     AICoaching row insert 전이어야 오늘 사용량 count가 현재 생성분을 포함하지 않는다.
     """
+    from app.features.subscription.entitlements import resolve_effective_pro
     from app.shared.models import Subscription
 
     KST = timezone(timedelta(hours=9))
@@ -161,7 +164,8 @@ async def consume_token_for_extra_free_coaching(db: AsyncSession, user_id: str) 
     if not sub:
         return False
 
-    is_pro = sub.plan_type.value in ("PRO_MONTHLY", "PRO_YEARLY") and sub.is_active
+    effective_pro = await resolve_effective_pro(db, user_id, subscription=sub)
+    is_pro = effective_pro.is_pro
     if is_pro or (sub.ai_tokens_remaining or 0) <= 0:
         return False
 

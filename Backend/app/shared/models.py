@@ -218,6 +218,7 @@ class User(Base):
     # Relationships
     dogs = relationship("Dog", back_populates="user", cascade="all, delete-orphan")
     subscription = relationship("Subscription", back_populates="user", uselist=False, cascade="all, delete-orphan")
+    entitlements = relationship("UserEntitlement", back_populates="user", cascade="all, delete-orphan")
     settings = relationship("UserSettings", back_populates="user", uselist=False, cascade="all, delete-orphan")
 
 
@@ -236,6 +237,30 @@ class Subscription(Base):
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
     user = relationship("User", back_populates="subscription")
+
+
+class UserEntitlement(Base):
+    """사용자 임시 권한 — contactsViral PRO 1일권 등 비구독 PRO 권한"""
+    __tablename__ = "user_entitlements"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid4)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    type = Column(String(50), nullable=False)
+    source = Column(String(50), nullable=False)
+    source_module_id = Column(String(255))
+    starts_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    expires_at = Column(DateTime(timezone=True), nullable=False)
+    meta = Column("metadata", JSONB, nullable=False, default=dict)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+    user = relationship("User", back_populates="entitlements")
+
+    __table_args__ = (
+        CheckConstraint("type IN ('PRO_DAY_PASS')", name="ck_user_entitlements_type"),
+        CheckConstraint("source IN ('contacts_viral')", name="ck_user_entitlements_source"),
+        Index("idx_user_entitlements_active", "user_id", "type", "expires_at"),
+    )
 
 
 class Dog(Base):

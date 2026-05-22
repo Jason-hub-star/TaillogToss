@@ -80,6 +80,7 @@ if settings.BACKEND_CORS_ORIGINS:
 # report.ts   → /api/v1/report
 # onboarding  → /api/v1/onboarding
 # dashboard   → /api/v1/dashboard
+# referral    → /api/v1/referral
 # ──────────────────────────────────────
 
 from app.features.auth.router import router as auth_router
@@ -95,6 +96,7 @@ from app.features.notification.router import router as notification_router
 from app.features.org.router import router as org_router
 from app.features.report.router import router as report_router
 from app.features.analytics.router import router as analytics_router
+from app.features.referral.router import router as referral_router
 
 prefix = settings.API_V1_STR
 
@@ -107,6 +109,7 @@ app.include_router(coaching_router, prefix=f"{prefix}/coaching", tags=["coaching
 app.include_router(training_router, prefix=f"{prefix}/training", tags=["training"])
 app.include_router(settings_router, prefix=f"{prefix}/settings", tags=["settings"])
 app.include_router(subscription_router, prefix=f"{prefix}/subscription", tags=["subscription"])
+app.include_router(referral_router, prefix=f"{prefix}/referral", tags=["referral"])
 app.include_router(notification_router, prefix=f"{prefix}/notification", tags=["notification"])
 app.include_router(org_router, prefix=f"{prefix}/org", tags=["org"])
 app.include_router(report_router, prefix=f"{prefix}/report", tags=["report"])

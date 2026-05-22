@@ -132,10 +132,21 @@ function mapBackendOrder(userId: string, row: BackendOrderHistory): TossOrder {
   };
 }
 
+function normalizeSubscription(row: Subscription | null): Subscription | null {
+  if (!row) return null;
+  const paidPro = row.is_active && (row.plan_type === 'PRO_MONTHLY' || row.plan_type === 'PRO_YEARLY');
+  return {
+    ...row,
+    effective_is_pro: row.effective_is_pro ?? paidPro,
+    effective_pro_source: row.effective_pro_source ?? (paidPro ? 'paid_subscription' : null),
+    effective_pro_expires_at: row.effective_pro_expires_at ?? null,
+  };
+}
+
 /** 현재 구독 상태 */
 export async function getSubscription(userId: string): Promise<Subscription | null> {
-  return withBackendFallback(
-    () => requestBackend<Subscription | null>('/api/v1/subscription/'),
+  const row = await withBackendFallback(
+    async () => normalizeSubscription(await requestBackend<Subscription | null>('/api/v1/subscription/')),
     async () => {
       const { data, error } = await supabase
         .from('subscriptions')
@@ -143,9 +154,10 @@ export async function getSubscription(userId: string): Promise<Subscription | nu
         .eq('user_id', userId)
         .single();
       if (error && error.code !== 'PGRST116') throw error;
-      return data as Subscription | null;
+      return normalizeSubscription(data as Subscription | null);
     },
   );
+  return row;
 }
 
 /** IAP 구매 검증 (Edge Function) */

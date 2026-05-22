@@ -17,6 +17,7 @@ def test_all_routers_registered():
         "/api/v1/training",
         "/api/v1/settings",
         "/api/v1/subscription",
+        "/api/v1/referral",
         "/api/v1/notification",
         "/api/v1/org",
         "/api/v1/report",
@@ -59,6 +60,7 @@ def test_openapi_paths():
     assert "/api/v1/coaching/admin/training-candidates" in paths
     assert "/api/v1/coaching/admin/training-candidates/{coaching_id}/candidate-payload" in paths
     assert "/api/v1/coaching/admin/training-candidates/{coaching_id}/review" in paths
+    assert "/api/v1/referral/reward/contacts-viral" in paths
     assert "/api/v1/report/share/verify-parent-phone" in paths
 
 

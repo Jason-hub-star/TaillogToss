@@ -35,6 +35,10 @@ class Settings(BaseSettings):
     SUPABASE_ANON_KEY: str
     SUPABASE_SERVICE_ROLE_KEY: str | None = None
 
+    # contactsViral 공유 리워드 — PRO 1일권
+    CONTACTS_VIRAL_PRO_DAY_PASS_MODULE_ID: str = ""
+    CONTACTS_VIRAL_PRO_DAY_PASS_DAYS: int = 1
+
     # Admin API (내부 자동화 전용 — X-Admin-Key 헤더)
     ADMIN_API_KEY: str = ""
 

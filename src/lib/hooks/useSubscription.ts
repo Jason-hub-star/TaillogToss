@@ -28,12 +28,29 @@ export function useCurrentSubscription(userId: string | undefined, options?: { e
 }
 
 export function useIsPro(userId: string | undefined) {
-  const { data } = useCurrentSubscription(userId);
+  return useProStatus(userId).isPro;
+}
+
+export function useProStatus(userId: string | undefined) {
+  const query = useCurrentSubscription(userId);
   if (isDevToolsEnabled()) {
     const override = getDevPlanOverride();
-    if (override !== null) return override === 'PRO_MONTHLY';
+    if (override !== null) {
+      return {
+        ...query,
+        isPro: override === 'PRO_MONTHLY',
+        isEntitlementResolved: true,
+      };
+    }
   }
-  return data?.plan_type === 'PRO_MONTHLY' && data?.is_active;
+  const paidSubscriptionPro =
+    (query.data?.plan_type === 'PRO_MONTHLY' || query.data?.plan_type === 'PRO_YEARLY') &&
+    query.data?.is_active;
+  return {
+    ...query,
+    isPro: query.data?.effective_is_pro ?? paidSubscriptionPro,
+    isEntitlementResolved: !!userId && query.isSuccess,
+  };
 }
 
 /**

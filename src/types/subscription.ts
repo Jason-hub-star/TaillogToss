@@ -5,7 +5,7 @@
  */
 
 /** 플랜 유형 (B2C) */
-export type PlanType = 'FREE' | 'PRO_MONTHLY';
+export type PlanType = 'FREE' | 'PRO_MONTHLY' | 'PRO_YEARLY';
 
 /** B2C + B2B 통합 플랜 유형 */
 export type AllPlanType = PlanType | import('./b2b').OrgPlanType;
@@ -89,6 +89,8 @@ export const DOG_LIMITS = {
 } as const;
 
 /** 구독 정보 */
+export type EffectiveProSource = 'paid_subscription' | 'pro_day_pass' | null;
+
 export interface Subscription {
   id: string;
   user_id: string;
@@ -99,6 +101,9 @@ export interface Subscription {
   next_billing_date: string | null; // ISO date
   created_at: string;
   updated_at: string;
+  effective_is_pro: boolean;
+  effective_pro_source: EffectiveProSource;
+  effective_pro_expires_at: string | null;
 }
 
 // ──────────────────────────────────────

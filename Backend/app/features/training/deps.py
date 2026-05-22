@@ -5,6 +5,7 @@ from fastapi import HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.features.subscription.entitlements import resolve_effective_pro
 from app.shared.models import Subscription
 
 # FE published/v2026-03-02-auto-080532/curriculum.ts 의 access:'pro' ID 목록과 동기화
@@ -28,8 +29,8 @@ async def require_pro_for_curriculum(
         return
     q = select(Subscription).where(Subscription.user_id == UUID(user_id))
     sub = (await db.execute(q)).scalar_one_or_none()
-    is_pro = bool(sub and sub.plan_type.value in ("PRO_MONTHLY", "PRO_YEARLY") and sub.is_active)
-    if not is_pro:
+    effective_pro = await resolve_effective_pro(db, user_id, subscription=sub)
+    if not effective_pro.is_pro:
         raise HTTPException(
             status_code=403,
             detail={"message": "Pro 구독이 필요한 커리큘럼이에요", "curriculum_id": curriculum_id},

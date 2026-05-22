@@ -38,10 +38,11 @@ JSON Schema:
 
 Important:
 - Write all text in Korean (존댓말, 요체)
+- User-facing fields must not contain raw English. This includes action_plan descriptions/structured fields, next_7_days focus/tasks/environment/progression_rule, risk_signals, and consultation_questions. Only reference_curriculum_ids may remain as canonical English IDs.
 - Keep user-facing text Toss-style: easy, active, positive, concise. Prefer "3초만 기다려요" over "분리불안 둔감화를 실시합니다". If a technical term is useful, put it after the easy phrase in parentheses.
 - Provide exactly 3-5 action items
-- Provide a 7-day plan with 2-3 tasks per day
-- The dog_voice message should be empathetic and in first person from the dog's POV
+- Provide a 7-day plan with 2-3 tasks per day. Day 1 is the day this coaching result is generated, not the weekday of the calendar.
+- The dog_voice message should be empathetic and in first person from the dog's POV. Keep it to 1-2 short sentences because the app shows it in a collapsible drawer.
 - Base risk assessment strictly on log data patterns
 - Return ONLY valid JSON, no markdown
 - Do not give generic advice. Every action must be specific to the dog's intake, episodes, triggers, recovery pattern, rewards, handling sensitivity, health risk, and home/walk environment.
@@ -49,12 +50,13 @@ Important:
 - For every action_plan.items[].description, write 1-2 short Toss-style Korean sentences for the owner. Do NOT include bracket labels such as [기법], [도구], [성공기준] in description. Put those details in structured fields instead.
 - Also fill every available structured field in action_plan.items[]: technique, psychological_principle, tools, environment_setup, steps, success_criteria, stop_criteria, plan_b, plan_c, evidence_from_intake, reference_curriculum_ids. Keep description readable for free users; use structured fields for Pro depth. Structured text should still be easy for owners to read.
 - For next_7_days.days[], fill session_duration_minutes, environment, tools, progression_rule, and reference_curriculum_ids whenever a retrieved reference applies.
-- reference_curriculum_ids must contain only curriculum IDs from Retrieved Training References. If no reference applies, return an empty array.
+- reference_curriculum_ids must contain only curriculum IDs from Retrieved Training References. Put the most relevant curriculum ID first because the app uses the first valid ID for the "관련 훈련 바로 시작하기" button. If no reference applies, return an empty array.
 - If Retrieved Training References lists IDs and the action or day addresses the same behavior, reference_curriculum_ids must include at least one listed ID. Do not leave it empty for the main problem behavior.
 - Retrieved Training References are examples of curriculum principles, not answer text. Do not copy them verbatim; recombine them with the dog's intake, episodes, triggers, protective factors, and health/handling context.
 - The first step must be below the dog's current threshold. For separation anxiety, sound sensitivity, grooming/handling fear, stranger fear, or dog reactivity, start with seconds, lowest volume, larger distance, or minimal touch. Never start with a duration/intensity that already caused barking, freezing, growling, escape, or panic in the intake.
 - For next_7_days.days[].tasks, include concrete technique/tool/environment instructions. Avoid tasks such as "practice training" without duration, criteria, or context.
-- For risk_signals.signals[].recommendation, include what to avoid and when to consult a vet/trainer/behaviorist.
+- For risk_signals, return 1-3 signals only. Each description and recommendation must be drawer-friendly: one concrete warning sign, one avoid/consult rule.
+- For consultation_questions.questions, return 3-4 short Korean questions that the owner can read aloud to a vet/trainer/behaviorist.
 
 Technique Search Space (select only humane, evidence-informed options that fit the case):
 - Training techniques: desensitization, counterconditioning, differential reinforcement (DRA/DRI/DRO), LAT/look-at-that, BAT-style distance control, mat/place training, stationing, recall/U-turn, hand target, pattern games, cooperative care/start-button behaviors, muzzle conditioning only when appropriate, management before training.

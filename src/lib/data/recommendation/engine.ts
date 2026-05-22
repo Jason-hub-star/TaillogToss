@@ -27,9 +27,10 @@ export interface BehaviorAnalytics {
 export interface ScoreBand {
   behaviorScore: number;        // 0~40: 설문 행동 일치 점수
   logIntensityScore: number;    // 0~35: 로그 강도 기반 점수
-  progressBonus: number;        // 0~15: 진행도 보너스
-  coachingBonus?: number;       // 0~20: 최근 코칭 reference_curriculum_ids boost (Phase 7)
-  total: number;                // max 100 (Phase 7 이후)
+  progressBonus: number;        // 0~15: 진행도 보너스 (Phase 8)
+  memoKeywordScore?: number;    // 0~15: 메모 키워드 매칭 (Phase 8)
+  coachingBonus?: number;       // 0~20: 최근 코칭 reference boost (Phase 7)
+  total: number;                // max 100 clamp
 }
 
 /** 커리큘럼 추천 v2 (로그 기반 + 콜드스타트 플래그) */
@@ -150,18 +151,24 @@ function _enrichReasoning(
 /** 동기 함수 — API 결과를 파라미터로 받음 (로그 5개 이상일 때 호출).
  *
  * Phase 7 (코칭↔Academy 동기화): recentCoachingReferenceIds가 주어지면
- * 해당 ID는 ScoreBand.total에 +20 boost를 받고, max 100으로 clamp된다.
- * 최근 코칭에서 AI가 추천한 커리큘럼이 Academy 추천 상위에 자연스럽게 노출되어
- * 두 시스템의 추천이 일관됨.
+ * 해당 ID는 ScoreBand에 +20 coachingBonus를 받음.
+ *
+ * Phase 8 (ScoreBand v3 다차원):
+ * - inProgressCurriculumIds: 진행 중인 커리큘럼에 +8 progressBonus 부여
+ * - memo_keywords가 curriculum.title/description에 매칭되면 단어당 +3 (max 15)
+ *
+ * 모든 점수 합산은 max 100으로 clamp됨.
  */
 export function getRecommendationsV2(
   behaviors: BehaviorType[],
   completedCurriculumIds: CurriculumId[],
   logAnalytics: BehaviorAnalytics,
   recentCoachingReferenceIds?: CurriculumId[],
+  inProgressCurriculumIds?: CurriculumId[],
 ): CurriculumRecommendationV2 {
   const completedSet = new Set(completedCurriculumIds);
   const coachingRefSet = new Set(recentCoachingReferenceIds ?? []);
+  const inProgressSet = new Set(inProgressCurriculumIds ?? []);
 
   // 1. 행동 매핑 후보 (설문 기반)
   const candidates: CurriculumId[] = [];
@@ -212,18 +219,33 @@ export function getRecommendationsV2(
     // 강도 7 이상 = 높은 점수, 4 이하 = 낮은 점수
     const logIntensityScore = Math.round(Math.min(35, (avgIntensity / 10) * 35));
 
-    // progressBonus: 이미 시작한 커리큘럼 우선 (진행 데이터 없음 — 기본 0)
-    const progressBonus = 0;
+    // Phase 8: progressBonus — 진행 중 커리큘럼 우선 (+8)
+    const progressBonus = inProgressSet.has(currId) ? 8 : 0;
 
-    // Phase 7: 최근 코칭 reference_curriculum_ids에 포함되면 +20 boost (max 100 clamp)
+    // Phase 8: memoKeywordScore — 메모 키워드가 curriculum.title/description에 매칭되면 단어당 +3 (max 15)
+    let memoKeywordScore = 0;
+    if (curriculum) {
+      const haystack = `${curriculum.title} ${curriculum.description}`.toLowerCase();
+      const memoKeywords = new Set<string>();
+      for (const kw of Object.values(logAnalytics.memo_keywords ?? {}).flat()) {
+        if (typeof kw === 'string' && kw.length >= 2) memoKeywords.add(kw.toLowerCase());
+      }
+      let hits = 0;
+      memoKeywords.forEach((kw) => {
+        if (haystack.includes(kw)) hits++;
+      });
+      memoKeywordScore = Math.min(15, hits * 3);
+    }
+
+    // Phase 7: 최근 코칭 reference_curriculum_ids에 포함되면 +20 boost
     const coachingBonus = coachingRefSet.has(currId) ? 20 : 0;
 
-    const rawTotal = behaviorScore + logIntensityScore + progressBonus + coachingBonus;
+    const rawTotal = behaviorScore + logIntensityScore + progressBonus + memoKeywordScore + coachingBonus;
     const total = Math.min(100, rawTotal);
 
     scoreBands.push({
       id: currId,
-      band: { behaviorScore, logIntensityScore, progressBonus, coachingBonus, total },
+      band: { behaviorScore, logIntensityScore, progressBonus, memoKeywordScore, coachingBonus, total },
     });
   }
 

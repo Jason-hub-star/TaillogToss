@@ -79,6 +79,14 @@ function TrainingAcademyPage() {
       .map((p: TrainingProgress) => p.curriculum_id);
   }, [progressList]);
 
+  // Phase 8: 진행 중 커리큘럼 — ScoreBand progressBonus 입력
+  const inProgressIds = useMemo<CurriculumId[]>(() => {
+    if (!Array.isArray(progressList)) return [];
+    return progressList
+      .filter((p: TrainingProgress) => p.status === 'in_progress')
+      .map((p: TrainingProgress) => p.curriculum_id);
+  }, [progressList]);
+
   // Phase 7: 최근 코칭의 reference_curriculum_ids 추출 — Academy 추천 boost 입력
   const recentCoachingReferenceIds = useMemo<CurriculumId[]>(() => {
     const blocks = latestCoaching?.blocks;
@@ -118,9 +126,10 @@ function TrainingAcademyPage() {
     // warm-start: 실제 로그 top_behaviors를 BehaviorType으로 정규화 후 우선 사용
     const warmBehaviors = normalizeTopBehaviors(behaviorAnalytics.top_behaviors ?? []);
     const behaviors = warmBehaviors.length > 0 ? warmBehaviors : coldStartBehaviors;
-    // Phase 7: 최근 코칭 reference를 4번째 인자로 전달 → +20 boost
-    return getRecommendationsV2(behaviors, completedIds, behaviorAnalytics, recentCoachingReferenceIds);
-  }, [surveyData, dogEnv, completedIds, behaviorAnalytics, recentCoachingReferenceIds]);
+    // Phase 7: 최근 코칭 reference를 4번째 인자로 전달 → +20 coachingBonus
+    // Phase 8: 진행 중 curriculum을 5번째 인자로 전달 → +8 progressBonus
+    return getRecommendationsV2(behaviors, completedIds, behaviorAnalytics, recentCoachingReferenceIds, inProgressIds);
+  }, [surveyData, dogEnv, completedIds, behaviorAnalytics, recentCoachingReferenceIds, inProgressIds]);
 
   // 현재 진행 중인 커리큘럼
   const activeProgress = useMemo(() => {

@@ -89,16 +89,37 @@ export function RecommendedCurriculumCard({
         </View>
       )}
 
-      {/* ScoreBand 점수 분해 — PRO만 표시 */}
+      {/* Phase 8: 종합 점수 게이지 — 무료/PRO 모두 표시 */}
+      {scoreBand && (
+        <View style={styles.totalScoreBlock} testID="recommended-total-score">
+          <ScoreBandRow
+            label="추천 점수"
+            value={scoreBand.total}
+            max={100}
+            color={colors.primaryBlue}
+          />
+        </View>
+      )}
+
+      {/* ScoreBand v3 상세 분해 — PRO만 표시 */}
       {isPro && scoreBand && (
         <View style={styles.scoreBandContainer}>
           <ScoreBandRow label="행동 일치" value={scoreBand.behaviorScore} max={40} color={colors.primaryBlue} />
           <ScoreBandRow label="강도 분석" value={scoreBand.logIntensityScore} max={35} color={colors.orange500} />
+          {scoreBand.progressBonus > 0 && (
+            <ScoreBandRow label="진도 보너스" value={scoreBand.progressBonus} max={15} color={colors.green500 ?? colors.primaryBlue} />
+          )}
+          {scoreBand.memoKeywordScore !== undefined && scoreBand.memoKeywordScore > 0 && (
+            <ScoreBandRow label="메모 매칭" value={scoreBand.memoKeywordScore} max={15} color={colors.purple500} />
+          )}
+          {scoreBand.coachingBonus !== undefined && scoreBand.coachingBonus > 0 && (
+            <ScoreBandRow label="최근 코칭" value={scoreBand.coachingBonus} max={20} color={colors.primaryBlue} />
+          )}
         </View>
       )}
       {!isPro && scoreBand && (
         <View style={styles.proLock}>
-          <Text style={styles.proLockText}>PRO에서 점수 분석 확인</Text>
+          <Text style={styles.proLockText}>상세 점수 분석은 PRO에서 →</Text>
         </View>
       )}
     </TouchableOpacity>
@@ -237,8 +258,15 @@ const styles = StyleSheet.create({
     ...typography.caption,
     color: colors.textSecondary,
   },
+  totalScoreBlock: {
+    marginTop: 4,
+    marginBottom: 8,
+    paddingBottom: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.divider,
+  },
   scoreBandContainer: {
-    marginTop: 8,
+    marginTop: 4,
     gap: 6,
   },
   proLock: {

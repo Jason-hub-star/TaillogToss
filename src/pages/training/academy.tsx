@@ -21,6 +21,7 @@ import { ErrorState } from 'components/tds-ext/ErrorState';
 import { CURRICULUMS } from 'lib/data/published/runtime';
 import { getRecommendations, getRecommendationsV2 } from 'lib/data/recommendation/engine';
 import { useTrainingProgress, useStepFeedback, useBehaviorAnalytics } from 'lib/hooks/useTraining';
+import { useLatestCoaching } from 'lib/hooks/useCoaching';
 import { useIsPro } from 'lib/hooks/useSubscription';
 import { usePageGuard } from 'lib/hooks/usePageGuard';
 import { useActiveDog } from 'stores/ActiveDogContext';
@@ -51,10 +52,12 @@ function TrainingAcademyPage() {
   const progressQuery = useTrainingProgress(activeDog?.id);
   const feedbackQuery = useStepFeedback(activeDog?.id);
   const behaviorAnalyticsQuery = useBehaviorAnalytics(activeDog?.id);
+  const latestCoachingQuery = useLatestCoaching(activeDog?.id);
   const { data: dogEnv } = dogEnvQuery;
   const { data: progressList, isLoading, isError, refetch } = progressQuery;
   const { data: feedbackList } = feedbackQuery;
   const { data: behaviorAnalytics } = behaviorAnalyticsQuery;
+  const { data: latestCoaching } = latestCoachingQuery;
   const { isReady } = usePageGuard({ currentPath: '/training/academy' });
 
   // 진행 상태 맵: curriculumId → TrainingProgress
@@ -76,6 +79,25 @@ function TrainingAcademyPage() {
       .map((p: TrainingProgress) => p.curriculum_id);
   }, [progressList]);
 
+  // Phase 7: 최근 코칭의 reference_curriculum_ids 추출 — Academy 추천 boost 입력
+  const recentCoachingReferenceIds = useMemo<CurriculumId[]>(() => {
+    const blocks = latestCoaching?.blocks;
+    if (!blocks) return [];
+    const ids = new Set<string>();
+    const actionItems = blocks.action_plan?.items ?? [];
+    for (const item of actionItems) {
+      for (const id of item.reference_curriculum_ids ?? []) ids.add(id);
+    }
+    const days = blocks.next_7_days?.days ?? [];
+    for (const day of days) {
+      for (const id of day.reference_curriculum_ids ?? []) ids.add(id);
+    }
+    // 유효 curriculum ID만 통과 (Phase 7 안전 가드)
+    return Array.from(ids).filter((id): id is CurriculumId =>
+      CURRICULUMS.some((c) => c.id === id),
+    );
+  }, [latestCoaching]);
+
   // AI 맞춤 추천 (cold start fallback 포함)
   const recommendation = useMemo(() => {
     // 행동 문제 소스 우선순위:
@@ -96,8 +118,9 @@ function TrainingAcademyPage() {
     // warm-start: 실제 로그 top_behaviors를 BehaviorType으로 정규화 후 우선 사용
     const warmBehaviors = normalizeTopBehaviors(behaviorAnalytics.top_behaviors ?? []);
     const behaviors = warmBehaviors.length > 0 ? warmBehaviors : coldStartBehaviors;
-    return getRecommendationsV2(behaviors, completedIds, behaviorAnalytics);
-  }, [surveyData, dogEnv, completedIds, behaviorAnalytics]);
+    // Phase 7: 최근 코칭 reference를 4번째 인자로 전달 → +20 boost
+    return getRecommendationsV2(behaviors, completedIds, behaviorAnalytics, recentCoachingReferenceIds);
+  }, [surveyData, dogEnv, completedIds, behaviorAnalytics, recentCoachingReferenceIds]);
 
   // 현재 진행 중인 커리큘럼
   const activeProgress = useMemo(() => {
@@ -315,6 +338,7 @@ function TrainingAcademyPage() {
             contextTags={'contextTags' in recommendation ? (recommendation as CurriculumRecommendationV2).contextTags : undefined}
             logCount={behaviorAnalytics?.total_logs ?? 0}
             isPro={isPro ?? false}
+            isFromRecentCoaching={'isFromRecentCoaching' in recommendation ? (recommendation as CurriculumRecommendationV2).isFromRecentCoaching : undefined}
             onPress={() => {
               const c = CURRICULUMS.find((cur) => cur.id === recommendation.primary);
               if (c) handleCardPress(c);

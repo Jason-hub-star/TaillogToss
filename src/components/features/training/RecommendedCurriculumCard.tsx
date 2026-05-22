@@ -18,6 +18,7 @@ interface Props {
   isPro: boolean;
   onPress: () => void;
   contextTags?: string[];
+  isFromRecentCoaching?: boolean; // Phase 7: 최근 코칭 추천 배지
 }
 
 export function RecommendedCurriculumCard({
@@ -28,6 +29,7 @@ export function RecommendedCurriculumCard({
   isPro,
   onPress,
   contextTags,
+  isFromRecentCoaching,
 }: Props) {
   const curriculum = CURRICULUMS.find((c) => c.id === curriculumId);
   if (!curriculum) return null;
@@ -41,8 +43,16 @@ export function RecommendedCurriculumCard({
   return (
     <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.85}>
       <View style={styles.header}>
-        <View style={styles.badge}>
-          <Text style={styles.badgeText}>AI 추천</Text>
+        <View style={styles.badgeRow}>
+          <View style={styles.badge}>
+            <Text style={styles.badgeText}>AI 추천</Text>
+          </View>
+          {/* Phase 7: 최근 코칭 추천에서 boost된 항목 표시 */}
+          {isFromRecentCoaching && (
+            <View style={styles.coachingBadge} testID="recommended-from-coaching-badge">
+              <Text style={styles.coachingBadgeText}>최근 코칭 추천</Text>
+            </View>
+          )}
         </View>
         <Text style={styles.difficulty}>
           {difficultyLabel[curriculum.difficulty] ?? curriculum.difficulty}
@@ -125,6 +135,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 10,
   },
+  badgeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    flexShrink: 1,
+  },
   badge: {
     backgroundColor: colors.primaryBlue,
     borderRadius: 8,
@@ -135,6 +151,20 @@ const styles = StyleSheet.create({
     ...typography.caption,
     fontWeight: '700',
     color: colors.white,
+  },
+  coachingBadge: {
+    backgroundColor: colors.blue50,
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderWidth: 1,
+    borderColor: colors.primaryBlue,
+  },
+  coachingBadgeText: {
+    ...typography.caption,
+    fontWeight: '700',
+    color: colors.primaryBlue,
+    fontSize: 11,
   },
   difficulty: {
     ...typography.caption,

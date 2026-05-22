@@ -28,7 +28,8 @@ export interface ScoreBand {
   behaviorScore: number;        // 0~40: 설문 행동 일치 점수
   logIntensityScore: number;    // 0~35: 로그 강도 기반 점수
   progressBonus: number;        // 0~15: 진행도 보너스
-  total: number;
+  coachingBonus?: number;       // 0~20: 최근 코칭 reference_curriculum_ids boost (Phase 7)
+  total: number;                // max 100 (Phase 7 이후)
 }
 
 /** 커리큘럼 추천 v2 (로그 기반 + 콜드스타트 플래그) */
@@ -37,6 +38,7 @@ export interface CurriculumRecommendationV2 extends CurriculumRecommendation {
   logBased: boolean;
   coldStart: boolean;
   contextTags?: string[];  // 메모 키워드 기반 상황 태그 (UI 배지용)
+  isFromRecentCoaching?: boolean; // Phase 7: 최근 코칭 추천에서 boost된 항목
 }
 
 // ──────────────────────────────────────
@@ -145,13 +147,21 @@ function _enrichReasoning(
   return `${base} · '${top}' 상황 집중`;
 }
 
-/** 동기 함수 — API 결과를 파라미터로 받음 (로그 5개 이상일 때 호출) */
+/** 동기 함수 — API 결과를 파라미터로 받음 (로그 5개 이상일 때 호출).
+ *
+ * Phase 7 (코칭↔Academy 동기화): recentCoachingReferenceIds가 주어지면
+ * 해당 ID는 ScoreBand.total에 +20 boost를 받고, max 100으로 clamp된다.
+ * 최근 코칭에서 AI가 추천한 커리큘럼이 Academy 추천 상위에 자연스럽게 노출되어
+ * 두 시스템의 추천이 일관됨.
+ */
 export function getRecommendationsV2(
   behaviors: BehaviorType[],
   completedCurriculumIds: CurriculumId[],
   logAnalytics: BehaviorAnalytics,
+  recentCoachingReferenceIds?: CurriculumId[],
 ): CurriculumRecommendationV2 {
   const completedSet = new Set(completedCurriculumIds);
+  const coachingRefSet = new Set(recentCoachingReferenceIds ?? []);
 
   // 1. 행동 매핑 후보 (설문 기반)
   const candidates: CurriculumId[] = [];
@@ -205,11 +215,15 @@ export function getRecommendationsV2(
     // progressBonus: 이미 시작한 커리큘럼 우선 (진행 데이터 없음 — 기본 0)
     const progressBonus = 0;
 
-    const total = behaviorScore + logIntensityScore + progressBonus;
+    // Phase 7: 최근 코칭 reference_curriculum_ids에 포함되면 +20 boost (max 100 clamp)
+    const coachingBonus = coachingRefSet.has(currId) ? 20 : 0;
+
+    const rawTotal = behaviorScore + logIntensityScore + progressBonus + coachingBonus;
+    const total = Math.min(100, rawTotal);
 
     scoreBands.push({
       id: currId,
-      band: { behaviorScore, logIntensityScore, progressBonus, total },
+      band: { behaviorScore, logIntensityScore, progressBonus, coachingBonus, total },
     });
   }
 
@@ -255,5 +269,6 @@ export function getRecommendationsV2(
     logBased: true,
     coldStart: false,
     contextTags: contextTags && contextTags.length > 0 ? contextTags : undefined,
+    isFromRecentCoaching: coachingRefSet.has(primary),
   };
 }

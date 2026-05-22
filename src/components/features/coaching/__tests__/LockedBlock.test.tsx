@@ -1,6 +1,36 @@
 import React from 'react';
 import { fireEvent, render } from '@testing-library/react-native';
-import { LockedBlock, RiskSignalsView, UnlockedBlock } from '../LockedBlock';
+import { LockedBlock, Next7DaysView, RiskSignalsView, UnlockedBlock } from '../LockedBlock';
+
+describe('Next7DaysView swipeable + dots (Phase 6)', () => {
+  const mockData = {
+    days: [1, 2, 3, 4, 5, 6, 7].map((n) => ({
+      day_number: n,
+      focus: `Day ${n} focus`,
+      tasks: [`task ${n}-1`, `task ${n}-2`],
+    })),
+  };
+
+  it('renders 7 dots indicator for swipeable carousel', () => {
+    const { getByTestId, getAllByLabelText } = render(
+      <Next7DaysView data={mockData as never} />,
+    );
+    expect(getByTestId('next-7-days-dots')).toBeTruthy();
+    // accessibilityLabel로 7개 dot touch 검증
+    const dots = [1, 2, 3, 4, 5, 6, 7]
+      .map((n) => getAllByLabelText(`${n}일차로 이동`));
+    expect(dots).toHaveLength(7);
+    dots.forEach((d) => expect(d.length).toBeGreaterThan(0));
+  });
+
+  it('renders all 7 day cards as scrollable timeline', () => {
+    const { getAllByText } = render(<Next7DaysView data={mockData as never} />);
+    // 각 day의 일차 텍스트가 timeline에 노출 (7개 모두 렌더)
+    [1, 2, 3, 4, 5, 6, 7].forEach((n) => {
+      expect(getAllByText(`${n}일차`).length).toBeGreaterThan(0);
+    });
+  });
+});
 
 describe('LockedBlock previewItems (Phase 5)', () => {
   // meta.label은 blockLabel + lockTitle 두 곳에 렌더되므로 unique한 previewItems로만 검증

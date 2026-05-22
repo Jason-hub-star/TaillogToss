@@ -4,8 +4,8 @@
  * 인터랙티브 카드: 수평 타임라인, 게이지 바, 프로필 카드
  * Parity: AI-001
  */
-import React, { useState } from 'react';
-import { View, Text, Image, StyleSheet, ScrollView, TouchableOpacity, Modal } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { View, Text, Image, StyleSheet, ScrollView, TouchableOpacity, Modal, NativeSyntheticEvent, NativeScrollEvent } from 'react-native';
 import type { Next7DaysBlock, RiskSignalsBlock, ConsultationQuestionsBlock, DayPlan } from 'types/coaching';
 import { colors, typography, spacing } from 'styles/tokens';
 import { ICONS } from 'lib/data/iconSources';
@@ -132,8 +132,12 @@ export function UnlockedBlock({
 }
 
 // ──────────────────────────────────────
-// PRO 블록 ④: 7일 맞춤 플랜 — 수평 스크롤 타임라인 카드
+// PRO 블록 ④: 7일 맞춤 플랜 — Swipeable Carousel + dots indicator (Phase 6)
 // ──────────────────────────────────────
+
+const TIMELINE_CARD_WIDTH = 184;
+const TIMELINE_GAP = 12; // spacing.md
+const TIMELINE_SNAP = TIMELINE_CARD_WIDTH + TIMELINE_GAP;
 
 export function Next7DaysView({
   data,
@@ -142,15 +146,50 @@ export function Next7DaysView({
   data: Next7DaysBlock;
   generatedAt?: string;
 }) {
+  const scrollRef = useRef<ScrollView | null>(null);
   const [selectedDay, setSelectedDay] = useState<DayPlan | null>(null);
+  const [currentIndex, setCurrentIndex] = useState(0);
   const activeDayNumber = getGeneratedPlanDayNumber(generatedAt);
+
+  // 초기 진입 시 오늘 day로 자동 스크롤 — Phase 6 발견성 개선
+  useEffect(() => {
+    if (
+      activeDayNumber !== null &&
+      activeDayNumber >= 1 &&
+      activeDayNumber <= data.days.length
+    ) {
+      const idx = activeDayNumber - 1;
+      setCurrentIndex(idx);
+      const t = setTimeout(() => {
+        scrollRef.current?.scrollTo({ x: idx * TIMELINE_SNAP, animated: false });
+      }, 60);
+      return () => clearTimeout(t);
+    }
+    return undefined;
+  }, [activeDayNumber, data.days.length]);
+
+  const handleMomentumEnd = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const x = e.nativeEvent.contentOffset.x;
+    const idx = Math.round(x / TIMELINE_SNAP);
+    setCurrentIndex(Math.max(0, Math.min(idx, data.days.length - 1)));
+  };
+
+  const jumpToIndex = (idx: number) => {
+    scrollRef.current?.scrollTo({ x: idx * TIMELINE_SNAP, animated: true });
+    setCurrentIndex(idx);
+  };
 
   return (
     <>
       <ScrollView
+        ref={scrollRef}
         horizontal
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.timelineScroll}
+        snapToInterval={TIMELINE_SNAP}
+        snapToAlignment="start"
+        decelerationRate="fast"
+        onMomentumScrollEnd={handleMomentumEnd}
       >
         {data.days.map((day) => {
           const isActiveDay = day.day_number === activeDayNumber;
@@ -182,6 +221,22 @@ export function Next7DaysView({
           );
         })}
       </ScrollView>
+
+      {/* Phase 6: dots indicator — 수평 스크롤 발견성 명시 */}
+      <View style={styles.dotsRow} testID="next-7-days-dots">
+        {data.days.map((day, idx) => (
+          <TouchableOpacity
+            key={day.day_number}
+            onPress={() => jumpToIndex(idx)}
+            style={styles.dotTouch}
+            activeOpacity={0.6}
+            accessibilityRole="button"
+            accessibilityLabel={`${day.day_number}일차로 이동`}
+          >
+            <View style={[styles.dot, idx === currentIndex && styles.dotActive]} />
+          </TouchableOpacity>
+        ))}
+      </View>
 
       <Modal
         visible={!!selectedDay}
@@ -496,6 +551,30 @@ const styles = StyleSheet.create({
   timelineScroll: {
     paddingRight: spacing.lg,
     gap: spacing.md,
+  },
+  // ── Phase 6: dots indicator ──
+  dotsRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: spacing.xs,
+    marginTop: spacing.md,
+    paddingVertical: spacing.xs,
+  },
+  dotTouch: {
+    padding: spacing.xs,
+  },
+  dot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: colors.grey200,
+  },
+  dotActive: {
+    width: 18,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: colors.primaryBlue,
   },
   timelineCard: {
     width: 184,

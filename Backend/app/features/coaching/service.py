@@ -18,6 +18,7 @@ from app.core.database import SessionLocal
 from app.core.exceptions import BadRequestException, NotFoundException
 from app.features.coaching import budget, prompts, rule_engine, schemas
 from app.features.coaching.training_references import (
+    extract_behaviors_from_text,
     localize_user_visible_tools,
     retrieve_training_references,
     sanitize_reference_curriculum_ids,
@@ -34,8 +35,13 @@ STALE_GENERATION_AFTER = timedelta(minutes=10)
 
 async def generate_coaching(
     db: AsyncSession, request: schemas.CoachingRequest,
+    focused: bool = False,
 ) -> schemas.CoachingResponse:
-    """6블록 코칭 생성 (캐시 → 예산 확인 → AI/규칙)"""
+    """6블록 코칭 생성 (캐시 → 예산 확인 → AI/규칙).
+
+    focused=True: Phase 1 격리 모드. user_context의 행동 키워드만 분석 대상으로
+    좁히고, 프롬프트에 격리 지시를 추가한다. focused-coaching API에서 호출.
+    """
     dog_id = UUID(request.dog_id)
 
     # 1. Dog + DogEnv 조회
@@ -93,7 +99,17 @@ async def generate_coaching(
     else:
         # AI 생성 시도
         try:
-            behavior_analytics_text, analytics_metadata = await _build_behavior_analytics_text(db, dog_id, logs_result)
+            # focused 모드: user_context에서 행동 키워드 추출 → analytics 필터링
+            focused_behaviors: list[str] = []
+            if focused and request.user_context:
+                focused_behaviors = extract_behaviors_from_text(request.user_context)
+                if not focused_behaviors:
+                    # 키워드 매칭 실패 → 격리 미적용 fallback (전체 표시)
+                    logger.info("focused mode: no behavior keyword matched in user_context, fallback to full analytics")
+
+            behavior_analytics_text, analytics_metadata = await _build_behavior_analytics_text(
+                db, dog_id, logs_result, focused_behaviors=focused_behaviors or None,
+            )
             age_months = 0
             if dog.birth_date:
                 age_months = int((date.today() - dog.birth_date).days / 30)
@@ -105,6 +121,7 @@ async def generate_coaching(
                 onboarding_context=onboarding_ctx,
                 ai_persona=ai_persona,
                 user_context=request.user_context or None,
+                focused=focused and bool(focused_behaviors),
             )
             result = await openai_client.generate(
                 prompts.SYSTEM_PROMPT_6BLOCK, user_prompt,
@@ -291,6 +308,8 @@ async def run_generation_job(job_id: str) -> None:
 
         try:
             report_type = job.report_type.value if hasattr(job.report_type, "value") else str(job.report_type)
+            # Phase 1: 비동기 job도 user_context 있으면 자동 격리 모드 (focused=True)
+            job_focused = bool(job.user_context and job.user_context.strip())
             response = await generate_coaching(
                 db,
                 schemas.CoachingRequest(
@@ -298,6 +317,7 @@ async def run_generation_job(job_id: str) -> None:
                     report_type=report_type,
                     user_context=job.user_context,
                 ),
+                focused=job_focused,
             )
 
             completed_job = await db.get(CoachingGenerationJob, job_uuid)
@@ -686,10 +706,36 @@ def _apply_safety_filter(blocks: schemas.CoachingBlocks) -> schemas.CoachingBloc
     )
 
 
+def _is_behavior_focused(behavior_key: str, focused: list[str]) -> bool:
+    """behavior_groups의 한 key가 focused 행동 리스트에 매칭되는지 판단.
+
+    BehaviorLog.behavior / quick_category는 한국어 또는 영문 혼재 가능하므로,
+    영문 매칭 + _KEYWORD_RULES 한국어 키워드 역방향 매칭 모두 수행.
+    """
+    if not focused:
+        return True
+    if not behavior_key:
+        return False
+    from app.features.coaching.training_references import _KEYWORD_RULES
+    key_lower = behavior_key.lower()
+    for fb in focused:
+        if fb.lower() in key_lower:
+            return True
+        for behavior, keywords in _KEYWORD_RULES:
+            if behavior == fb and any(kw.lower() in key_lower for kw in keywords):
+                return True
+    return False
+
+
 async def _build_behavior_analytics_text(
-    db: AsyncSession, dog_id: UUID, logs: list
+    db: AsyncSession, dog_id: UUID, logs: list,
+    focused_behaviors: list[str] | None = None,
 ) -> tuple[str, dict]:
-    """behavior_logs 기반 구조화된 분석 텍스트 생성 (프롬프트 주입용)"""
+    """behavior_logs 기반 구조화된 분석 텍스트 생성 (프롬프트 주입용).
+
+    focused_behaviors가 주어지면 해당 행동만 상세 표시, 나머지는 '기타 행동: N건 (생략)'으로 축약.
+    Phase 1 격리 모드 진입점.
+    """
     if not logs:
         return "No recent behavior logs", {"log_count": 0, "analysis_days": 30, "top_behavior": None}
 
@@ -708,10 +754,21 @@ async def _build_behavior_analytics_text(
             hour_counts[h] = hour_counts.get(h, 0) + 1
 
     total = len(logs)
-    lines = [f"[행동 패턴 분석 (최근 30일)] 총 {total}회 기록"]
+    header = "[행동 패턴 분석 (최근 30일, 격리 모드)]" if focused_behaviors else "[행동 패턴 분석 (최근 30일)]"
+    lines = [f"{header} 총 {total}회 기록"]
+    if focused_behaviors:
+        lines.append(f"[focus] user_context 매칭 행동: {', '.join(focused_behaviors)}")
 
     top_behavior = None
+    other_count = 0  # 격리 모드에서 축약될 행동의 총 발생수
+    other_names: list[str] = []
     for behavior, blogs in sorted(behavior_groups.items(), key=lambda x: len(x[1]), reverse=True):
+        # 격리 모드: focused_behaviors에 매칭되지 않으면 축약 대상
+        if focused_behaviors and not _is_behavior_focused(behavior, focused_behaviors):
+            other_count += len(blogs)
+            other_names.append(behavior)
+            continue
+
         intensities = [l.intensity for l in blogs if l.intensity is not None]
         avg_int = round(sum(intensities) / len(intensities), 1) if intensities else 0.0
 
@@ -727,6 +784,10 @@ async def _build_behavior_analytics_text(
 
         if top_behavior is None:
             top_behavior = behavior
+
+    if other_count > 0:
+        names_str = ", ".join(other_names[:5])
+        lines.append(f"- 기타 행동: {other_count}건 ({names_str}) — background context only, do not address in coaching blocks")
 
     # weekly trend (이번주 vs 지난주)
     week_ago = datetime.now(timezone.utc) - timedelta(days=7)

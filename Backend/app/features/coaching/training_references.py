@@ -195,6 +195,23 @@ def extract_behavior_candidates(
     return _dedupe(candidates)
 
 
+def extract_behaviors_from_text(text: str | None) -> list[str]:
+    """user_context 텍스트에서 행동 키워드만 추출 — focused-coaching 격리용.
+
+    Phase 1 (focused-coaching API): 사용자가 자유 입력한 user_context에서
+    어떤 행동에 대해 묻고 있는지 매칭. fallback 없음 — 매칭 안 되면 빈 리스트
+    반환하므로 호출자가 "격리 미적용 (fallback)" 분기를 해야 함.
+    """
+    if not text or not isinstance(text, str):
+        return []
+    normalized = text.lower()
+    matches: list[str] = []
+    for behavior, keywords in _KEYWORD_RULES:
+        if any(keyword.lower() in normalized for keyword in keywords):
+            matches.append(behavior)
+    return _dedupe(matches)
+
+
 def retrieve_training_references(
     issues: list[str] | None,
     triggers: list[str] | None,

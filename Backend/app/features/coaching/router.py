@@ -59,6 +59,57 @@ async def generate_coaching(
     return await service.generate_coaching(db, request)
 
 
+@router.post("/generate-focused", response_model=schemas.CoachingResponse)
+async def generate_focused_coaching(
+    request: schemas.CoachingRequest,
+    user_id: str = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db),
+):
+    """user_context 격리 모드 6블록 코칭 생성 (Phase 1).
+
+    사용자가 user_context로 특정 행동만 질문했을 때, LLM이 다른 행동을 끌고
+    들어오지 않도록 behavior_analytics 필터링 + 프롬프트 격리 지시 적용.
+    user_context 필수. 매칭되는 행동 키워드가 없으면 자동 fallback (전체 분석).
+    """
+    if not request.user_context or not request.user_context.strip():
+        raise HTTPException(
+            status_code=400,
+            detail={"message": "user_context는 focused 코칭에 필수입니다"},
+        )
+
+    await verify_dog_ownership(db, UUID(request.dog_id), user_id=user_id)
+
+    burst_ok = await budget.check_user_burst_limit(db, user_id)
+    if not burst_ok:
+        raise HTTPException(
+            status_code=429,
+            detail={
+                "message": "잠시 후 다시 시도해 주세요",
+                "remaining": 0,
+                "retry_after_sec": 600,
+            },
+        )
+
+    daily_ok, used, limit = await budget.check_user_daily_limit(
+        db,
+        user_id,
+        include_active_generation_jobs=True,
+    )
+    if not daily_ok:
+        raise HTTPException(
+            status_code=429,
+            detail={
+                "message": "일일 코칭 한도에 도달했어요",
+                "remaining": 0,
+                "daily_used": used,
+                "daily_limit": limit,
+                "retry_after_sec": _seconds_until_midnight(),
+            },
+        )
+
+    return await service.generate_coaching(db, request, focused=True)
+
+
 @router.post("/generation-jobs", response_model=schemas.CoachingGenerationJobResponse)
 async def start_generation_job(
     request: schemas.CoachingRequest,

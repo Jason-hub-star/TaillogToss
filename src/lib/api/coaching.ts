@@ -26,16 +26,22 @@ export interface GenerateCoachingError {
   message: string;
 }
 
-/** AI 코칭 생성 — 백엔드 필수, 생성은 fallback 없음 */
+/** AI 코칭 생성 — 백엔드 필수, 생성은 fallback 없음.
+ *  user_context 있으면 격리 모드(/generate-focused), 없으면 기존(/generate). Phase 1.
+ */
 export async function generateCoaching(
   dogId: string,
   reportType: ReportType = 'DAILY',
   userContext?: string,
 ): Promise<CoachingResult> {
   const body: GenerateCoachingRequest = { dog_id: dogId, report_type: reportType };
-  if (userContext?.trim()) body.user_context = userContext.trim();
+  const trimmedContext = userContext?.trim();
+  if (trimmedContext) body.user_context = trimmedContext;
+  const endpoint = trimmedContext
+    ? '/api/v1/coaching/generate-focused'
+    : '/api/v1/coaching/generate';
   return requestBackend<CoachingResult, GenerateCoachingRequest>(
-    '/api/v1/coaching/generate',
+    endpoint,
     { method: 'POST', body },
   );
 }

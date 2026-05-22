@@ -86,6 +86,7 @@ def build_user_prompt(
     onboarding_context: dict | None = None,
     ai_persona: dict | None = None,
     user_context: str | None = None,
+    focused: bool = False,
 ) -> str:
     """사용자 프롬프트 생성
 
@@ -110,7 +111,21 @@ Reference previous trends and note improvements or regressions.
 
     user_context_section = ""
     if user_context:
-        user_context_section = f"""
+        if focused:
+            user_context_section = f"""
+Today's FOCUSED Question (the owner explicitly asked about this specific situation):
+{user_context}
+
+CRITICAL FOCUS DIRECTIVE — Phase 1 격리 모드:
+- Focus EXCLUSIVELY on the behaviors mentioned in this question.
+- Do NOT introduce action_plan items for unrelated behaviors, even if they appear prominently in behavior_analytics.
+- behavior_analytics for unrelated behaviors is BACKGROUND CONTEXT only — never the subject of the 6 blocks.
+- All 6 blocks (insight, action_plan, dog_voice, next_7_days, risk_signals, consultation_questions) must center on the focused question.
+- The only exception: if an unrelated behavior shows life-threatening severity (overall_risk >= "high"), you may add ONE entry in risk_signals — but never in other blocks.
+- Owner trusts that asking a focused question yields a focused answer. Mixing behaviors silently breaks that trust.
+"""
+        else:
+            user_context_section = f"""
 Today's Special Situation (directly reported by the owner):
 {user_context}
 

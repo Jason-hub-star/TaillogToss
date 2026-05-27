@@ -6,9 +6,17 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, Image, StyleSheet, TouchableOpacity, Animated } from 'react-native';
 import type { InsightBlock, ActionPlanBlock, DogVoiceBlock, ActionItem } from 'types/coaching';
+import type { CurriculumId } from 'types/training';
 import { SpeechBubble } from 'components/tds-ext/SpeechBubble';
 import { colors, typography, spacing } from 'styles/tokens';
 import { ICONS } from 'lib/data/iconSources';
+import {
+  firstKnownCurriculumId,
+  formatLocalizedList,
+  localizeCurriculum,
+  localizeStructuredText,
+  localizeTool,
+} from 'lib/data/coachingLocalization';
 
 // ──────────────────────────────────────
 // Block ①: 행동 분석 인사이트 — 트렌드 배지 + 카테고리 아이콘
@@ -62,7 +70,7 @@ export function InsightBlockView({ data }: { data: InsightBlock }) {
                 source={{ uri: PATTERN_ICONS[idx % PATTERN_ICONS.length] }}
                 style={styles.patternIconImg}
               />
-              <Text style={styles.patternText}>{pattern}</Text>
+              <Text style={styles.patternText}>{localizeStructuredText(pattern)}</Text>
             </View>
           ))}
         </View>
@@ -133,7 +141,7 @@ function CheckboxItem({
           </View>
           <View style={styles.actionContent}>
             <Text style={[styles.actionText, item.is_completed && styles.completed]}>
-              {item.description}
+              {localizeStructuredText(item.description)}
             </Text>
             <View style={[styles.priorityBadge, { backgroundColor: PRIORITY_COLOR[item.priority] + '1A' }]}>
               <Text style={[styles.priorityText, { color: PRIORITY_COLOR[item.priority] }]}>
@@ -173,26 +181,30 @@ function CheckboxItem({
 
 function buildActionDetailRows(item: ActionItem): Array<{ label: string; value: string }> {
   const rows: Array<{ label: string; value: string }> = [];
-  const append = (label: string, value?: string | string[]) => {
+  const append = (
+    label: string,
+    value?: string | string[],
+    formatter: (value: string) => string = localizeStructuredText,
+  ) => {
     if (Array.isArray(value)) {
-      const compact = value.filter(Boolean).join(', ');
+      const compact = formatLocalizedList(value, formatter);
       if (compact) rows.push({ label, value: compact });
       return;
     }
-    if (value) rows.push({ label, value });
+    if (value) rows.push({ label, value: formatter(value) });
   };
 
   append('방법', item.technique);
   append('이유', item.psychological_principle);
-  append('준비물', item.tools);
+  append('준비물', item.tools, localizeTool);
   append('장소', item.environment_setup);
-  append('순서', item.steps?.map((step, idx) => `${idx + 1}. ${step}`).join('\n'));
+  append('순서', item.steps?.map((step, idx) => `${idx + 1}. ${localizeStructuredText(step)}`).join('\n'), (value) => value);
   append('잘 된 기준', item.success_criteria);
   append('멈출 신호', item.stop_criteria);
   append('다른 방법', item.plan_b);
   append('더 쉽게', item.plan_c);
   append('상담지 근거', item.evidence_from_intake);
-  append('참고 훈련', item.reference_curriculum_ids);
+  append('참고 훈련', item.reference_curriculum_ids, localizeCurriculum);
 
   return rows;
 }
@@ -205,11 +217,14 @@ export function ActionPlanBlockView({
 }: {
   data: ActionPlanBlock;
   onToggleItem?: (itemId: string) => void;
-  onNavigateToTraining?: () => void;
+  onNavigateToTraining?: (curriculumId?: CurriculumId | null) => void;
   isPro?: boolean;
 }) {
   const completedCount = data.items.filter((i) => i.is_completed).length;
   const totalCount = data.items.length;
+  const primaryCurriculumId = firstKnownCurriculumId(
+    data.items.flatMap((item) => item.reference_curriculum_ids ?? []),
+  );
 
   return (
     <View style={styles.card}>
@@ -248,10 +263,12 @@ export function ActionPlanBlockView({
       {onNavigateToTraining && (
         <TouchableOpacity
           style={styles.trainingLink}
-          onPress={onNavigateToTraining}
+          onPress={() => onNavigateToTraining(primaryCurriculumId)}
           activeOpacity={0.7}
         >
-          <Text style={styles.trainingLinkText}>관련 훈련 시작하기</Text>
+          <Text style={styles.trainingLinkText}>
+            {primaryCurriculumId ? '관련 훈련 바로 시작하기' : '맞춤 훈련 찾기'}
+          </Text>
         </TouchableOpacity>
       )}
     </View>
@@ -281,11 +298,14 @@ const EMOTION_LABEL: Record<string, string> = {
 export function DogVoiceBlockView({
   data,
   dogName,
+  defaultCollapsed = true,
 }: {
   data: DogVoiceBlock;
   dogName?: string;
   dogImageUrl?: string | null;
+  defaultCollapsed?: boolean;
 }) {
+  const [isCollapsed, setIsCollapsed] = useState(defaultCollapsed);
   const [isTypingDone, setIsTypingDone] = useState(false);
   const [displayedText, setDisplayedText] = useState('');
   const typingRef = useRef(false);
@@ -296,6 +316,7 @@ export function DogVoiceBlockView({
 
   // 타이핑 효과 (세션 1회)
   useEffect(() => {
+    if (isCollapsed) return;
     setIsTypingDone(false);
     setDisplayedText('');
     typingRef.current = false;
@@ -314,24 +335,35 @@ export function DogVoiceBlockView({
     }, 30);
 
     return () => clearInterval(interval);
-  }, [dogVoiceMessage]);
+  }, [dogVoiceMessage, isCollapsed]);
 
   return (
     <View style={[styles.card, { backgroundColor: EMOTION_BG[data.emotion] || colors.white }]}>
-      <View style={styles.dogVoiceHeader}>
+      <TouchableOpacity
+        style={styles.dogVoiceHeader}
+        onPress={() => setIsCollapsed((prev) => !prev)}
+        activeOpacity={0.75}
+      >
         <Text style={styles.blockLabel}>
           {dogName ? `${dogName}의 마음` : '강아지의 마음'}
         </Text>
-        <View style={styles.emotionBadge}>
-          <Text style={styles.emotionBadgeText}>
-            {EMOTION_LABEL[data.emotion]}
-          </Text>
+        <View style={styles.dogVoiceHeaderRight}>
+          <View style={styles.emotionBadge}>
+            <Text style={styles.emotionBadgeText}>
+              {EMOTION_LABEL[data.emotion]}
+            </Text>
+          </View>
+          <Text style={styles.drawerToggleText}>{isCollapsed ? '열기' : '접기'}</Text>
         </View>
-      </View>
-      <SpeechBubble
-        message={isTypingDone ? dogVoiceMessage : displayedText}
-        emotion={data.emotion}
-      />
+      </TouchableOpacity>
+      {isCollapsed ? (
+        <Text style={styles.drawerPreview}>강아지 입장에서 느끼는 신호를 접어두었어요.</Text>
+      ) : (
+        <SpeechBubble
+          message={isTypingDone ? dogVoiceMessage : displayedText}
+          emotion={data.emotion}
+        />
+      )}
     </View>
   );
 }
@@ -524,6 +556,11 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
   },
+  dogVoiceHeaderRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
   emotionBadge: {
     backgroundColor: colors.surfaceSecondary,
     paddingHorizontal: 10,
@@ -534,6 +571,16 @@ const styles = StyleSheet.create({
     ...typography.caption,
     color: colors.textSecondary,
     fontWeight: '500',
+  },
+  drawerToggleText: {
+    ...typography.caption,
+    color: colors.primaryBlue,
+    fontWeight: '700',
+  },
+  drawerPreview: {
+    ...typography.caption,
+    color: colors.textSecondary,
+    lineHeight: 18,
   },
   // Training link
   trainingLink: {

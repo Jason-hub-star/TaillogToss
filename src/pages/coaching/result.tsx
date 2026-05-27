@@ -37,6 +37,7 @@ import { Stage2InterceptModal } from 'components/features/survey/Stage2Intercept
 import { useSurveyStatus } from 'lib/hooks/useSurvey';
 import type { CoachingResult } from 'types/coaching';
 import { ICONS } from 'lib/data/iconSources';
+import type { CurriculumId } from 'types/training';
 
 export const Route = createRoute('/coaching/result', {
   component: CoachingResultPage,
@@ -240,13 +241,26 @@ function CoachingResultPage() {
     setSelectedHistoryCoaching(c);
   }, []);
 
-  const handleNavigateToAcademy = useCallback(() => {
+  const handleNavigateToTraining = useCallback((curriculumId?: CurriculumId | null) => {
+    if (curriculumId) {
+      navigation.navigate('/training/detail', { curriculum_id: curriculumId });
+      return;
+    }
     navigation.navigate('/training/academy');
   }, [navigation]);
 
   const handleNavigateToSubscription = useCallback(() => {
+    const shouldCollectProIntake = !isPro && activeDog?.id && (surveyStatus?.completion_stage ?? 1) < 3;
+    if (shouldCollectProIntake) {
+      navigation.navigate('/onboarding/stage3-form', {
+        dogId: activeDog.id,
+        dogName: activeDog.name ?? '우리 강아지',
+        afterSubmit: 'subscription',
+      });
+      return;
+    }
     navigation.navigate('/settings/subscription');
-  }, [navigation]);
+  }, [activeDog?.id, activeDog?.name, isPro, navigation, surveyStatus?.completion_stage]);
 
   const handleBack = useCallback(() => {
     if (selectedHistoryCoaching) {
@@ -435,7 +449,7 @@ function CoachingResultPage() {
             isPro={isPro ?? false}
             activeDog={activeDog}
             onToggleActionItem={handleToggleActionItem}
-            onNavigateToTraining={handleNavigateToAcademy}
+            onNavigateToTraining={handleNavigateToTraining}
             onNavigateToSubscription={handleNavigateToSubscription}
             onStarPress={handleStarPress}
             selectedScore={selectedScore}

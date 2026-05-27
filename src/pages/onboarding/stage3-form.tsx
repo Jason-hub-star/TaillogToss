@@ -28,7 +28,7 @@ export const Route = createRoute('/onboarding/stage3-form', {
   screenOptions: { headerShown: false },
 });
 
-type RouteParams = { dogId?: string; dogName?: string; mode?: 'edit' };
+type RouteParams = { dogId?: string; dogName?: string; mode?: 'edit'; afterSubmit?: 'subscription' | 'profile' };
 
 interface EpisodeDraft extends BehaviorEpisode {
   localId: string;
@@ -394,6 +394,10 @@ function Stage3FormPage() {
     submitStage3.mutate({ dogId: targetDogId, data: payload }, {
       onSuccess: async () => {
         await clearDraft();
+        if (params.afterSubmit === 'subscription') {
+          navigation.navigate('/settings/subscription');
+          return;
+        }
         navigation.navigate('/dog/profile');
       },
       onError: (err) => {

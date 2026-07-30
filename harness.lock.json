@@ -1,0 +1,64 @@
+{
+  "template_root": "/Users/family/orca/workspaces/jason-agent-harness-template/spirula",
+  "template_commit": "57b7543",
+  "synced_on": "2026-07-31",
+  "project_name": "",
+  "assets": {
+    ".claude/automations/automation-health-monitor.prompt.md": {
+      "local": "ebe5c78fc6c0557bc60f1d9445e6b6472ef5d45a84cb8ce86e4809bf868b4c38",
+      "src": "472113090dabc6d525004dcb127cad3b81e76ecc135eca9898b7564ca82f9800"
+    },
+    ".claude/automations/code-doc-align.prompt.md": {
+      "local": "5ad5592b318c1d8aa742ade1cb85df235e6867a4e6830f741d1bd93debe36a6d",
+      "src": "53b18a7e30b4a997d75329692354907ddd2d3e2be74e9ebd838418aea189ed47"
+    },
+    ".claude/automations/docs-nightly-organizer.prompt.md": {
+      "local": "b790946ca51ad533aadc80e42557676a588556e3fec9a978acb38cafa0891f71",
+      "src": "a2c61a1373593c04e63541cdb4e13b75ff687f02b72e9af1e8dfcea055a52521"
+    },
+    ".claude/commands/doc-update.md": {
+      "local": "7c603549fe53b32351dcc6f0b33494bd22a8e8d007af5498a43ecf0f5b674e0d",
+      "src": "6664e60636d1160a8fb19b95f37bd2c5cc952ff800f3ad5820de9cb3eda92892"
+    },
+    ".claude/commands/evidence-review.md": {
+      "local": "24f7383b73825421842c15e66b30958067cca0a2c053fbf896c4e6622819a3d0",
+      "src": "0abbea38da1fdfe8f3e55a35015c5f9e047b265b4a9e23410cf5f9a2eee9a0e9"
+    },
+    ".claude/commands/handoff.md": {
+      "local": "f7d27cf2001af50e9903b7278253c84ffecbba361f89bb82db7f5b351bc3857f",
+      "src": "f48ed19a1fc62648c2e9934b147639a545f02f8b149377fdd9f09358e6efbff5"
+    },
+    ".claude/commands/impact-map.md": {
+      "local": "5d19eb91e05820d3ecccd31e31ab15f5c93c5b131de55a14953a42f03a5b3dde",
+      "src": "585ed1c9f66421c42e7236d5e207910c5835e520e622a118cfb0091726c5e9a4"
+    },
+    ".claude/commands/intake.md": {
+      "local": "5f1545b4f0fd69a4dbd3335f829ea84b8e50ecb68b37c752020f5245f44e657b",
+      "src": "44952566dd51d822284fd2efaf91af6213ae719b1c0d01a1f210de774cb13c77"
+    },
+    ".claude/commands/profile-recommend.md": {
+      "local": "887378374b947b6985e028b565f18084b77d5f4dae1eebaaacdd3ec09f57bfa7",
+      "src": "2d55787f60463855aed83ca8173befc32e99f3750973c685ecb73e992d191f4b"
+    },
+    ".claude/commands/self-review.md": {
+      "local": "bb2cc2d4b84cce8fba4bcbba5597aeb3f3542444c05c45f7a6eeabcf7c46c98b",
+      "src": "003433b0b563d9964b6845112dcd6c9855b2ce46b30bea3290bbf8a06b3a5796"
+    },
+    ".claude/settings.json": {
+      "local": "9dfd658126c5b1dd2fa64d80eb37876f620d771094e127e05b3f447c9d4e0d45",
+      "src": "a8692e11a0db7a0010d8f4f6a18897f57dab617ea0744ad633d5a76b5db7b67f"
+    },
+    "scripts/check-agent-layer.sh": {
+      "local": "118dd49d04d1bf46266796d956d537b6a3d33ba66379bb6d31dc21c8ed5a172c",
+      "src": "ccbad47e8bcd5565fdb82dcba6501b3bfc8a6b0ee9f1958274ef573f032db579"
+    },
+    "scripts/check-doc-consistency.sh": {
+      "local": "e5857f5ea638851d79468d3a1d38527c07669a8c26737eba8f73199778bec088",
+      "src": "91ff511d79ee2ecdb381450011193c55838e718e92d0c3a27a2051433579ee04"
+    },
+    "scripts/check-planning.sh": {
+      "local": "95041ddcf9cf67d3f1a940ccb2f61b348004b7f864afd7ab81c45dc8e70140af",
+      "src": "13e71fda110e7b4c7d77e52ab3861d3d204a1b08aa3114f487b56e7c547120e3"
+    }
+  }
+}

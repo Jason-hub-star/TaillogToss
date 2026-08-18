@@ -1,0 +1,1014 @@
+{
+  "baseline": {
+    "source": "src/lib/data/mappings/behaviorToCurriculum.ts + catalog.json",
+    "entries": 10,
+    "uniquePaths": 7,
+    "uniqueness": 0.7,
+    "fillRate": 1,
+    "avgSteps": 15.571428571428571
+  },
+  "thresholds": {
+    "T_UNIQUENESS": 0.85,
+    "T_MAX_GAP": 1,
+    "T_MIN_HOW": 5
+  },
+  "checks": {
+    "a_uniqueness": {
+      "value": 0.9,
+      "threshold": 0.85,
+      "baseline": 0.7,
+      "pass": true
+    },
+    "b_maxGap": {
+      "value": 0,
+      "threshold": 1,
+      "pass": true
+    },
+    "c_minHowPerPath": {
+      "value": 16,
+      "threshold": 5,
+      "pass": true
+    }
+  },
+  "pass": true,
+  "rows": [
+    {
+      "behavior": "separation",
+      "symptom": "alone",
+      "goal": "skill.mechanics.sep_reunion",
+      "goalLabel": "차분하게 맞이하기 (저에너지 재결합)",
+      "pathLen": 21,
+      "howCount": 21,
+      "fillRate": 1,
+      "maxGap": 0,
+      "goalHasHow": true,
+      "path": [
+        {
+          "id": "skill.manners.bench_side_settle",
+          "how": true
+        },
+        {
+          "id": "skill.manners.restaurant_floor_wait",
+          "how": true
+        },
+        {
+          "id": "skill.obedience.distance_down_sit",
+          "how": true
+        },
+        {
+          "id": "skill.obedience.front_to_heel_finish",
+          "how": true
+        },
+        {
+          "id": "skill.obedience.stay_separation_dynamic",
+          "how": true
+        },
+        {
+          "id": "skill.rally.halt_sit_sequence",
+          "how": true
+        },
+        {
+          "id": "skill.rally.position_exchange",
+          "how": true
+        },
+        {
+          "id": "skill.emotional.puppy_handling",
+          "how": true
+        },
+        {
+          "id": "skill.foundation.consent",
+          "how": true
+        },
+        {
+          "id": "skill.cue.basic",
+          "how": true
+        },
+        {
+          "id": "skill.foundation.routine",
+          "how": true
+        },
+        {
+          "id": "skill.foundation.settle",
+          "how": true
+        },
+        {
+          "id": "skill.foundation.threshold",
+          "how": true
+        },
+        {
+          "id": "skill.mechanics.reward",
+          "how": true
+        },
+        {
+          "id": "skill.emotional.fear_sound",
+          "how": true
+        },
+        {
+          "id": "skill.foundation.attention",
+          "how": true
+        },
+        {
+          "id": "skill.foundation.crate",
+          "how": true
+        },
+        {
+          "id": "skill.mechanics.marker",
+          "how": true
+        },
+        {
+          "id": "skill.emotional.sep_cue_desens",
+          "how": true
+        },
+        {
+          "id": "skill.self_regulation.sep_graduated",
+          "how": true
+        },
+        {
+          "id": "skill.mechanics.sep_reunion",
+          "how": true
+        }
+      ]
+    },
+    {
+      "behavior": "anxiety",
+      "symptom": "fearful",
+      "goal": "skill.generalization.puppy_novelty",
+      "goalLabel": "새 자극 습관화",
+      "pathLen": 16,
+      "howCount": 16,
+      "fillRate": 1,
+      "maxGap": 0,
+      "goalHasHow": true,
+      "path": [
+        {
+          "id": "skill.manners.bench_side_settle",
+          "how": true
+        },
+        {
+          "id": "skill.manners.restaurant_floor_wait",
+          "how": true
+        },
+        {
+          "id": "skill.obedience.distance_down_sit",
+          "how": true
+        },
+        {
+          "id": "skill.obedience.front_to_heel_finish",
+          "how": true
+        },
+        {
+          "id": "skill.rally.halt_sit_sequence",
+          "how": true
+        },
+        {
+          "id": "skill.rally.position_exchange",
+          "how": true
+        },
+        {
+          "id": "skill.emotional.puppy_handling",
+          "how": true
+        },
+        {
+          "id": "skill.foundation.consent",
+          "how": true
+        },
+        {
+          "id": "skill.cue.basic",
+          "how": true
+        },
+        {
+          "id": "skill.foundation.routine",
+          "how": true
+        },
+        {
+          "id": "skill.foundation.settle",
+          "how": true
+        },
+        {
+          "id": "skill.foundation.threshold",
+          "how": true
+        },
+        {
+          "id": "skill.mechanics.reward",
+          "how": true
+        },
+        {
+          "id": "skill.foundation.attention",
+          "how": true
+        },
+        {
+          "id": "skill.mechanics.marker",
+          "how": true
+        },
+        {
+          "id": "skill.generalization.puppy_novelty",
+          "how": true
+        }
+      ]
+    },
+    {
+      "behavior": "barking",
+      "symptom": "barking",
+      "goal": "skill.generalization.react_distance",
+      "goalLabel": "거리·회복 진행 규칙",
+      "pathLen": 29,
+      "howCount": 29,
+      "fillRate": 1,
+      "maxGap": 0,
+      "goalHasHow": true,
+      "path": [
+        {
+          "id": "skill.manners.bench_side_settle",
+          "how": true
+        },
+        {
+          "id": "skill.manners.common_area_quiet_passage",
+          "how": true
+        },
+        {
+          "id": "skill.manners.pass_dog_neutral",
+          "how": true
+        },
+        {
+          "id": "skill.manners.restaurant_floor_wait",
+          "how": true
+        },
+        {
+          "id": "skill.obedience.distance_down_sit",
+          "how": true
+        },
+        {
+          "id": "skill.obedience.front_to_heel_finish",
+          "how": true
+        },
+        {
+          "id": "skill.obedience.group_wait_parallel",
+          "how": true
+        },
+        {
+          "id": "skill.obedience.recall_to_front_sit",
+          "how": true
+        },
+        {
+          "id": "skill.rally.halt_sit_sequence",
+          "how": true
+        },
+        {
+          "id": "skill.rally.position_exchange",
+          "how": true
+        },
+        {
+          "id": "skill.emotional.puppy_handling",
+          "how": true
+        },
+        {
+          "id": "skill.mechanics.marker",
+          "how": true
+        },
+        {
+          "id": "skill.foundation.consent",
+          "how": true
+        },
+        {
+          "id": "skill.generalization.puppy_exposure",
+          "how": true
+        },
+        {
+          "id": "skill.cue.basic",
+          "how": true
+        },
+        {
+          "id": "skill.foundation.routine",
+          "how": true
+        },
+        {
+          "id": "skill.foundation.settle",
+          "how": true
+        },
+        {
+          "id": "skill.foundation.threshold",
+          "how": true
+        },
+        {
+          "id": "skill.mechanics.reward",
+          "how": true
+        },
+        {
+          "id": "skill.foundation.attention",
+          "how": true
+        },
+        {
+          "id": "skill.emotional.react_lat",
+          "how": true
+        },
+        {
+          "id": "skill.generalization.social_observe",
+          "how": true
+        },
+        {
+          "id": "skill.cue.loose_leash",
+          "how": true
+        },
+        {
+          "id": "skill.generalization.crowd_navigation",
+          "how": true
+        },
+        {
+          "id": "skill.generalization.leash_turn",
+          "how": true
+        },
+        {
+          "id": "skill.generalization.social_parallel",
+          "how": true
+        },
+        {
+          "id": "skill.cue.recall",
+          "how": true
+        },
+        {
+          "id": "skill.generalization.recall_proofed",
+          "how": true
+        },
+        {
+          "id": "skill.generalization.react_distance",
+          "how": true
+        }
+      ]
+    },
+    {
+      "behavior": "destructive",
+      "symptom": "destructive",
+      "goal": "skill.generalization.needs_enrichment",
+      "goalLabel": "에너지·후각 욕구 충족",
+      "pathLen": 22,
+      "howCount": 22,
+      "fillRate": 1,
+      "maxGap": 0,
+      "goalHasHow": true,
+      "path": [
+        {
+          "id": "skill.manners.bench_side_settle",
+          "how": true
+        },
+        {
+          "id": "skill.manners.restaurant_floor_wait",
+          "how": true
+        },
+        {
+          "id": "skill.obedience.distance_down_sit",
+          "how": true
+        },
+        {
+          "id": "skill.obedience.front_to_heel_finish",
+          "how": true
+        },
+        {
+          "id": "skill.obedience.stay_separation_dynamic",
+          "how": true
+        },
+        {
+          "id": "skill.rally.halt_sit_sequence",
+          "how": true
+        },
+        {
+          "id": "skill.rally.position_exchange",
+          "how": true
+        },
+        {
+          "id": "skill.foundation.settle",
+          "how": true
+        },
+        {
+          "id": "skill.foundation.threshold",
+          "how": true
+        },
+        {
+          "id": "skill.mechanics.reward",
+          "how": true
+        },
+        {
+          "id": "skill.emotional.puppy_handling",
+          "how": true
+        },
+        {
+          "id": "skill.foundation.attention",
+          "how": true
+        },
+        {
+          "id": "skill.foundation.crate",
+          "how": true
+        },
+        {
+          "id": "skill.foundation.consent",
+          "how": true
+        },
+        {
+          "id": "skill.mechanics.marker",
+          "how": true
+        },
+        {
+          "id": "skill.cue.basic",
+          "how": true
+        },
+        {
+          "id": "skill.emotional.fear_sound",
+          "how": true
+        },
+        {
+          "id": "skill.emotional.sep_cue_desens",
+          "how": true
+        },
+        {
+          "id": "skill.foundation.routine",
+          "how": true
+        },
+        {
+          "id": "skill.generalization.puppy_novelty",
+          "how": true
+        },
+        {
+          "id": "skill.self_regulation.sep_graduated",
+          "how": true
+        },
+        {
+          "id": "skill.generalization.needs_enrichment",
+          "how": true
+        }
+      ]
+    },
+    {
+      "behavior": "reactivity",
+      "symptom": "dog_greeting",
+      "goal": "skill.generalization.social_parallel",
+      "goalLabel": "평행 산책",
+      "pathLen": 23,
+      "howCount": 23,
+      "fillRate": 1,
+      "maxGap": 0,
+      "goalHasHow": true,
+      "path": [
+        {
+          "id": "skill.manners.bench_side_settle",
+          "how": true
+        },
+        {
+          "id": "skill.manners.common_area_quiet_passage",
+          "how": true
+        },
+        {
+          "id": "skill.manners.pass_dog_neutral",
+          "how": true
+        },
+        {
+          "id": "skill.manners.restaurant_floor_wait",
+          "how": true
+        },
+        {
+          "id": "skill.obedience.distance_down_sit",
+          "how": true
+        },
+        {
+          "id": "skill.obedience.front_to_heel_finish",
+          "how": true
+        },
+        {
+          "id": "skill.obedience.group_wait_parallel",
+          "how": true
+        },
+        {
+          "id": "skill.rally.halt_sit_sequence",
+          "how": true
+        },
+        {
+          "id": "skill.rally.position_exchange",
+          "how": true
+        },
+        {
+          "id": "skill.mechanics.reward",
+          "how": true
+        },
+        {
+          "id": "skill.emotional.puppy_handling",
+          "how": true
+        },
+        {
+          "id": "skill.foundation.attention",
+          "how": true
+        },
+        {
+          "id": "skill.foundation.consent",
+          "how": true
+        },
+        {
+          "id": "skill.mechanics.marker",
+          "how": true
+        },
+        {
+          "id": "skill.cue.basic",
+          "how": true
+        },
+        {
+          "id": "skill.generalization.puppy_exposure",
+          "how": true
+        },
+        {
+          "id": "skill.foundation.routine",
+          "how": true
+        },
+        {
+          "id": "skill.foundation.settle",
+          "how": true
+        },
+        {
+          "id": "skill.foundation.threshold",
+          "how": true
+        },
+        {
+          "id": "skill.emotional.react_lat",
+          "how": true
+        },
+        {
+          "id": "skill.generalization.social_observe",
+          "how": true
+        },
+        {
+          "id": "skill.cue.loose_leash",
+          "how": true
+        },
+        {
+          "id": "skill.generalization.social_parallel",
+          "how": true
+        }
+      ]
+    },
+    {
+      "behavior": "aggression",
+      "symptom": "biting",
+      "goal": "skill.self_regulation.impulse_trade",
+      "goalLabel": "교환 (자원보호 예방)",
+      "pathLen": 16,
+      "howCount": 16,
+      "fillRate": 1,
+      "maxGap": 0,
+      "goalHasHow": true,
+      "path": [
+        {
+          "id": "skill.manners.bench_side_settle",
+          "how": true
+        },
+        {
+          "id": "skill.manners.restaurant_floor_wait",
+          "how": true
+        },
+        {
+          "id": "skill.obedience.distance_down_sit",
+          "how": true
+        },
+        {
+          "id": "skill.obedience.front_to_heel_finish",
+          "how": true
+        },
+        {
+          "id": "skill.rally.halt_sit_sequence",
+          "how": true
+        },
+        {
+          "id": "skill.rally.position_exchange",
+          "how": true
+        },
+        {
+          "id": "skill.emotional.puppy_handling",
+          "how": true
+        },
+        {
+          "id": "skill.foundation.attention",
+          "how": true
+        },
+        {
+          "id": "skill.foundation.consent",
+          "how": true
+        },
+        {
+          "id": "skill.mechanics.marker",
+          "how": true
+        },
+        {
+          "id": "skill.cue.basic",
+          "how": true
+        },
+        {
+          "id": "skill.foundation.routine",
+          "how": true
+        },
+        {
+          "id": "skill.foundation.settle",
+          "how": true
+        },
+        {
+          "id": "skill.foundation.threshold",
+          "how": true
+        },
+        {
+          "id": "skill.mechanics.reward",
+          "how": true
+        },
+        {
+          "id": "skill.self_regulation.impulse_trade",
+          "how": true
+        }
+      ]
+    },
+    {
+      "behavior": "resource_guarding",
+      "symptom": "resource_guarding",
+      "goal": "skill.self_regulation.impulse_trade",
+      "goalLabel": "교환 (자원보호 예방)",
+      "pathLen": 16,
+      "howCount": 16,
+      "fillRate": 1,
+      "maxGap": 0,
+      "goalHasHow": true,
+      "path": [
+        {
+          "id": "skill.manners.bench_side_settle",
+          "how": true
+        },
+        {
+          "id": "skill.manners.restaurant_floor_wait",
+          "how": true
+        },
+        {
+          "id": "skill.obedience.distance_down_sit",
+          "how": true
+        },
+        {
+          "id": "skill.obedience.front_to_heel_finish",
+          "how": true
+        },
+        {
+          "id": "skill.rally.halt_sit_sequence",
+          "how": true
+        },
+        {
+          "id": "skill.rally.position_exchange",
+          "how": true
+        },
+        {
+          "id": "skill.emotional.puppy_handling",
+          "how": true
+        },
+        {
+          "id": "skill.foundation.attention",
+          "how": true
+        },
+        {
+          "id": "skill.foundation.consent",
+          "how": true
+        },
+        {
+          "id": "skill.mechanics.marker",
+          "how": true
+        },
+        {
+          "id": "skill.cue.basic",
+          "how": true
+        },
+        {
+          "id": "skill.foundation.routine",
+          "how": true
+        },
+        {
+          "id": "skill.foundation.settle",
+          "how": true
+        },
+        {
+          "id": "skill.foundation.threshold",
+          "how": true
+        },
+        {
+          "id": "skill.mechanics.reward",
+          "how": true
+        },
+        {
+          "id": "skill.self_regulation.impulse_trade",
+          "how": true
+        }
+      ]
+    },
+    {
+      "behavior": "leash_pulling",
+      "symptom": "leash_pulling",
+      "goal": "skill.generalization.crowd_navigation",
+      "goalLabel": "사람 많은 곳 지나가기",
+      "pathLen": 20,
+      "howCount": 20,
+      "fillRate": 1,
+      "maxGap": 0,
+      "goalHasHow": true,
+      "path": [
+        {
+          "id": "skill.manners.bench_side_settle",
+          "how": true
+        },
+        {
+          "id": "skill.manners.common_area_quiet_passage",
+          "how": true
+        },
+        {
+          "id": "skill.manners.pass_dog_neutral",
+          "how": true
+        },
+        {
+          "id": "skill.manners.restaurant_floor_wait",
+          "how": true
+        },
+        {
+          "id": "skill.obedience.distance_down_sit",
+          "how": true
+        },
+        {
+          "id": "skill.obedience.front_to_heel_finish",
+          "how": true
+        },
+        {
+          "id": "skill.rally.halt_sit_sequence",
+          "how": true
+        },
+        {
+          "id": "skill.rally.position_exchange",
+          "how": true
+        },
+        {
+          "id": "skill.emotional.puppy_handling",
+          "how": true
+        },
+        {
+          "id": "skill.foundation.consent",
+          "how": true
+        },
+        {
+          "id": "skill.cue.basic",
+          "how": true
+        },
+        {
+          "id": "skill.foundation.routine",
+          "how": true
+        },
+        {
+          "id": "skill.foundation.settle",
+          "how": true
+        },
+        {
+          "id": "skill.foundation.threshold",
+          "how": true
+        },
+        {
+          "id": "skill.mechanics.reward",
+          "how": true
+        },
+        {
+          "id": "skill.foundation.attention",
+          "how": true
+        },
+        {
+          "id": "skill.mechanics.marker",
+          "how": true
+        },
+        {
+          "id": "skill.emotional.react_lat",
+          "how": true
+        },
+        {
+          "id": "skill.cue.loose_leash",
+          "how": true
+        },
+        {
+          "id": "skill.generalization.crowd_navigation",
+          "how": true
+        }
+      ]
+    },
+    {
+      "behavior": "jumping",
+      "symptom": "jumping",
+      "goal": "skill.self_regulation.four_paws",
+      "goalLabel": "네 발 바닥 (점프 대체)",
+      "pathLen": 21,
+      "howCount": 21,
+      "fillRate": 1,
+      "maxGap": 0,
+      "goalHasHow": true,
+      "path": [
+        {
+          "id": "skill.manners.bench_side_settle",
+          "how": true
+        },
+        {
+          "id": "skill.manners.ignore_street_food_debris",
+          "how": true
+        },
+        {
+          "id": "skill.manners.restaurant_floor_wait",
+          "how": true
+        },
+        {
+          "id": "skill.obedience.distance_down_sit",
+          "how": true
+        },
+        {
+          "id": "skill.obedience.front_to_heel_finish",
+          "how": true
+        },
+        {
+          "id": "skill.obedience.group_wait_parallel",
+          "how": true
+        },
+        {
+          "id": "skill.obedience.stay_separation_dynamic",
+          "how": true
+        },
+        {
+          "id": "skill.rally.halt_sit_sequence",
+          "how": true
+        },
+        {
+          "id": "skill.rally.position_exchange",
+          "how": true
+        },
+        {
+          "id": "skill.emotional.puppy_handling",
+          "how": true
+        },
+        {
+          "id": "skill.foundation.attention",
+          "how": true
+        },
+        {
+          "id": "skill.foundation.consent",
+          "how": true
+        },
+        {
+          "id": "skill.mechanics.marker",
+          "how": true
+        },
+        {
+          "id": "skill.cue.basic",
+          "how": true
+        },
+        {
+          "id": "skill.foundation.routine",
+          "how": true
+        },
+        {
+          "id": "skill.foundation.settle",
+          "how": true
+        },
+        {
+          "id": "skill.foundation.threshold",
+          "how": true
+        },
+        {
+          "id": "skill.mechanics.reward",
+          "how": true
+        },
+        {
+          "id": "skill.self_regulation.impulse_trade",
+          "how": true
+        },
+        {
+          "id": "skill.self_regulation.wait",
+          "how": true
+        },
+        {
+          "id": "skill.self_regulation.four_paws",
+          "how": true
+        }
+      ]
+    },
+    {
+      "behavior": "other",
+      "symptom": "cues",
+      "goal": "skill.generalization.recall_proofed",
+      "goalLabel": "산만한 곳에서도 오게 하기 (방해 속 리콜)",
+      "pathLen": 28,
+      "howCount": 28,
+      "fillRate": 1,
+      "maxGap": 0,
+      "goalHasHow": true,
+      "path": [
+        {
+          "id": "skill.manners.bench_side_settle",
+          "how": true
+        },
+        {
+          "id": "skill.manners.common_area_quiet_passage",
+          "how": true
+        },
+        {
+          "id": "skill.manners.pass_dog_neutral",
+          "how": true
+        },
+        {
+          "id": "skill.manners.restaurant_floor_wait",
+          "how": true
+        },
+        {
+          "id": "skill.obedience.distance_down_sit",
+          "how": true
+        },
+        {
+          "id": "skill.obedience.front_to_heel_finish",
+          "how": true
+        },
+        {
+          "id": "skill.obedience.group_wait_parallel",
+          "how": true
+        },
+        {
+          "id": "skill.obedience.recall_to_front_sit",
+          "how": true
+        },
+        {
+          "id": "skill.rally.halt_sit_sequence",
+          "how": true
+        },
+        {
+          "id": "skill.rally.position_exchange",
+          "how": true
+        },
+        {
+          "id": "skill.emotional.puppy_handling",
+          "how": true
+        },
+        {
+          "id": "skill.foundation.consent",
+          "how": true
+        },
+        {
+          "id": "skill.cue.basic",
+          "how": true
+        },
+        {
+          "id": "skill.foundation.routine",
+          "how": true
+        },
+        {
+          "id": "skill.foundation.settle",
+          "how": true
+        },
+        {
+          "id": "skill.foundation.threshold",
+          "how": true
+        },
+        {
+          "id": "skill.mechanics.reward",
+          "how": true
+        },
+        {
+          "id": "skill.foundation.attention",
+          "how": true
+        },
+        {
+          "id": "skill.generalization.social_observe",
+          "how": true
+        },
+        {
+          "id": "skill.mechanics.marker",
+          "how": true
+        },
+        {
+          "id": "skill.emotional.react_lat",
+          "how": true
+        },
+        {
+          "id": "skill.generalization.puppy_exposure",
+          "how": true
+        },
+        {
+          "id": "skill.cue.loose_leash",
+          "how": true
+        },
+        {
+          "id": "skill.generalization.crowd_navigation",
+          "how": true
+        },
+        {
+          "id": "skill.generalization.leash_turn",
+          "how": true
+        },
+        {
+          "id": "skill.generalization.social_parallel",
+          "how": true
+        },
+        {
+          "id": "skill.cue.recall",
+          "how": true
+        },
+        {
+          "id": "skill.generalization.recall_proofed",
+          "how": true
+        }
+      ]
+    }
+  ]
+}

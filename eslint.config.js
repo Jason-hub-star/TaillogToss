@@ -63,6 +63,11 @@ export default [
       '@typescript-eslint/no-require-imports': 'off',
     },
   },
+  // Node ESM 스크립트 (.mjs) — commonjs 가 아니므로 별도 블록
+  {
+    files: ['scripts/**/*.mjs', '**/*.mjs'],
+    languageOptions: { globals: { ...globals.node }, sourceType: 'module' },
+  },
   // 테스트: jest 전역
   {
     files: ['**/__tests__/**', '**/*.test.{ts,tsx,js}', '**/*.spec.{ts,tsx,js}'],

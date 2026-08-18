@@ -155,7 +155,7 @@ select * from dogs where user_id = 'mock_stable_user_001';
 
 #### 2.2 AuthContext에서 onboarding 완료 판별
 
-**File**: `src/features/auth/AuthContext.tsx`  
+**File**: `src/stores/AuthContext.tsx`  
 **Function**: `getHasCompletedOnboarding`  
 **Line**: ~52
 
@@ -388,7 +388,7 @@ adb shell dumpsys connectivity
    - 네트워크 요청 추적
 
 4. **개선 항목 기록**
-   - `docs/PROJECT-STATUS.md` 업데이트
+   - `docs/status/PROJECT-STATUS.md` 업데이트
    - 반복되는 이슈면 자동화 추가 검토
 
 ---

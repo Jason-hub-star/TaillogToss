@@ -27,6 +27,7 @@ import { Route as _SettingsRoute } from '../pages/settings';
 import { Route as _SettingsSubscriptionRoute } from '../pages/settings/subscription';
 import { Route as _TrainingAcademyRoute } from '../pages/training/academy';
 import { Route as _TrainingDetailRoute } from '../pages/training/detail';
+import { Route as _TrainingNodeRoute } from '../pages/training/node';
 
 declare module '@granite-js/react-native' {
   interface RegisterScreenInput {
@@ -57,6 +58,7 @@ declare module '@granite-js/react-native' {
     '/settings/subscription': (typeof _SettingsSubscriptionRoute)['_inputType'];
     '/training/academy': (typeof _TrainingAcademyRoute)['_inputType'];
     '/training/detail': (typeof _TrainingDetailRoute)['_inputType'];
+    '/training/node': (typeof _TrainingNodeRoute)['_inputType'];
   }
 
   interface RegisterScreen {
@@ -87,5 +89,6 @@ declare module '@granite-js/react-native' {
     '/settings/subscription': (typeof _SettingsSubscriptionRoute)['_outputType'];
     '/training/academy': (typeof _TrainingAcademyRoute)['_outputType'];
     '/training/detail': (typeof _TrainingDetailRoute)['_outputType'];
+    '/training/node': (typeof _TrainingNodeRoute)['_outputType'];
   }
 }

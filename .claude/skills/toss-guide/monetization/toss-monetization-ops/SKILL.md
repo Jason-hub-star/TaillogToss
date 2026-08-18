@@ -169,9 +169,9 @@ Next Action:
 ```
 
 ## 문서 반영 규칙
-- 상태 요약: `docs/PROJECT-STATUS.md`
-- 상세 증적: `docs/11-FEATURE-PARITY-MATRIX.md`
-- 차단/미완료: `docs/MISSING-AND-UNIMPLEMENTED.md`
+- 상태 요약: `docs/status/PROJECT-STATUS.md`
+- 상세 증적: `docs/status/11-FEATURE-PARITY-MATRIX.md`
+- 차단/미완료: `docs/status/MISSING-AND-UNIMPLEMENTED.md`
 
 ## Failure Modes
 <!-- enrich:57c3e8f1b412 -->

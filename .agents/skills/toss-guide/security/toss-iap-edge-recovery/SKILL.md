@@ -67,7 +67,7 @@ limit 5;
 ## 주의사항
 - `verify_jwt=false`를 쓸 때는 함수 내부 `/auth/v1/user` 검증이 반드시 있어야 한다.
 - `authenticated` 허용은 B2C 결제 복구용이며, 조직/트레이너 지급 컨텍스트는 별도 권한 검증 없이는 열지 않는다.
-- 문서 상태는 `CLAUDE.md`에 장문 누적하지 말고 `docs/PROJECT-STATUS.md`에 증적 중심으로 기록한다.
+- 문서 상태는 `CLAUDE.md`에 장문 누적하지 말고 `docs/status/PROJECT-STATUS.md`에 증적 중심으로 기록한다.
 
 ## Failure Modes
 <!-- enrich:13e9a4b7f078 -->

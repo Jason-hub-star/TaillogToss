@@ -1,17 +1,17 @@
 ---
 name: page-login-upgrade
-description: Page-level hardening workflow for /login (Login). Use this when improving UI/UX and feature completeness for this route only.
+description: Page-level hardening workflow for /onboarding/welcome (Login). Use this when improving UI/UX and feature completeness for this route only.
 ---
 
 # page-login-upgrade
 
 ## Trigger
-- User asks to improve, polish, fix, or complete route `/login`.
+- User asks to improve, polish, fix, or complete route `/onboarding/welcome`.
 - UI/UX hardening is requested for Login page.
 
 ## Input Context
-- Route: `/login`
-- Page file: `src/pages/login.tsx`
+- Route: `/onboarding/welcome`
+- Page file: `src/pages/onboarding/welcome.tsx`
 - Parity: AUTH-001
 - Priority: P2
 

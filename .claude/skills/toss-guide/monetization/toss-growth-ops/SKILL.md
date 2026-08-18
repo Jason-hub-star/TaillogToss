@@ -122,9 +122,9 @@ Next Action:
 ```
 
 ## 문서 동기화 규칙
-- 최신 증적은 `docs/PROJECT-STATUS.md`를 우선 갱신.
-- 상세 로그/케이스는 `docs/11-FEATURE-PARITY-MATRIX.md`에 누적.
-- 미완료/차단 항목은 `docs/MISSING-AND-UNIMPLEMENTED.md`에 단일 기준으로 반영.
+- 최신 증적은 `docs/status/PROJECT-STATUS.md`를 우선 갱신.
+- 상세 로그/케이스는 `docs/status/11-FEATURE-PARITY-MATRIX.md`에 누적.
+- 미완료/차단 항목은 `docs/status/MISSING-AND-UNIMPLEMENTED.md`에 단일 기준으로 반영.
 
 ## Failure Modes
 <!-- enrich:46b2d7e0a301 -->

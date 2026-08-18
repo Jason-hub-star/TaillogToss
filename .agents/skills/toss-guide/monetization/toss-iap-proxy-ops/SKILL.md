@@ -455,7 +455,7 @@ export async function verifyAndGrant(receipt: string, userId: string) {
 - `useIsPro()` → `false` → PRO 기능 잠금 해제 안 됨
 
 ### 근본 원인
-`verify-iap-order/main.ts`에 `toss_orders` upsert 이후 `subscriptions` 업데이트 로직 누락.  
+`supabase/functions/verify-iap-order/main.ts`에 `toss_orders` upsert 이후 `subscriptions` 업데이트 로직 누락.  
 `subscriptions.user_id`에 UNIQUE 제약도 없어서 upsert 자체가 불가능했음.
 
 ### 해결 순서
@@ -617,7 +617,7 @@ supabase db query "SELECT user_id, plan_type, is_active, next_billing_date, upda
 
 6. **검증 및 문서 동기화**
    - IAP 엔드-투-엔드 검증 완료
-   - `docs/PROJECT-STATUS.md` 업데이트
+   - `docs/status/PROJECT-STATUS.md` 업데이트
    - `docs/ref/AIT-IAP-MESSAGE-POINTS-REFERENCE.md` 패턴 추가
 
 ---

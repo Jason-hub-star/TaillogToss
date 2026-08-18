@@ -87,9 +87,9 @@ Next Action:
 ```
 
 ## 문서 동기화
-- 요약: `docs/PROJECT-STATUS.md`
-- 상세 로그: `docs/11-FEATURE-PARITY-MATRIX.md`
-- 차단/잔여: `docs/MISSING-AND-UNIMPLEMENTED.md`
+- 요약: `docs/status/PROJECT-STATUS.md`
+- 상세 로그: `docs/status/11-FEATURE-PARITY-MATRIX.md`
+- 차단/잔여: `docs/status/MISSING-AND-UNIMPLEMENTED.md`
 
 ## Failure Modes
 <!-- enrich:e4c7a9b2d045 -->

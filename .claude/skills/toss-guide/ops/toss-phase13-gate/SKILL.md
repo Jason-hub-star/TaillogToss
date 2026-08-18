@@ -14,9 +14,9 @@ Phase 13(출시 직전)에서 게이트 항목을 빠르게 판정하고, 증적
 
 ## 입력 기준 문서
 - `CLAUDE.md`
-- `docs/11-FEATURE-PARITY-MATRIX.md`
-- `docs/MISSING-AND-UNIMPLEMENTED.md`
-- `docs/2-28/PHASE13-FE-BE-ROLLING-MIGRATION.md`
+- `docs/status/11-FEATURE-PARITY-MATRIX.md`
+- `docs/status/MISSING-AND-UNIMPLEMENTED.md`
+- ~~`docs/2-28/PHASE13-FE-BE-ROLLING-MIGRATION.md`~~ (폐기 — 2026-08-18 확인. Phase 13 은 완료됐고 롤링 마이그레이션 문서는 남아 있지 않다)
 
 ## 게이트 체크리스트
 1. AUTH-001

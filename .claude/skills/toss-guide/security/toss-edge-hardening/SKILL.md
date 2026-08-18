@@ -26,7 +26,7 @@ description: TaillogToss Edge Function 보안 하드닝 — 권한 검증, 헤�
 ## 작업 순서
 1. 사전 확인
 - `list_edge_functions`로 `verify_jwt` 설정과 버전 확인
-- 타깃 함수 엔트리포인트와 `_shared/httpAdapter.ts` 같은 공통 auth 파일 확인
+- 타깃 함수 엔트리포인트와 `supabase/functions/_shared/httpAdapter.ts` 같은 공통 auth 파일 확인
 
 2. 코드 점검
 - `buildEdgeContext`에서 role 유입 경로 확인
@@ -62,7 +62,7 @@ description: TaillogToss Edge Function 보안 하드닝 — 권한 검증, 헤�
 ## 증적 최소 세트
 - HTTP 증적: baseline/probe 각각 status + `sb-request-id` 1개 이상
 - 로그 증적: `deployment_id`, `version`, `status_code`가 HTTP 결과와 일치
-- 문서 반영: `docs/MISSING-AND-UNIMPLEMENTED.md`의 배포 버전/검증 상태 동기화
+- 문서 반영: `docs/status/MISSING-AND-UNIMPLEMENTED.md`의 배포 버전/검증 상태 동기화
 
 ## 완료 기준
 - 타깃 함수가 최신 버전으로 `ACTIVE`

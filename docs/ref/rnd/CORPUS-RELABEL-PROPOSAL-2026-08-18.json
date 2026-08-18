@@ -1,0 +1,93 @@
+{
+  "principle": "앱이 훈련 콘텐츠로 답해도 되는가 — 되면 none",
+  "proposals": [
+    {
+      "idx": 12,
+      "from": "trainer",
+      "to": "none",
+      "reason": "산책 중 반응성 짖음. 물림 없음 — 앱 훈련 콘텐츠의 표준 주제",
+      "severity": "P1"
+    },
+    {
+      "idx": 17,
+      "from": "trainer",
+      "to": "none",
+      "reason": "3개월 퍼피의 산책 후 흥분. 놀이 맥락 으르렁, 위해 없음",
+      "severity": "P1"
+    },
+    {
+      "idx": 18,
+      "from": "trainer",
+      "to": "none",
+      "reason": "6개월 퍼피 과활동. 나이 대비 정상 범위",
+      "severity": "P1"
+    },
+    {
+      "idx": 19,
+      "from": "none",
+      "to": "vet",
+      "reason": "흥분성 배뇨가 '갈수록 심해진다' = 악화. 비뇨기 감별 대상",
+      "severity": "P1"
+    },
+    {
+      "idx": 22,
+      "from": "none",
+      "to": "vet",
+      "reason": "심장병·폐수종 명시 — 의학 그 자체. 훈련 질문이 아니다",
+      "severity": "P0"
+    },
+    {
+      "idx": 29,
+      "from": "trainer",
+      "to": "none",
+      "reason": "다른 개와 못 어울림(겁). 사회화 훈련의 표준 주제",
+      "severity": "P1"
+    },
+    {
+      "idx": 42,
+      "from": "trainer",
+      "to": "none",
+      "reason": "6개월 퍼피 입질. 앱이 반드시 다뤄야 할 표준 주제",
+      "severity": "P1"
+    },
+    {
+      "idx": 45,
+      "from": "trainer",
+      "to": "none",
+      "reason": "보호자 죄책감 + 처벌 사용 고민. LIMA 교육으로 앱이 답할 주제",
+      "severity": "P1"
+    },
+    {
+      "idx": 57,
+      "from": "vet",
+      "to": "vet|trainer",
+      "reason": "'개물림 피해자' — 사람 부상(vet)과 가해견 공격성(trainer) 둘 다 방어 가능. 단일 정답 강요가 오류",
+      "severity": "P2"
+    },
+    {
+      "idx": 95,
+      "from": "none",
+      "to": "vet",
+      "reason": "차에서 침 흘림 = 오심의 전형 지표. 토가 없어도 멀미 초기",
+      "severity": "P1"
+    }
+  ],
+  "recompute_naive": {
+    "before": {
+      "vetRecall": 0.7272727272727273,
+      "vetN": "8/11",
+      "refRecall": 0.8148148148148148,
+      "refN": "22/27",
+      "precision": 0.4888888888888889,
+      "precN": "22/45"
+    },
+    "after": {
+      "vetRecall": 0.7857142857142857,
+      "vetN": "11/14",
+      "refRecall": 0.9166666666666666,
+      "refN": "22/24",
+      "precision": 0.4888888888888889,
+      "precN": "22/45"
+    }
+  }
+}

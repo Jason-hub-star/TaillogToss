@@ -2,17 +2,23 @@
  * 훈련 그래프 번들 스모크 — 데이터가 실제로 쓸 수 있는 모양인지
  * Parity: UIUX-002, UIUX-003
  */
+import type { BehaviorType } from 'types/dog';
+
 import {
+  BEHAVIOR_TO_SYMPTOM,
   GRAPH_COUNTS,
   GRAPH_EDGES,
   GRAPH_NODES,
   SYMPTOMS,
   fillName,
+  getEntryNodeForBehavior,
   getHow,
   getLadder,
   getNode,
   getNodesForSymptom,
   getPrerequisites,
+  getTrainingPath,
+  getTrainingPathForBehaviors,
 } from '../index';
 
 describe('훈련 그래프 번들', () => {
@@ -89,6 +95,33 @@ describe('훈련 그래프 번들', () => {
     const filled = fillName(withTemplate!.oneline, '메이');
     expect(filled).toContain('메이');
     expect(filled).not.toContain('{{name}}');
+  });
+
+  it('증상 17종 전부가 진입 노드를 가지고, 그 노드가 번들 안에 있다', () => {
+    for (const s of SYMPTOMS) {
+      const path = getTrainingPath(s.id);
+      expect(path).not.toBeNull();
+      expect(getNode(path!.goal)).toBeDefined();
+      expect(getHow(path!.goal)).toBeDefined();
+      expect(path!.ladder[path!.ladder.length - 1]).toBe(path!.goal);
+    }
+  });
+
+  it('BehaviorType 10종이 전부 훈련 경로로 이어진다', () => {
+    const behaviors = Object.keys(BEHAVIOR_TO_SYMPTOM) as BehaviorType[];
+    expect(behaviors).toHaveLength(10);
+    for (const b of behaviors) {
+      const goal = getEntryNodeForBehavior(b);
+      expect(goal).not.toBeNull();
+      expect(getHow(goal!)).toBeDefined();
+    }
+  });
+
+  it('코칭 결과의 훈련 목적지가 첫 유효 behavior 로 정해진다', () => {
+    const path = getTrainingPathForBehaviors(['separation', 'barking']);
+    expect(path?.symptomId).toBe('alone');
+    expect(path?.goal).toBe('skill.self_regulation.sep_graduated');
+    expect(getTrainingPathForBehaviors([])).toBeNull();
   });
 
   it('stuck 처방이 가리키는 노드는 번들 안에 있거나 아예 없다 — 깨진 링크 금지', () => {

@@ -11,7 +11,9 @@
   "edges": 326,
   "how": 207,
   "symptoms": 17,
-  "rejectedByFilter": 0
+  "rejectedByFilter": 0,
+  "symptomEntry": 17,
+  "entryFromCorpus": 14
  },
  "symptoms": [
   {
@@ -8995,5 +8997,43 @@
   "skill.trick.back_walk_stairs": [
    "tricks"
   ]
+ },
+ "symptomEntry": {
+  "alone": "skill.self_regulation.sep_graduated",
+  "barking": "skill.emotional.react_lat",
+  "biting": "skill.self_regulation.puppy_bite_inhibition",
+  "overexcited": "skill.self_regulation.off_switch",
+  "fearful": "skill.emotional.react_lat",
+  "dog_greeting": "skill.emotional.react_lat",
+  "jumping": "skill.self_regulation.four_paws",
+  "destructive": "skill.generalization.needs_enrichment",
+  "resource_guarding": "skill.self_regulation.impulse_trade",
+  "marking": "skill.generalization.marking_management",
+  "potty": "skill.self_regulation.marking_redirect",
+  "leash_pulling": "skill.cue.loose_leash",
+  "handling": "skill.husbandry.mouth_care",
+  "travel": "skill.emotional.car_acclimation",
+  "cues": "skill.cue.recall",
+  "energy": "skill.self_regulation.off_switch",
+  "tricks": "skill.dance.beat_matched_pace"
+ },
+ "$entrySource": {
+  "alone": "corpus(3)",
+  "barking": "corpus(6)",
+  "biting": "corpus(4)",
+  "overexcited": "corpus(3)",
+  "fearful": "corpus(6)",
+  "dog_greeting": "corpus(6)",
+  "jumping": "fallback",
+  "destructive": "corpus(2)",
+  "resource_guarding": "fallback",
+  "marking": "corpus(5)",
+  "potty": "corpus(2)",
+  "leash_pulling": "corpus(1)",
+  "handling": "corpus(6)",
+  "travel": "corpus(1)",
+  "cues": "corpus(2)",
+  "energy": "corpus(3)",
+  "tricks": "shortest-ladder(1)"
  }
 }

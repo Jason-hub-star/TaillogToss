@@ -10,6 +10,8 @@
  *
  * Parity: UIUX-002, UIUX-003
  */
+import type { BehaviorType } from 'types/dog';
+
 import raw from './training-graph.json';
 
 /** 보호자 언어 축 — 앱 진입점. dom(트레이너 커리큘럼 축)과 직교한다. */
@@ -59,12 +61,23 @@ export interface HowCard {
 
 interface TrainingGraph {
   $source: { repo: string; commit: string; taxonomyVersion: string; filter: string; note: string };
-  counts: { nodes: number; edges: number; how: number; symptoms: number; rejectedByFilter: number };
+  counts: {
+    nodes: number;
+    edges: number;
+    how: number;
+    symptoms: number;
+    rejectedByFilter: number;
+    symptomEntry: number;
+    entryFromCorpus: number;
+  };
   symptoms: Symptom[];
   nodes: GraphNode[];
   edges: GraphEdge[];
   how: Record<string, HowCard>;
   symptomIndex: Record<string, string[]>;
+  /** 증상 → 대표 진입 노드. 14/17 은 tailtree 실코퍼스의 사람 판정에서 왔다. */
+  symptomEntry: Record<string, string>;
+  $entrySource: Record<string, string>;
 }
 
 const graph = raw as unknown as TrainingGraph;
@@ -161,4 +174,64 @@ export function getLadder(goalId: string): string[] {
 /** how 본문의 `{{name}}` 을 강아지 이름으로 치환한다. */
 export function fillName(text: string, dogName: string): string {
   return text.replace(/\{\{name\}\}/g, dogName);
+}
+
+// ── 진입 라우팅 ─────────────────────────────────────────────
+
+/**
+ * 기존 설문·코칭 축(`BehaviorType` 10종)을 tailtree 증상 축(17종)으로 잇는다.
+ *
+ * 두 축을 **교체가 아니라 공존**시킨다(3차 수렴 P11 #3). 설문·코칭·분석·알림이
+ * 전부 `BehaviorType` 에 결박돼 있어 갈아끼우면 그 전부가 회귀한다.
+ * 증상 17 은 신규 진입점(마킹·배변·핸들링·이동·기본신호·에너지·재주 7종)을 여는 쪽이다.
+ */
+export const BEHAVIOR_TO_SYMPTOM: Record<BehaviorType, string> = {
+  separation: 'alone',
+  anxiety: 'fearful',
+  barking: 'barking',
+  destructive: 'destructive',
+  reactivity: 'dog_greeting',
+  aggression: 'biting',
+  resource_guarding: 'resource_guarding',
+  leash_pulling: 'leash_pulling',
+  jumping: 'jumping',
+  other: 'cues',
+};
+
+/** 증상의 대표 진입 노드. 14/17 은 tailtree 실코퍼스의 사람 판정이 출처다. */
+export function getEntryNodeForSymptom(symptomId: string): string | null {
+  return graph.symptomEntry[symptomId] ?? null;
+}
+
+export function getEntryNodeForBehavior(behavior: BehaviorType): string | null {
+  return getEntryNodeForSymptom(BEHAVIOR_TO_SYMPTOM[behavior]);
+}
+
+export interface TrainingPath {
+  symptomId: string;
+  /** 목표 노드 */
+  goal: string;
+  /** 기초 → 목표 순서의 원자 사다리 */
+  ladder: string[];
+}
+
+/** 증상 하나에 대한 훈련 경로. 진입 노드가 없으면 null. */
+export function getTrainingPath(symptomId: string): TrainingPath | null {
+  const goal = getEntryNodeForSymptom(symptomId);
+  if (!goal) return null;
+  return { symptomId, goal, ladder: getLadder(goal) };
+}
+
+/**
+ * 코칭 결과의 "관련 훈련 바로 시작하기" 목적지.
+ *
+ * 규칙 기반 코칭은 `reference_curriculum_ids` 를 채우지 않으므로(LLM 이 채우던 자리),
+ * 앱이 번들 그래프로 직접 라우팅한다. 서버에 물어보지 않는다.
+ */
+export function getTrainingPathForBehaviors(behaviors: BehaviorType[]): TrainingPath | null {
+  for (const b of behaviors) {
+    const path = getTrainingPath(BEHAVIOR_TO_SYMPTOM[b]);
+    if (path) return path;
+  }
+  return null;
 }

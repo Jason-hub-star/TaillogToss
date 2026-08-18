@@ -83,6 +83,92 @@ for (const [nodeId, syms] of Object.entries(symIndex)) {
   slimIndex[a] = [...new Set([...(slimIndex[a] || []), ...syms])];
 }
 
+// 증상 → 대표 진입 노드
+//
+// 휴리스틱으로 고르지 않는다. tailtree 실코퍼스(ke1-v2-run.v0.json)에서
+// **사람이 판정한** entry_node 를 증상별로 집계해 최빈값을 쓴다.
+//
+// 왜 휴리스틱이 안 되나(2026-08-18 실측): "사다리가 가장 긴 노드"를 목표로 잡으면
+// leash_pulling -> skill.rally.off_leash_heel(줄 당김 문제에 목줄 제거 훈련),
+// aggression -> skill.emotional.muzzle_conditioning(입마개 = 낙인) 처럼
+// 보호자에게 최종 보스를 던지는 결과가 나온다.
+const corpus = (() => {
+  try {
+    return JSON.parse(readFileSync(join(TT, 'data/ke1-v2-run.v0.json'), 'utf-8')).items;
+  } catch {
+    return [];
+  }
+})();
+
+const entryVotes = new Map(); // symptom -> Map(nodeId -> count)
+for (const item of corpus) {
+  const raw = item.entry_node;
+  if (!raw) continue;
+  const atom = fold(raw);
+  if (!exposed.has(atom)) continue;
+  for (const s of symIndex[raw] ?? symIndex[atom] ?? []) {
+    if (!entryVotes.has(s)) entryVotes.set(s, new Map());
+    const m = entryVotes.get(s);
+    m.set(atom, (m.get(atom) ?? 0) + 1);
+  }
+}
+
+// 코퍼스에 사람 판정이 없는 증상만 명시 보완한다. 추론 규칙을 만들지 않는다 —
+// 3개뿐이고, 근거를 적어두는 편이 규칙을 세우는 것보다 정직하다.
+const ENTRY_FALLBACK = {
+  jumping: 'skill.self_regulation.four_paws', // 네 발 바닥 = 뛰어오름 대응의 표준 첫 수
+  resource_guarding: 'skill.self_regulation.impulse_trade', // 교환 훈련이 자원 보호의 표준
+};
+
+// 3순위: 그 증상에 태깅된 노드 중 **사다리가 가장 짧은** 것(진입 장벽 최소).
+// 안전 민감 증상에는 쓰지 않는다 — 위에서 코퍼스나 명시 매핑으로 이미 덮인다.
+// tricks 처럼 스포츠 축에서만 걸리며, 거기선 "가장 쉬운 것부터"가 옳다.
+const prereqOf = new Map();
+for (const e of slimEdges) {
+  const list = prereqOf.get(e.t);
+  if (list) list.push(e.f);
+  else prereqOf.set(e.t, [e.f]);
+}
+const ladderSize = (id) => {
+  const seen = new Set([id]);
+  const stack = [id];
+  while (stack.length > 0) {
+    const cur = stack.pop();
+    for (const p of prereqOf.get(cur) ?? []) {
+      if (!seen.has(p)) {
+        seen.add(p);
+        stack.push(p);
+      }
+    }
+  }
+  return seen.size;
+};
+
+const symptomEntry = {};
+const entrySource = {};
+for (const s of symptoms) {
+  const votes = entryVotes.get(s.id);
+  if (votes && votes.size > 0) {
+    const [top] = [...votes.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+    symptomEntry[s.id] = top[0];
+    entrySource[s.id] = `corpus(${top[1]})`;
+    continue;
+  }
+  if (ENTRY_FALLBACK[s.id] && exposed.has(ENTRY_FALLBACK[s.id])) {
+    symptomEntry[s.id] = ENTRY_FALLBACK[s.id];
+    entrySource[s.id] = 'fallback';
+    continue;
+  }
+  const tagged = Object.entries(slimIndex)
+    .filter(([, syms]) => syms.includes(s.id))
+    .map(([id]) => id);
+  if (tagged.length > 0) {
+    const easiest = tagged.reduce((a, b) => (ladderSize(b) < ladderSize(a) ? b : a));
+    symptomEntry[s.id] = easiest;
+    entrySource[s.id] = `shortest-ladder(${ladderSize(easiest)})`;
+  }
+}
+
 // 출처 각인
 let ttCommit = 'unknown';
 try {
@@ -105,12 +191,16 @@ const payload = {
     how: Object.keys(slimHow).length,
     symptoms: symptoms.length,
     rejectedByFilter: rejected,
+    symptomEntry: Object.keys(symptomEntry).length,
+    entryFromCorpus: Object.values(entrySource).filter((v) => v.startsWith('corpus')).length,
   },
   symptoms,
   nodes: slimNodes,
   edges: slimEdges,
   how: slimHow,
   symptomIndex: slimIndex,
+  symptomEntry,
+  $entrySource: entrySource,
 };
 
 const json = JSON.stringify(payload, null, 1);
@@ -141,5 +231,6 @@ console.log(`  노드      ${payload.counts.nodes}`);
 console.log(`  엣지      ${payload.counts.edges}`);
 console.log(`  how       ${payload.counts.how}`);
 console.log(`  증상      ${payload.counts.symptoms}`);
+console.log(`  진입노드  ${payload.counts.symptomEntry}/${payload.counts.symptoms}  (코퍼스 사람판정 ${payload.counts.entryFromCorpus} · 명시보완 ${payload.counts.symptomEntry - payload.counts.entryFromCorpus})`);
 console.log(`  크기      ${kb(Buffer.byteLength(json))}  ->  ${OUT}`);
 console.log('  비교      현행 curriculum.ts 64 KB · 토스 .ait 제한 100 MB\n');

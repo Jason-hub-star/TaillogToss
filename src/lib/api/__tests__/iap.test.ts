@@ -9,7 +9,19 @@ const mockRequestBackend = jest.fn();
 const mockGetSession = jest.fn();
 const mockRefreshSession = jest.fn();
 const mockGetUser = jest.fn();
-const mockCreateOneTimePurchaseOrder = jest.fn(() => jest.fn());
+/** createOneTimePurchaseOrder 에 실제로 넘어가는 인자 모양 (SDK 계약) */
+type CreateOrderArg = {
+  options: { processProductGrant: (p: { orderId: string }) => Promise<unknown> };
+  onEvent: (e: { type: string; result?: { orderId: string } }) => void;
+};
+const mockCreateOneTimePurchaseOrder = jest.fn((_arg: CreateOrderArg) => jest.fn());
+
+/** 첫 호출 인자를 꺼낸다. 미호출이면 undefined 크래시 대신 명시적으로 실패시킨다. */
+function firstOrderArg(): CreateOrderArg {
+  const call = mockCreateOneTimePurchaseOrder.mock.calls[0];
+  if (!call) throw new Error('createOneTimePurchaseOrder 가 호출되지 않았다');
+  return call[0];
+}
 const mockCompleteProductGrant = jest.fn();
 const mockGetPendingOrders = jest.fn();
 const mockStorageGetItem = jest.fn();
@@ -17,9 +29,9 @@ const mockStorageSetItem = jest.fn();
 
 jest.mock('@apps-in-toss/native-modules', () => ({
   IAP: {
-    createOneTimePurchaseOrder: (...args: unknown[]) => mockCreateOneTimePurchaseOrder.apply(null, args),
-    completeProductGrant: (...args: unknown[]) => mockCompleteProductGrant.apply(null, args),
-    getPendingOrders: (...args: unknown[]) => mockGetPendingOrders.apply(null, args),
+    createOneTimePurchaseOrder: (...args: Parameters<typeof mockCreateOneTimePurchaseOrder>) => mockCreateOneTimePurchaseOrder(...args),
+    completeProductGrant: (...args: Parameters<typeof mockCompleteProductGrant>) => mockCompleteProductGrant(...args),
+    getPendingOrders: (...args: Parameters<typeof mockGetPendingOrders>) => mockGetPendingOrders(...args),
   },
 }));
 
@@ -341,7 +353,7 @@ describe('createOneTimePurchaseOrder', () => {
       onEvent,
     });
 
-    const options = (mockCreateOneTimePurchaseOrder.mock.calls as any)[0][0];
+    const options = firstOrderArg();
     await options.options.processProductGrant({ orderId: 'ord_failed' });
 
     expect(onEvent).toHaveBeenCalledWith({ type: 'PURCHASE_STARTED' });
@@ -360,7 +372,7 @@ describe('createOneTimePurchaseOrder', () => {
       onEvent,
     });
 
-    const options = (mockCreateOneTimePurchaseOrder.mock.calls as any)[0][0];
+    const options = firstOrderArg();
     await options.options.processProductGrant({ orderId: 'ord_failed' });
     options.onEvent({ type: 'completed' });
 
@@ -377,7 +389,7 @@ describe('createOneTimePurchaseOrder', () => {
       onEvent,
     });
 
-    const options = (mockCreateOneTimePurchaseOrder.mock.calls as any)[0][0];
+    const options = firstOrderArg();
     await options.options.processProductGrant({ orderId: 'ord_granted' });
     options.onEvent({ type: 'completed', result: { orderId: 'ord_granted' } });
 
@@ -403,7 +415,7 @@ describe('createOneTimePurchaseOrder', () => {
       onEvent,
     });
 
-    const options = (mockCreateOneTimePurchaseOrder.mock.calls as any)[0][0];
+    const options = firstOrderArg();
     const grantPromise = options.options.processProductGrant({ orderId: 'ord_granted' });
     options.onEvent({ type: 'PAYMENT_COMPLETED', result: { orderId: 'ord_granted' } });
 

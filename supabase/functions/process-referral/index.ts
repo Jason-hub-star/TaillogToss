@@ -181,7 +181,7 @@ async function settleReferrals(
     if (granted >= remainingBudget) break;
 
     // 3-1. invitee IP가 referrer IP와 같으면 자가초대 의심 → expired
-    let isSelfReferralSuspect = false;
+    const isSelfReferralSuspect = false;
     if (ref.invitee_ip) {
       // referrer의 last_sign_in_ip 조회는 auth schema 접근 필요 — 여기서는 단순화: invitee_ip만 비교
       // 운영에서는 auth.users.last_sign_in_ip 조회 후 비교

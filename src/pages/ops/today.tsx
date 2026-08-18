@@ -31,6 +31,7 @@ import type { OpsItem } from 'components/features/ops/OpsListItem';
 import type { OpsStatus } from 'components/features/ops/OpsBadge';
 import type { DailyReport } from 'types/b2b';
 import { colors, typography, spacing } from 'styles/tokens';
+import type { IntensityLevel } from 'types/log';
 
 export const Route = createRoute('/ops/today', {
   component: OpsTodayPage,
@@ -315,7 +316,7 @@ function OpsTodayPage() {
       {
         dog_id: data.dogId,
         category: 'other_behavior',
-        intensity: data.intensity as any,
+        intensity: data.intensity as IntensityLevel,
         occurred_at: new Date().toISOString(),
         memo: data.memo,
         org_id: org.id,
@@ -370,7 +371,7 @@ function OpsTodayPage() {
         createQuickLog.mutateAsync({
           dog_id: item.dogId,
           category: 'other_behavior',
-          intensity: intensity as any,
+          intensity: intensity as IntensityLevel,
           occurred_at: new Date().toISOString(),
           memo,
           org_id: org.id,

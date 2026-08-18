@@ -15,7 +15,6 @@ const path = require('node:path');
 
 const root = path.resolve(__dirname, '..');
 const DEFAULT_PROJECT_REF = 'gxvtgrcqkbdibkyeqyil';
-const DEFAULT_SUPABASE_URL = `https://${DEFAULT_PROJECT_REF}.supabase.co`;
 const DEFAULT_BACKEND_URL = 'https://taillogtoss-backend-l35lj.ondigitalocean.app';
 const MALFORMED_JWT = 'not-a-valid.jwt';
 const EXPIRED_TEST_JWT = [

@@ -8,7 +8,7 @@ import { colors, typography } from 'styles/tokens';
 import { ICONS } from 'lib/data/iconSources';
 import { ChipGroup } from 'components/tds-ext';
 import { DogPhotoPicker } from 'components/features/dog/DogPhotoPicker';
-import type { SurveyStep1, SurveyStep2, DogSex } from 'types/dog';
+import type { SurveyStep1, SurveyStep2, DogSex, SurveyData } from 'types/dog';
 import breedsData from 'lib/data/breeds.json';
 
 const LIVING_OPTIONS = [
@@ -208,7 +208,7 @@ export function Step1Profile({ step1, step2, onChange }: Props) {
         <ChipGroup
           items={LIVING_OPTIONS}
           selectedKeys={[step2.household.living_type]}
-          onSelect={(key) => update2({ household: { ...step2.household, living_type: key as any } })}
+          onSelect={(key) => update2({ household: { ...step2.household, living_type: key as SurveyData['step2_environment']['household']['living_type'] } })}
         />
         <View style={styles.switchRow}>
           <Text style={styles.switchLabel}>어린이와 함께 사나요?</Text>

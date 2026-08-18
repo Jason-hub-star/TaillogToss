@@ -154,7 +154,7 @@ describe('loginWithToss', () => {
 describe('setSessionFromBridgeResponse', () => {
   it('토큰 누락 시 INVALID_BRIDGE_TOKENS', async () => {
     await expect(
-      setSessionFromBridgeResponse({ access_token: '', refresh_token: '' } as any),
+      setSessionFromBridgeResponse({ access_token: '', refresh_token: '' } as unknown as Parameters<typeof setSessionFromBridgeResponse>[0]),
     ).rejects.toThrow('INVALID_BRIDGE_TOKENS');
   });
 
@@ -162,7 +162,7 @@ describe('setSessionFromBridgeResponse', () => {
     const result = await setSessionFromBridgeResponse({
       access_token: 'sb_access_mock',
       refresh_token: 'sb_refresh_mock',
-    } as any);
+    } as unknown as Parameters<typeof setSessionFromBridgeResponse>[0]);
 
     expect(result).toBe(false);
     expect(mockSetSession).not.toHaveBeenCalled();
@@ -174,7 +174,7 @@ describe('setSessionFromBridgeResponse', () => {
     const result = await setSessionFromBridgeResponse({
       access_token: 'header.payload.signature',
       refresh_token: 'plain-refresh-token',
-    } as any);
+    } as unknown as Parameters<typeof setSessionFromBridgeResponse>[0]);
 
     expect(result).toBe(true);
     expect(mockSetSession).toHaveBeenCalledWith({
@@ -190,7 +190,7 @@ describe('setSessionFromBridgeResponse', () => {
     const result = await setSessionFromBridgeResponse({
       access_token: 'header.payload.signature',
       refresh_token: 'plain-refresh-token',
-    } as any);
+    } as unknown as Parameters<typeof setSessionFromBridgeResponse>[0]);
 
     expect(result).toBe(false);
     expect(mockSignOut).toHaveBeenCalled();

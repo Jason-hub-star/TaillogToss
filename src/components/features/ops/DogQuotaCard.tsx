@@ -3,7 +3,7 @@
  * Parity: B2B-002
  */
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, type DimensionValue } from 'react-native';
 import { colors, typography, spacing } from 'styles/tokens';
 
 interface DogQuotaCardProps {
@@ -45,7 +45,7 @@ export function DogQuotaCard({ activeCount, maxDogs, isLoading }: DogQuotaCardPr
 
           {maxDogs > 0 && (
             <View style={styles.barBg}>
-              <View style={[styles.barFill, { width: `${pct}%` as any, backgroundColor: barColor }]} />
+              <View style={[styles.barFill, { width: `${pct}%` as DimensionValue, backgroundColor: barColor }]} />
             </View>
           )}
 

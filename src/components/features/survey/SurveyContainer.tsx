@@ -29,10 +29,10 @@ const INITIAL_DATA: SurveyData = {
     household: { members_count: 1, has_children: false, has_other_pets: false, living_type: 'apartment' },
     daily_alone_hours: 0,
   },
-  step3_behavior: { primary_behaviors: [], severity: {} as any, other_behavior_desc: '' },
+  step3_behavior: { primary_behaviors: [], severity: {} as SurveyData['step3_behavior']['severity'], other_behavior_desc: '' },
   step4_triggers: { triggers: [], worst_time: 'random', custom_trigger: '' },
   step5_history: { past_attempts: [], professional_help: false },
-  step6_goals: { goals: [], priority_behavior: 'anxiety' as any },
+  step6_goals: { goals: [], priority_behavior: 'anxiety' as SurveyData['step6_goals']['priority_behavior'] },
   step7_preferences: {
     energy_score: 0,
     social_score: 0,

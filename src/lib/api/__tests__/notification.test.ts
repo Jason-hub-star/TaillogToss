@@ -43,7 +43,7 @@ beforeEach(() => {
 
 describe('sendSmartMessage auth guard', () => {
   it('세션이 없으면 protected Edge 호출을 보내지 않는다', async () => {
-    await expect(sendSmartMessage(request as any)).rejects.toThrow('NO_SESSION');
+    await expect(sendSmartMessage(request as unknown as Parameters<typeof sendSmartMessage>[0])).rejects.toThrow('NO_SESSION');
 
     expect(mockGetUser).not.toHaveBeenCalled();
     expect(mockInvoke).not.toHaveBeenCalled();
@@ -55,7 +55,7 @@ describe('sendSmartMessage auth guard', () => {
       error: null,
     });
 
-    await expect(sendSmartMessage(request as any)).rejects.toThrow('INVALID_SESSION');
+    await expect(sendSmartMessage(request as unknown as Parameters<typeof sendSmartMessage>[0])).rejects.toThrow('INVALID_SESSION');
 
     expect(mockGetUser).not.toHaveBeenCalled();
     expect(mockSignOut).toHaveBeenCalled();
@@ -69,7 +69,7 @@ describe('sendSmartMessage auth guard', () => {
     });
     mockGetUser.mockResolvedValueOnce({ data: { user: null }, error: new Error('Invalid JWT') });
 
-    await expect(sendSmartMessage(request as any)).rejects.toThrow('INVALID_SESSION');
+    await expect(sendSmartMessage(request as unknown as Parameters<typeof sendSmartMessage>[0])).rejects.toThrow('INVALID_SESSION');
 
     expect(mockGetUser).toHaveBeenCalledWith('header.payload.signature');
     expect(mockSignOut).toHaveBeenCalled();
@@ -82,7 +82,7 @@ describe('sendSmartMessage auth guard', () => {
       error: null,
     });
 
-    await expect(sendSmartMessage(request as any)).resolves.toBeUndefined();
+    await expect(sendSmartMessage(request as unknown as Parameters<typeof sendSmartMessage>[0])).resolves.toBeUndefined();
 
     expect(mockGetUser).toHaveBeenCalledWith('header.payload.signature');
     expect(mockInvoke).toHaveBeenCalledWith('send-smart-message', expect.objectContaining({

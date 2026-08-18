@@ -37,7 +37,7 @@ export const Route = createRoute('/ops/settings', {
 
 function OpsSettingsPage() {
   const { isReady } = usePageGuard({
-    currentPath: '/ops/settings' as any,
+    currentPath: '/ops/settings',
     requireFeature: 'b2bOnly',
   });
   const navigation = useNavigation();

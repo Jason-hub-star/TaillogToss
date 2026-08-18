@@ -37,6 +37,7 @@ import { useActiveDog } from 'stores/ActiveDogContext';
 import { useAuth } from 'stores/AuthContext';
 import type { CurriculumId, PlanVariant, TrainingProgress, DogReaction } from 'types/training';
 import { colors, typography, spacing } from 'styles/tokens';
+import type { BehaviorType } from 'types/dog';
 
 export const Route = createRoute('/training/detail', {
   validateParams: (params) => params as { curriculum_id: CurriculumId },
@@ -79,7 +80,21 @@ function TrainingDetailPage() {
     }
     // 훈련 첫 시작 — dogEnv 로드 완료 후 Plan 자동 추천
     if (!isLoading && dogEnv !== undefined) {
-      const env = dogEnv as any;
+      // dog_env JSONB 는 타입 선언보다 넓다(설문이 넣는 확장 필드).
+      // 여기서 읽는 필드만 좁게 선언해 any 를 피한다.
+      const env = dogEnv as {
+        health_meta?: { physical_stats?: { has_pain?: boolean } };
+        activity_meta?: { energy_score?: number; rewards_meta?: { play?: number } };
+        household_info?: { noise_sensitivity?: number };
+        chronic_issues?: { top_issues?: BehaviorType[] };
+        temperament?: {
+          env_reaction?: string;
+          person_reaction?: string;
+          dog_reaction?: string;
+          focus_level?: string;
+          attach_level?: string;
+        };
+      } | undefined;
       const recommended = recommendPlan({
         birthDate: activeDog?.birth_date,
         weightKg: activeDog?.weight_kg,

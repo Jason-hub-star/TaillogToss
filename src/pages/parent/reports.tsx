@@ -46,7 +46,7 @@ function extractShareToken(params: unknown): string {
 
 function AuthenticatedParentReports() {
   const { isReady } = usePageGuard({
-    currentPath: '/parent/reports' as any,
+    currentPath: '/parent/reports',
     requireFeature: 'b2bOnly',
   });
   const { user } = useAuth();
@@ -169,7 +169,7 @@ function AuthenticatedParentReports() {
 
 function SharedReportEntry({ shareToken }: { shareToken: string }) {
   const { isReady } = usePageGuard({
-    currentPath: '/parent/reports' as any,
+    currentPath: '/parent/reports',
     skipAuth: true,
     skipOnboarding: true,
   });

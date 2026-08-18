@@ -97,7 +97,7 @@ export function createFrameworkAdsSdk(): TossAdsSdk {
   let loadCleanup: Cleanup | null = null;
   let showCleanup: Cleanup | null = null;
 
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  // RN lazy require — 프레임워크 모듈을 호출 시점에만 로드
   const { loadFullScreenAd, showFullScreenAd } = require('@apps-in-toss/framework') as {
     loadFullScreenAd: {
       (params: {

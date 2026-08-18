@@ -601,7 +601,6 @@ export function createLoginWithTossHandler(overrides?: Partial<LoginHandlerDeps>
       const statusError = error as TossStatusError;
       const upstreamStatus = typeof statusError.status === 'number' ? statusError.status : undefined;
       const upstreamCode = typeof statusError.code === 'string' ? statusError.code : undefined;
-      const upstreamMessage = statusError.message?.slice(0, 240);
 
       deps.logger?.('login_with_toss_failure',
         safeLogPayload({

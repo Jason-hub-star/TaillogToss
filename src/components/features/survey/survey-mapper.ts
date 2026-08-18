@@ -31,7 +31,7 @@ export function mapSurveyToDogEnv(survey: SurveyData, dogId: string): Partial<Do
         has_allergy: survey.step8_health_context.health.has_allergy,
         is_overweight: survey.step8_health_context.health.is_overweight,
       }
-    } as any,
+    } as DogEnv['health_meta'],
     triggers: combinedTriggers,
     past_attempts: survey.step5_history.past_attempts,
     temperament: survey.step3_behavior.other_behavior_desc || null, // 주관식 고민 텍스트 저장
@@ -45,7 +45,7 @@ export function mapSurveyToDogEnv(survey: SurveyData, dogId: string): Partial<Do
       mastered_commands: survey.step7_preferences.mastered_commands,
       // 보상 선호도 데이터 (JSONB)
       rewards_meta: survey.step7_preferences.rewards,
-    } as any,
+    } as DogEnv['activity_meta'],
   };
 }
 

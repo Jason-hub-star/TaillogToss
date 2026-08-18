@@ -17,7 +17,7 @@ export interface PiiCheckResult {
 
 // 한글 이름 패턴 — 2~4자 한글 (성+이름)
 // 단순 패턴 매칭이라 false positive 가능, 운영에서 화이트리스트 추가 가능
-const KOREAN_NAME_RE = /[가-힣]{2,4}(?:[\s,.　])/g;
+const KOREAN_NAME_RE = /[가-힣]{2,4}(?:[\s,.\u3000])/g;
 
 // 특정 일시 패턴 — "2026년 5월 22일", "5/22", "2026-05-22" 등
 const SPECIFIC_DATE_RE = /(?:\d{4}[-./년\s]+\d{1,2}[-./월\s]+\d{1,2}[일]?|\d{1,2}[-./]\d{1,2}\b)/g;
@@ -43,7 +43,7 @@ export function checkMarketingContent(content: string): PiiCheckResult {
   let match: RegExpExecArray | null;
   KOREAN_NAME_RE.lastIndex = 0;
   while ((match = KOREAN_NAME_RE.exec(content)) !== null) {
-    const name = match[0].replace(/[\s,.　]/g, '');
+    const name = match[0].replace(/[\s,.\u3000]/g, '');
     if (!ALLOWED_KOREAN_NAMES.has(name)) {
       violations.push({ type: 'korean_name', snippet: match[0], position: match.index });
     }

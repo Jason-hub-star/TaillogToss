@@ -27,7 +27,7 @@ function ShareTokenReportPage() {
   const params = route.params as { shareToken?: string } | undefined;
   const shareToken = params?.shareToken ?? '';
   const { isReady } = usePageGuard({
-    currentPath: '/report/[shareToken]' as any,
+    currentPath: '/report/[shareToken]',
     skipAuth: true,
     skipOnboarding: true,
   });

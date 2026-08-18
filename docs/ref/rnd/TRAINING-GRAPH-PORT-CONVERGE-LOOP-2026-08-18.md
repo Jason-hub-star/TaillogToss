@@ -105,11 +105,11 @@ D8은 **이식과 무관한 기존 버그**로 분리 — 선결 마이그레이
 | # | 내용 | 근거 결함 |
 |---|---|---|
 | 1 | **선결**: `user_training_status` UNIQUE에 `dog_id` 추가 + SQLAlchemy `UniqueConstraint` 선언(모델↔DB 드리프트 해소) | D8 |
-| 2 | 그래프·how를 Supabase 테이블로 적재. 앱 번들에 넣지 않음(재심사 회피) | D2 반박 |
+| 2 | 그래프·how를 Supabase 테이블로 적재. 앱 번들에 넣지 않음(재심사 회피). **단 how 카드는 클라이언트 캐시 필수** — 현행은 번들 정적이라 오프라인에서 뜨는데 서버 전용으로 가면 회귀한다(감사 A4) | D2 반박 |
 | 3 | 진입: 증상 17 병행 추가. `BehaviorType` 10은 **유지**(설문·코칭·알림 무회귀), 17→10 매핑 테이블로 공존 | D6 |
 | 4 | 경로 → 진행률 매핑: `curriculum_id` := goal node id / `stage_id` := 사다리 depth / `step_number` := how step index. **스키마 무변경** | D1·D7 |
 | 5 | A/B/C variant → how 카드 **선택 필터**로 재해석 | D3 |
-| 6 | `provenance.review` 통과 노드만 노출. 미검수는 그래프에 있어도 앱에 안 뜬다 | D11 |
+| 6 | ~~`provenance.review` 통과 노드만 노출~~ → **정정(감사 A2)**: 그 필드는 노드에 **0/1412 존재하지 않는다**. 실제 검수 플래그는 **`how[].authored`**(214/214 `'reviewed'`)이므로 게이트 단위는 노드가 아니라 **how 카드**다 | D11 |
 | 7 | PRO 게이팅은 **범위 밖** — ③가격 과제로 이관 | D10 |
 
 ## 5. 불가역 크럭스 (계획으로 못 닫는 단 하나)
@@ -142,6 +142,14 @@ KE-T1 실행 결과 **PASS**: 경로 고유성 0.90(기준선 0.70) · 최대 �
 
 ⇒ **크럭스 종료, 이식 착수 가능.** P4의 나머지 제약은 유효. 근거: `docs/goals/GOAL-ke-t1-path-coverage.md §7`, `docs/ref/rnd/KE-T1-RESULT.json`.
 
-## 8. 다음
+## 8. 감사 결과 (2026-08-18)
+
+`/감사` 8 페르소나 설계 워크스루 → **P0 3 · P1 4 · P2 2**, 반증 6건. 전문: `docs/status/AUDIT-TRAINING-GRAPH-PORT-2026-08-18.md`.
+
+P0 셋: **A1** 마킹=UTI 감별 문구 미해소(tailtree `review_flags` `priority:high`) · **A2** 위 P4 #6 명세 오류 · **A3** 코칭 "관련 훈련 바로 시작하기" 버튼 사망(`prompts.py:53`).
+
+**착수 전 A1·A2·A3 해소 필수.** A2는 이 문서 §4 에 반영 완료.
+
+## 9. 다음
 
 ~~KE-T1을 `골`로 계약화해 1패스 실행.~~ → **완료·PASS**(§7). 다음은 수렴 플랜 P4의 **선결 1번**(`user_training_status` UNIQUE에 `dog_id` 추가)부터.

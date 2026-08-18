@@ -80,6 +80,7 @@ This file only keeps execution rules, priorities, and pointers.
 
 | Command | Purpose | When to use |
 |---|---|---|
+| `/감사` | 8 페르소나 도그푸딩 (UX·안전·수익·심사) | 라우트 완료 후 · 큰 설계 검토 시 · "이렇게 하면 적절한가" |
 | `/token-lint` | 스타일 토큰 하드코딩 탐지 | 스타일 변경 후 |
 | `/skill-audit` | 반복 워크플로우 스킬 후보 감사 | 수동 반복이 보일 때 |
 | `/learn` | 교정 사항 → feedback memory 저장 | 교정을 규칙으로 굳힐 때 |

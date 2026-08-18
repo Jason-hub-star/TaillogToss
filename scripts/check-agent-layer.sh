@@ -8,11 +8,13 @@ required_files=(
   "$ROOT/docs/ref/STACK-PROFILES.md"
   "$ROOT/docs/ops/agent-orchestration.md"
   "$ROOT/docs/status/DECISION-LOG.md"
-  # 메타 커맨드 층 — 구 영문 커맨드 5종은 .claude/commands/_archive/ 로 이동(2026-08).
-  # 현 규약은 한글 메타 5종(/상태 /다음 /진단 /마감 /명령어).
-  # TODO(리뉴얼): 다음·진단·명령어 3종 신설 후 아래 목록에 추가해 5종 전수 강제.
+  # 메타 커맨드 층 — 구 영문 커맨드 7종은 .claude/commands/_archive/ 로 물러났다(2026-08).
+  # 현 규약은 한글 메타 5종. 전수 강제한다.
   "$ROOT/.claude/skills/상태/SKILL.md"
+  "$ROOT/.claude/skills/다음/SKILL.md"
+  "$ROOT/.claude/skills/진단/SKILL.md"
   "$ROOT/.claude/skills/마감/SKILL.md"
+  "$ROOT/.claude/skills/명령어/SKILL.md"
 )
 
 for file in "${required_files[@]}"; do

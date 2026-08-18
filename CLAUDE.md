@@ -66,18 +66,25 @@ This file only keeps execution rules, priorities, and pointers.
 
 ## Commands (User-Invocable)
 
+### 공통 5 메타 (전 프로젝트 동일)
+
+| 명령 | Purpose | When to use |
+|---|---|---|
+| `/상태` | 지금 어디까지 됐나 + 다음 액션 1개 추천 (읽기 전용) | 세션 시작·맥락 복구 |
+| `/다음` | 추천 말고 다음 백로그 1항목을 실제로 실행 | 할 일이 정해졌을 때 |
+| `/진단 <증상>` | 고장·막힘 근본원인 런북 (증상→첫 의심 표 내장) | 빌드 실패·404·미렌더 등 |
+| `/마감` | 게이트→증거→문서→핸드오프→커밋 | 세션·작업 종료 |
+| `/명령어` | 명령·스킬 전체 표 + 도메인 스킬 라우팅 | 뭘 불러야 할지 헷갈릴 때 |
+
+### 프로젝트 커맨드
+
 | Command | Purpose | When to use |
 |---|---|---|
-| `/intake` | 요청 분류 + parity/skill 고정 | 구현 전에 작업 성격과 범위를 먼저 정할 때 |
-| `/impact-map` | 영향 범위 + 검증 매트릭스 정리 | cross-cutting 변경이나 문서 동기화가 예상될 때 |
-| `/evidence-review` | 완료 근거와 리스크 점검 | 구현/조사 후 완료 선언 전에 |
-| `/handoff` | 다음 세션 재진입 캡슐 작성 | blocker나 미결정이 남았을 때 |
-| `/profile-recommend` | 작업 프로필 선택 | FE/BE/Edge/Runtime/Docs 중 시작 레이어가 헷갈릴 때 |
-| `/skill-audit` | 반복 워크플로우 스킬 후보 감사 | 최근 세션에서 수동 반복 작업과 스킬/서브에이전트 후보를 찾을 때 |
-| `/learn` | 교정 사항 → feedback memory 저장 | 교정 후 규칙으로 학습시킬 때 |
-| `/doc-update` | 코드 변경 후 문서 자동 갱신 | 구현 완료 후 문서 동기화 |
-| `/self-review` | working tree 전체 자기 리뷰 | 커밋 전 품질 점검 |
-| `/token-lint` | 스타일 토큰 하드코딩 탐지 | 스타일 변경 후 토큰 준수 확인 |
+| `/token-lint` | 스타일 토큰 하드코딩 탐지 | 스타일 변경 후 |
+| `/skill-audit` | 반복 워크플로우 스킬 후보 감사 | 수동 반복이 보일 때 |
+| `/learn` | 교정 사항 → feedback memory 저장 | 교정을 규칙으로 굳힐 때 |
+
+> 구 영문 커맨드 7종(`intake`·`impact-map`·`evidence-review`·`handoff`·`profile-recommend`·`doc-update`·`self-review`)은 `.claude/commands/_archive/` 로 물러났다(2026-08). 역할은 메타 5종이 흡수했다.
 
 ## Hooks
 

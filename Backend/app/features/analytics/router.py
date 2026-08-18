@@ -106,3 +106,15 @@ async def get_step_attempts(
     """시행착오 기록 조회 — training_step_attempts"""
     await verify_dog_ownership(db, dog_id, user_id=user_id)
     return await service.get_step_attempts(db, dog_id, step_id=step_id, limit=limit)
+
+
+@router.post("/{dog_id}/step-attempts", response_model=schemas.StepAttemptResponse)
+async def create_step_attempt(
+    dog_id: UUID,
+    data: schemas.StepAttemptCreate,
+    user_id: str = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db),
+):
+    """시행착오 기록 저장 — JWT 소유권 검증 후 training_step_attempts insert."""
+    await verify_dog_ownership(db, dog_id, user_id=user_id)
+    return await service.create_step_attempt(db, dog_id, data, recorded_by=user_id)

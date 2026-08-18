@@ -1,0 +1,337 @@
+- generic [active] [ref=e1]:
+  - link "본문으로 이동" [ref=e2] [cursor=pointer]:
+    - /url: "#main-content"
+  - banner [ref=e3]:
+    - navigation [ref=e4]:
+      - link "🐾 Tailog" [ref=e5] [cursor=pointer]:
+        - /url: /
+        - generic [ref=e6]: 🐾
+        - generic [ref=e7]: Tailog
+      - generic [ref=e8]:
+        - link "소개" [ref=e9] [cursor=pointer]:
+          - /url: "#about"
+        - link "기능" [ref=e10] [cursor=pointer]:
+          - /url: "#features"
+        - link "사용법" [ref=e11] [cursor=pointer]:
+          - /url: "#how-it-works"
+        - link "사례" [ref=e12] [cursor=pointer]:
+          - /url: "#cases"
+        - link "블로그" [ref=e13] [cursor=pointer]:
+          - /url: /blog
+        - link "FAQ" [ref=e14] [cursor=pointer]:
+          - /url: "#faq"
+        - link "토스에서 열기" [ref=e15] [cursor=pointer]:
+          - /url: supertoss://service/taillog
+          - button "토스에서 열기" [ref=e16]
+  - main [ref=e17]:
+    - generic [ref=e21]:
+      - generic [ref=e22]:
+        - generic [ref=e24]: 토스 미니앱
+        - heading "강아지가 왜 짖는지, 왜 불안한지" [level=1] [ref=e26]
+        - paragraph [ref=e27]: 1분 기록만 쌓아도 AI가 패턴을 찾아내요. 분리불안·짖음·공격성 같은 행동을 6가지 시각에서 분석하고, 다음 주에 뭘 해야 할지까지 알려드려요.
+        - paragraph [ref=e28]: 토스에서 "테일로그" 검색하면 끝
+        - generic [ref=e29]:
+          - link "토스에서 시작하기" [ref=e30] [cursor=pointer]:
+            - /url: supertoss://service/taillog
+            - button "토스에서 시작하기" [ref=e31]
+          - link "어떻게 쓰는지 보기" [ref=e32] [cursor=pointer]:
+            - /url: "#how-it-works"
+            - button "어떻게 쓰는지 보기" [ref=e33]
+        - generic [ref=e34]:
+          - generic [ref=e35]:
+            - img [ref=e37]
+            - text: CSCC 국제 독피트니스 트레이너 운영
+          - generic [ref=e39]:
+            - img [ref=e41]
+            - text: 행동 데이터 기반 패턴 분석
+          - generic [ref=e43]:
+            - img [ref=e45]
+            - text: PRO 7일 무료로 먼저 사용
+      - img "테일로그 PRO 구독 관리 화면" [ref=e50]
+    - generic [ref=e53]:
+      - generic [ref=e55]:
+        - generic [ref=e57]: 0블록
+        - paragraph [ref=e58]: AI 행동 분석
+      - generic [ref=e60]:
+        - generic [ref=e62]: 0초
+        - paragraph [ref=e63]: 빠른 기록 시간
+      - generic [ref=e65]:
+        - generic [ref=e67]: 0초
+        - paragraph [ref=e68]: AI 코칭 응답 (캐시 MISS)
+      - generic [ref=e70]:
+        - generic [ref=e72]: 0일
+        - paragraph [ref=e73]: PRO 무료 체험
+    - generic [ref=e76]:
+      - generic [ref=e77]:
+        - heading "관찰만 하는 펫캠과는 달라요" [level=2] [ref=e78]
+        - generic [ref=e79]:
+          - paragraph [ref=e80]: "\"우리 강아지가 왜 이러는지 모르겠어요.\""
+          - paragraph [ref=e81]: 산책 중에, 손님 오실 때, 보호자만 나가면 — 매번 다르게 보이는 행동의 원인을 보호자 혼자 알아내기는 어려워요. 직감으로 판단하기엔 데이터가 없죠.
+          - paragraph [ref=e82]: 행동 기록 + AI 분석 + 차트 + 다음 주 코칭.
+          - paragraph [ref=e83]: Tailog는 1분짜리 짧은 기록을 한 달 모아두면 AI가 행동 패턴을 6가지 블록으로 정리해줘요. 짖음 횟수가 줄었는지 늘었는지, 어떤 시간대가 가장 격한지, 다음 주에 뭘 우선해야 할지를 차트와 글로 받아볼 수 있어요.
+      - img "보호자와 강아지가 공원에서 산책하는 모습" [ref=e86]
+    - generic [ref=e88]:
+      - generic [ref=e89]:
+        - generic [ref=e90]: ★
+        - text: ABC 기록 1분
+      - generic [ref=e91]:
+        - generic [ref=e92]: ★
+        - text: AI 코칭 6블록
+      - generic [ref=e93]:
+        - generic [ref=e94]: ★
+        - text: 히트맵·레이더·바 차트
+      - generic [ref=e95]:
+        - generic [ref=e96]: ★
+        - text: 토스 안에서 바로
+      - generic [ref=e97]:
+        - generic [ref=e98]: ★
+        - text: 별도 설치 없음
+      - generic [ref=e99]:
+        - generic [ref=e100]: ★
+        - text: 강아지 5마리까지 · PRO
+      - generic [ref=e101]:
+        - generic [ref=e102]: ★
+        - text: ABC 기록 1분
+      - generic [ref=e103]:
+        - generic [ref=e104]: ★
+        - text: AI 코칭 6블록
+      - generic [ref=e105]:
+        - generic [ref=e106]: ★
+        - text: 히트맵·레이더·바 차트
+      - generic [ref=e107]:
+        - generic [ref=e108]: ★
+        - text: 토스 안에서 바로
+      - generic [ref=e109]:
+        - generic [ref=e110]: ★
+        - text: 별도 설치 없음
+      - generic [ref=e111]:
+        - generic [ref=e112]: ★
+        - text: 강아지 5마리까지 · PRO
+    - generic [ref=e114]:
+      - generic [ref=e116]:
+        - paragraph [ref=e117]: AI 6블록 분석
+        - heading "행동을 6가지 시각에서 봐요" [level=2] [ref=e118]
+      - generic [ref=e120]:
+        - button "자극 반응" [ref=e121] [cursor=pointer]
+        - button "분리 행동" [ref=e122] [cursor=pointer]
+        - button "사회적 상호작용" [ref=e123] [cursor=pointer]
+        - button "활동 리듬" [ref=e124] [cursor=pointer]
+        - button "환경 적응" [ref=e125] [cursor=pointer]
+        - button "학습 진도" [ref=e126] [cursor=pointer]
+      - generic [ref=e128]:
+        - generic [ref=e129]:
+          - heading "초인종·낯선 사람에 어떻게 반응하나요" [level=3] [ref=e130]
+          - paragraph [ref=e131]: 외부 자극을 만났을 때 반응 강도와 회복 시간을 분 단위로 추적해요. 같은 "짖음"이라도 강도 3과 강도 8은 코칭이 달라야 해요.
+          - list [ref=e132]:
+            - listitem [ref=e133]:
+              - img [ref=e135]
+              - generic [ref=e137]: 반응 강도 1-10 추적
+            - listitem [ref=e138]:
+              - img [ref=e140]
+              - generic [ref=e142]: 자극 후 회복 시간 측정
+            - listitem [ref=e143]:
+              - img [ref=e145]
+              - generic [ref=e147]: 자극 카테고리별 비교
+        - img "테일로그 자극 반응 화면" [ref=e151]
+    - generic [ref=e153]:
+      - heading "7일이면 첫 인사이트" [level=2] [ref=e155]
+      - generic [ref=e156]:
+        - generic [ref=e159]:
+          - generic [ref=e161]: "1"
+          - generic [ref=e162]:
+            - heading "Day 1 · 5분 셋업" [level=3] [ref=e163]
+            - paragraph [ref=e164]: 토스 앱에서 "테일로그" 검색해서 들어와요. 강아지 등록하고 4문항짜리 짧은 진단만 하면 끝.
+        - generic [ref=e166]:
+          - generic [ref=e168]: "2"
+          - generic [ref=e169]:
+            - heading "Day 2~3 · 짧게 자주" [level=3] [ref=e170]
+            - paragraph [ref=e171]: 산책 후, 자기 전 1분씩만 기록해요. 빠른 기록은 3터치면 끝나고, 상세 기록은 3분이에요.
+        - generic [ref=e173]:
+          - generic [ref=e175]: "3"
+          - generic [ref=e176]:
+            - heading "Day 4 · 첫 패턴 발견" [level=3] [ref=e177]
+            - paragraph [ref=e178]: 기록 10건이 쌓이면 AI가 우리 강아지 행동 패턴을 정리해줘요. 가장 시급한 블록 하나를 짚어서요.
+        - generic [ref=e180]:
+          - generic [ref=e182]: "4"
+          - generic [ref=e183]:
+            - heading "Day 5~6 · 다음 주 계획" [level=3] [ref=e184]
+            - paragraph [ref=e185]: AI가 짜준 5분 미션 3개씩 해봐요. 미션 완료할 때마다 체크하면 진도가 누적돼요.
+        - generic [ref=e187]:
+          - generic [ref=e189]: "5"
+          - generic [ref=e190]:
+            - heading "Day 7 · 주간 리포트" [level=3] [ref=e191]
+            - paragraph [ref=e192]: 6블록 강도가 어떻게 바뀌었는지 차트로 받아봐요. PRO 무료 체험은 여기서 끝나요.
+      - paragraph [ref=e194]: 지금 토스 앱 켜고 "테일로그" 검색해보세요.
+    - generic [ref=e196]:
+      - generic [ref=e198]:
+        - paragraph [ref=e199]: Real Data
+        - heading "실제 보호자분들의 4주 변화" [level=2] [ref=e200]
+        - paragraph [ref=e201]: 익명 활용에 동의해주신 분들의 30일 사용 데이터예요. 이름·정확한 일시·세부 견종은 표시하지 않아요. 견종도 "소/중/대형견"으로만 묶었습니다.
+      - generic [ref=e202]:
+        - article [ref=e204]:
+          - generic [ref=e206]: "사례 #001"
+          - heading "중형견 3세 · 짖음 행동" [level=3] [ref=e207]
+          - 'img "사례 #001 중형견 3세 · 짖음 행동 개선 데이터 화면" [ref=e209]'
+          - generic [ref=e210]: 1주차 ██████████████░░░░░░ 7.2 4주차 ██████░░░░░░░░░░░░░░ 3.1
+          - generic [ref=e211]:
+            - generic [ref=e212]: 개선률
+            - generic [ref=e213]: 57%
+        - article [ref=e215]:
+          - generic [ref=e217]: "사례 #002"
+          - heading "소형견 5세 · 분리불안" [level=3] [ref=e218]
+          - 'img "사례 #002 소형견 5세 · 분리불안 개선 데이터 화면" [ref=e220]'
+          - generic [ref=e221]: 1주차 ██████████████░░░░░░ 6.8 4주차 █████████░░░░░░░░░░░ 4.4
+          - generic [ref=e222]:
+            - generic [ref=e223]: 개선률
+            - generic [ref=e224]: 35%
+        - article [ref=e226]:
+          - generic [ref=e228]: "사례 #003"
+          - heading "대형견 2세 · 점프업" [level=3] [ref=e229]
+          - 'img "사례 #003 대형견 2세 · 점프업 개선 데이터 화면" [ref=e231]'
+          - generic [ref=e232]: 1주차 ████████████████░░░░ 8 4주차 ██████████░░░░░░░░░░ 5
+          - generic [ref=e233]:
+            - generic [ref=e234]: 개선률
+            - generic [ref=e235]: 38%
+      - paragraph [ref=e237]: ⚠ 익명화 가드레일 (L11) — 사용자명·반려견명·정확한 일시 절대 비노출
+    - generic [ref=e239]:
+      - heading "가격은 단순해요" [level=2] [ref=e241]
+      - generic [ref=e242]:
+        - generic [ref=e244]:
+          - heading "FREE" [level=3] [ref=e245]
+          - generic [ref=e247]: 0원
+          - list [ref=e248]:
+            - listitem [ref=e249]:
+              - img [ref=e250]
+              - text: 하루 1회 AI 코칭
+            - listitem [ref=e252]:
+              - img [ref=e253]
+              - text: 강아지 1마리
+            - listitem [ref=e255]:
+              - img [ref=e256]
+              - text: 기본 바 차트
+            - listitem [ref=e258]:
+              - img [ref=e259]
+              - text: 행동 기록 무제한
+          - link "토스에서 시작" [ref=e261] [cursor=pointer]:
+            - /url: supertoss://service/taillog
+            - button "토스에서 시작" [ref=e262]
+        - generic [ref=e264]:
+          - generic [ref=e265]: 추천
+          - heading "PRO" [level=3] [ref=e266]
+          - generic [ref=e267]:
+            - generic [ref=e268]: 4,895원
+            - generic [ref=e269]: /월
+          - list [ref=e270]:
+            - listitem [ref=e271]:
+              - img [ref=e272]
+              - text: AI 코칭 무제한
+            - listitem [ref=e274]:
+              - img [ref=e275]
+              - text: 강아지 5마리
+            - listitem [ref=e277]:
+              - img [ref=e278]
+              - text: 전체 커리큘럼
+            - listitem [ref=e280]:
+              - img [ref=e281]
+              - text: 광고 없음
+            - listitem [ref=e283]:
+              - img [ref=e284]
+              - text: 히트맵·레이더 차트
+          - link "7일 무료 체험" [ref=e286] [cursor=pointer]:
+            - /url: supertoss://service/taillog
+            - button "7일 무료 체험" [ref=e287]
+        - generic [ref=e289]:
+          - heading "AI 토큰" [level=3] [ref=e290]
+          - generic [ref=e291]:
+            - generic [ref=e292]: 1,903원~
+            - generic [ref=e293]: /팩
+          - list [ref=e294]:
+            - listitem [ref=e295]:
+              - img [ref=e296]
+              - text: 10회 1,903원 (회당 190원)
+            - listitem [ref=e298]:
+              - img [ref=e299]
+              - text: 30회 3,498원 (회당 117원)
+            - listitem [ref=e301]:
+              - img [ref=e302]
+              - text: 유효기간 없음
+            - listitem [ref=e304]:
+              - img [ref=e305]
+              - text: FREE에 추가
+          - link "필요할 때 충전" [ref=e307] [cursor=pointer]:
+            - /url: supertoss://service/taillog
+            - button "필요할 때 충전" [ref=e308]
+      - paragraph [ref=e310]: 토스 결제 정책 적용 · 7일 이내 무사용 시 환불 가능
+    - generic [ref=e314]:
+      - generic [ref=e315]: 지금 시작
+      - heading "토스 안에서 1분이면 시작해요" [level=2] [ref=e317]
+      - paragraph [ref=e318]: 별도 앱 없이 토스에서 바로. PRO 7일 무료 체험은 자동으로 적용돼요.
+      - generic [ref=e319]:
+        - link "토스에서 Tailog 열기" [ref=e320] [cursor=pointer]:
+          - /url: supertoss://service/taillog
+          - button "토스에서 Tailog 열기" [ref=e321]
+        - link "블로그 더 보기" [ref=e322] [cursor=pointer]:
+          - /url: /blog
+          - button "블로그 더 보기" [ref=e323]
+    - generic [ref=e325]:
+      - heading "자주 묻는 질문" [level=2] [ref=e327]
+      - generic [ref=e328]:
+        - generic [ref=e330]:
+          - button "Tailog는 정확히 뭔가요?" [expanded] [ref=e331] [cursor=pointer]:
+            - generic [ref=e332]: Tailog는 정확히 뭔가요?
+            - img [ref=e333]
+          - generic [ref=e336]: 토스 앱 안에서 동작하는 강아지 행동 코칭 미니앱이에요. 별도 설치 없이 토스에서 "테일로그" 검색하면 바로 사용할 수 있어요.
+        - button "어떤 행동을 다루나요?" [ref=e339] [cursor=pointer]:
+          - generic [ref=e340]: 어떤 행동을 다루나요?
+          - img [ref=e341]
+        - button "기록은 얼마나 번거로워요?" [ref=e345] [cursor=pointer]:
+          - generic [ref=e346]: 기록은 얼마나 번거로워요?
+          - img [ref=e347]
+        - button "데이터는 어떻게 보호되나요?" [ref=e351] [cursor=pointer]:
+          - generic [ref=e352]: 데이터는 어떻게 보호되나요?
+          - img [ref=e353]
+        - button "PRO는 꼭 결제해야 하나요?" [ref=e357] [cursor=pointer]:
+          - generic [ref=e358]: PRO는 꼭 결제해야 하나요?
+          - img [ref=e359]
+        - button "환불이 되나요?" [ref=e363] [cursor=pointer]:
+          - generic [ref=e364]: 환불이 되나요?
+          - img [ref=e365]
+  - contentinfo [ref=e367]:
+    - generic [ref=e368]:
+      - generic [ref=e369]:
+        - generic [ref=e370]:
+          - generic [ref=e371]:
+            - generic [ref=e372]: 🐾
+            - generic [ref=e373]: Tailog
+          - paragraph [ref=e374]: 강아지가 왜 그러는지, 데이터로 알아내요.
+        - generic [ref=e375]:
+          - link "hello@tailog.kr" [ref=e376] [cursor=pointer]:
+            - /url: mailto:hello@tailog.kr
+          - paragraph [ref=e377]: 운영 · 김주영 · CSCC 국제 독피트니스 트레이너
+          - generic [ref=e378]:
+            - link "Instagram" [ref=e379] [cursor=pointer]:
+              - /url: https://www.instagram.com/tailog_official/
+            - generic [ref=e380]: ·
+            - link "Threads" [ref=e381] [cursor=pointer]:
+              - /url: https://www.threads.net/@tailog_official
+            - generic [ref=e382]: ·
+            - link "당근" [ref=e383] [cursor=pointer]:
+              - /url: https://www.daangn.com/kr/local-profile/%EA%B0%95%EC%95%84%EC%A7%80-%EB%B0%A9%EB%AC%B8%EA%B5%90%EC%9C%A1-%ED%99%88%EC%8A%A4%EC%BF%A8%EB%A7%81-8oywzkpoyrdb/
+      - generic [ref=e384]:
+        - generic [ref=e385]:
+          - link "소개" [ref=e386] [cursor=pointer]:
+            - /url: "#about"
+          - link "기능" [ref=e387] [cursor=pointer]:
+            - /url: "#features"
+          - link "사용법" [ref=e388] [cursor=pointer]:
+            - /url: "#how-it-works"
+          - link "사례" [ref=e389] [cursor=pointer]:
+            - /url: "#cases"
+          - link "블로그" [ref=e390] [cursor=pointer]:
+            - /url: /blog
+          - link "FAQ" [ref=e391] [cursor=pointer]:
+            - /url: "#faq"
+        - paragraph [ref=e392]: © 2026 Tailog. All rights reserved.
+  - button "Open Next.js Dev Tools" [ref=e398] [cursor=pointer]:
+    - img [ref=e399]
+  - alert [ref=e402]

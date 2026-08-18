@@ -276,11 +276,12 @@ function AnalysisPage() {
             hasTrainingData={!!trainingProgress && trainingProgress.length > 0}
           />
 
-          {/* R2: 보상형 광고 — 무료 사용자 분석 화면 (CoachingPreviewCard 위) */}
+          {/* R2: 보상형 광고 — 무료 사용자 분석 화면에서 AI 코칭 진입 보상 */}
           {!isPro && (
             <RewardedAdButton
               placement="R2"
-              onRewarded={() => { /* 보상 지급 없음, 노출만 */ }}
+              label="광고 보고 AI 코칭 열기"
+              onRewarded={() => navigation.navigate('/coaching/result')}
             />
           )}
 

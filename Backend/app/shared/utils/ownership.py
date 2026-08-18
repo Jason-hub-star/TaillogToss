@@ -68,10 +68,34 @@ async def verify_dog_ownership(
         started_at = perf_counter()
         assignment_result = await db.execute(assignment_stmt)
         _record_timing(timings, "assignment_lookup_ms", started_at)
-        if assignment_result.scalar_one_or_none():
-            if timing_meta is not None:
-                timing_meta["ownership_path"] = "b2b_assignment"
-            return dog
+        assignment = assignment_result.scalar_one_or_none()
+        if assignment:
+            if assignment.org_id:
+                active_org_dog_stmt = (
+                    select(OrgDog)
+                    .where(
+                        OrgDog.org_id == assignment.org_id,
+                        OrgDog.dog_id == dog_id,
+                        OrgDog.status == "active",
+                    )
+                    .limit(1)
+                )
+                started_at = perf_counter()
+                active_org_dog_result = await db.execute(active_org_dog_stmt)
+                _record_timing(timings, "assignment_org_dog_lookup_ms", started_at)
+                if not active_org_dog_result.scalar_one_or_none():
+                    if timing_meta is not None:
+                        timing_meta["assignment_active_org_dog"] = "false"
+                else:
+                    if timing_meta is not None:
+                        timing_meta["assignment_active_org_dog"] = "true"
+                        timing_meta["ownership_path"] = "b2b_assignment"
+                    return dog
+            else:
+                if timing_meta is not None:
+                    timing_meta["assignment_active_org_dog"] = "personal"
+                    timing_meta["ownership_path"] = "b2b_assignment"
+                return dog
 
         # B2B 조직 소속 강아지 + 조직 멤버 확인
         org_dog_stmt = (

@@ -275,6 +275,9 @@ class Dog(Base):
     sex = Column(Enum(DogSex, name="dog_sex", values_callable=lambda x: [e.value for e in x]))
     weight_kg = Column(Numeric(5, 2))
     profile_image_url = Column(Text)
+    vet_name = Column(Text)
+    animal_reg_no = Column(Text)
+    parent_address = Column(Text)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
@@ -566,6 +569,8 @@ class TossOrder(Base):
     grant_status = Column(Enum(GrantStatus, name="grant_status"), default=GrantStatus.PENDING)
     amount = Column(Integer, default=0)
     toss_order_id = Column(String(255))
+    org_id = Column(UUID(as_uuid=True), ForeignKey("organizations.id", ondelete="SET NULL"), nullable=True)
+    trainer_user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     error_code = Column(String(100))
     retry_count = Column(Integer, default=0)
     created_at = Column(DateTime(timezone=True), server_default=func.now())

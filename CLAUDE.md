@@ -73,6 +73,7 @@ This file only keeps execution rules, priorities, and pointers.
 | `/evidence-review` | 완료 근거와 리스크 점검 | 구현/조사 후 완료 선언 전에 |
 | `/handoff` | 다음 세션 재진입 캡슐 작성 | blocker나 미결정이 남았을 때 |
 | `/profile-recommend` | 작업 프로필 선택 | FE/BE/Edge/Runtime/Docs 중 시작 레이어가 헷갈릴 때 |
+| `/skill-audit` | 반복 워크플로우 스킬 후보 감사 | 최근 세션에서 수동 반복 작업과 스킬/서브에이전트 후보를 찾을 때 |
 | `/learn` | 교정 사항 → feedback memory 저장 | 교정 후 규칙으로 학습시킬 때 |
 | `/doc-update` | 코드 변경 후 문서 자동 갱신 | 구현 완료 후 문서 동기화 |
 | `/self-review` | working tree 전체 자기 리뷰 | 커밋 전 품질 점검 |

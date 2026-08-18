@@ -23,6 +23,9 @@ export interface User {
   last_login_at: string | null; // ISO 8601
   created_at: string; // ISO 8601
   updated_at: string; // ISO 8601
+  /** 친구 초대 코드 (Phase 5). 가입 시 DB trigger가 자동 생성. 6자 영숫자(I/O/0/1 제외).
+   *  B3 폐기로 운영 비활성 — D+30 후 활성화 결정 (L10). */
+  share_code?: string | null;
 }
 
 /** Toss 로그인 응답 */

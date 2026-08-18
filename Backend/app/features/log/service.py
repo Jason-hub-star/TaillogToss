@@ -40,7 +40,10 @@ async def create_quick_log(
 
 
 async def create_detailed_log(
-    db: AsyncSession, data: schemas.DetailedLogCreate, timezone_str: str,
+    db: AsyncSession,
+    data: schemas.DetailedLogCreate,
+    timezone_str: str,
+    recorded_by: Optional[str] = None,
 ) -> schemas.LogResponse:
     """ABC 상세 기록 생성"""
     utc_occurred = to_utc(data.occurred_at, timezone_str)
@@ -58,6 +61,7 @@ async def create_detailed_log(
         "location": data.location,
         "memo": data.memo,
         "occurred_at": utc_occurred,
+        "recorded_by": UUID(recorded_by) if recorded_by else None,
     }
     new_log = await repository.create_log(db, log_data)
     return schemas.LogResponse.model_validate(new_log)

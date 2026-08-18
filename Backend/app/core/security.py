@@ -33,7 +33,7 @@ async def get_current_user_id(token: str = Depends(oauth2_scheme)) -> str:
             raise ValueError("User not found")
         return user_response.user.id
     except Exception as e:
-        logger.warning("Auth verification failed: %s", e)
+        logger.warning("Auth verification failed: %s", type(e).__name__)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Could not validate credentials",
@@ -59,13 +59,18 @@ def verify_admin_key(
 async def get_current_user_id_optional(
     token: Optional[str] = Depends(oauth2_scheme),
 ) -> Optional[str]:
-    """인증 선택 — 토큰 없거나 무효하면 None (게스트 허용)"""
+    """인증 선택 — 토큰이 없을 때만 게스트 허용, 무효 토큰은 401."""
     if not token:
         return None
     try:
         user_response = supabase.auth.get_user(token)
         if not user_response.user:
-            return None
+            raise ValueError("User not found")
         return user_response.user.id
-    except Exception:
-        return None
+    except Exception as e:
+        logger.warning("Optional auth verification failed: %s", type(e).__name__)
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Could not validate credentials",
+            headers={"WWW-Authenticate": "Bearer"},
+        )

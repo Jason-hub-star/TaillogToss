@@ -30,6 +30,7 @@ import {
   AiCoachingSettingsSection,
   AccountSettingsSection,
   ServiceSettingsSection,
+  MarketingDataConsentSection,
 } from 'components/features/settings';
 import {
   DEFAULT_NOTIFICATION_PREF,
@@ -78,6 +79,9 @@ function SettingsPage() {
     settings?.notification_pref ?? DEFAULT_NOTIFICATION_PREF,
   );
   const [marketingAgreed, setMarketingAgreed] = useState(settings?.marketing_agreed ?? false);
+  const [marketingDataConsent, setMarketingDataConsent] = useState(
+    settings?.marketing_data_consent ?? false,
+  );
   const [aiPersona, setAiPersona] = useState(settings?.ai_persona ?? DEFAULT_AI_PERSONA);
 
   useEffect(() => {
@@ -87,10 +91,18 @@ function SettingsPage() {
     if (typeof settings?.marketing_agreed === 'boolean') {
       setMarketingAgreed(settings.marketing_agreed);
     }
+    if (typeof settings?.marketing_data_consent === 'boolean') {
+      setMarketingDataConsent(settings.marketing_data_consent);
+    }
     if (settings?.ai_persona) {
       setAiPersona(settings.ai_persona);
     }
-  }, [settings?.notification_pref, settings?.marketing_agreed, settings?.ai_persona]);
+  }, [
+    settings?.notification_pref,
+    settings?.marketing_agreed,
+    settings?.marketing_data_consent,
+    settings?.ai_persona,
+  ]);
 
   const applyUpdates = useCallback(
     (updates: Partial<UserSettings>) => {
@@ -169,6 +181,12 @@ function SettingsPage() {
     });
   }, [notifPref, marketingAgreed, applyUpdates]);
 
+  const toggleMarketingDataConsent = useCallback(() => {
+    const nextEnabled = !marketingDataConsent;
+    setMarketingDataConsent(nextEnabled);
+    applyUpdates({ marketing_data_consent: nextEnabled });
+  }, [marketingDataConsent, applyUpdates]);
+
   const toggleAiTone = useCallback(() => {
     const nextPersona: AiPersona = {
       ...aiPersona,
@@ -215,7 +233,7 @@ function SettingsPage() {
               queryClient.clear();
               navigation.navigate('/onboarding/welcome' as never);
             } catch (error) {
-              console.error('[WITHDRAW] 탈퇴 오류:', error);
+              if (__DEV__) console.error('[WITHDRAW] 탈퇴 오류:', error);
               const code =
                 (error as { message?: string })?.message ?? '알 수 없는 오류';
               Alert.alert('탈퇴하지 못했어요', `잠시 후 다시 시도해주세요.\n(${code})`);
@@ -287,6 +305,11 @@ function SettingsPage() {
           aiPersona={aiPersona}
           onToggleTone={toggleAiTone}
           onTogglePerspective={toggleAiPerspective}
+        />
+
+        <MarketingDataConsentSection
+          marketingDataConsent={marketingDataConsent}
+          onToggle={toggleMarketingDataConsent}
         />
 
         <AccountSettingsSection

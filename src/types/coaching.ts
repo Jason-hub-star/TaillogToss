@@ -12,7 +12,7 @@ export interface CoachingResult {
   dog_id: string; // FK → dogs.id
   report_type: ReportType;
 
-  /** 6블록 (무료 3 + PRO 3) */
+  /** 6블록 (생성된 결과는 FREE/PRO 모두 전체 공개) */
   blocks: CoachingBlocks;
 
   feedback_score: 1 | 2 | 3 | 4 | 5 | null;

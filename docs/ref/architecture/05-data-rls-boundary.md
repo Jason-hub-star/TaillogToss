@@ -1,6 +1,6 @@
 Diagram-ID: arch-05
 Owner: data-platform
-Last-Verified: 2026-03-01
+Last-Verified: 2026-06-02
 Parity-IDs: AUTH-001, IAP-001, B2B-001
 Source-of-Truth:
 - docs/ref/SUPABASE-SCHEMA-INDEX.md

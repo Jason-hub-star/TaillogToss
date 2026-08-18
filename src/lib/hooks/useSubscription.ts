@@ -18,6 +18,14 @@ import { getDevPlanOverride } from 'lib/devPlanOverride';
 import { isDevToolsEnabled } from 'lib/devTools';
 import { markStartupPerformance } from 'lib/performance/startupPerformance';
 
+function devLog(...args: Parameters<typeof console.log>): void {
+  if (__DEV__) console.log(...args);
+}
+
+function devWarn(...args: Parameters<typeof console.warn>): void {
+  if (__DEV__) console.warn(...args);
+}
+
 export function useCurrentSubscription(userId: string | undefined, options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: queryKeys.subscription.current(userId ?? ''),
@@ -74,11 +82,11 @@ export function usePurchaseIAP() {
       cleanupRef.current?.();
 
       return new Promise<boolean>((resolve, reject) => {
-        console.log('[IAP-001] purchase mutation start', { productId });
+        devLog('[IAP-001] purchase mutation start', { productId });
         const cleanup = createOneTimePurchaseOrder({
           sku: productId,
           processProductGrant: async ({ orderId }) => {
-            console.log('[IAP-001] purchase mutation process grant', { productId, orderId });
+            devLog('[IAP-001] purchase mutation process grant', { productId, orderId });
             return verifyAndGrant({
               orderId,
               productId,
@@ -86,7 +94,7 @@ export function usePurchaseIAP() {
             });
           },
           onEvent: ({ type }) => {
-            console.log('[IAP-001] purchase mutation event', { productId, type });
+            devLog('[IAP-001] purchase mutation event', { productId, type });
             if (type === 'GRANT_COMPLETED') {
               tracker.iapPurchaseSuccess(productId);
               resolve(true);
@@ -95,7 +103,7 @@ export function usePurchaseIAP() {
             }
           },
           onError: (error) => {
-            console.warn('[IAP-001] purchase mutation error', {
+            devWarn('[IAP-001] purchase mutation error', {
               productId,
               message: error instanceof Error ? error.message : String(error),
             });

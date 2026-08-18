@@ -1,5 +1,9 @@
 # TaillogToss Project Status
 
+Current Coaching Hotfix: 2026-05-27 (KST) — `/coaching/result` trigger localization + fallback 7-day plan + FREE→Pro intake funnel follow-up deployed. Backend fallback commit `bd74004` was pushed to `codex/ait-standalone-diagnosis` and DigitalOcean App Platform deployment `6d955e19-4f09-4db6-953b-d025a7db1734` reached `ACTIVE`; `/health` returned 200. New AIT `deploymentId=019e6994-86e6-7ae0-a379-c60de9fb4d6d`, SHA256 `daa12df17836d61ebbf4674ad2a3c002cf7671f09bc108b4ae20c21895a06a56`, RN 0.84/0.72 Android+iOS `0 errors / 0 warnings`; bundle scan PASS (DigitalOcean backend URL, Supabase URL, HTTPS brand icon, live ad IDs 7, test ad IDs 0, local icon leaks 0, `isDevToolsEnabled() return false`). Actual Toss device `R3CXB0QH0LY` private launch PASS: `Bundle loading completed successfully`, `Running "shared"`, `/coaching/result` rendered `AI 행동 진단`, `오늘 1/1회 사용`, `광고 보고 무료 코칭 응원하기`; FREE PRO CTA tap opened `메이 Pro 상담지` with `정밀 코칭 준비 0/3` and `상담지 저장`, confirming consultation-intake-first upsell.
+
+Current Ads Maintenance: 2026-05-26 (KST) — Apps in Toss sent a deletion warning for two rewarded ad groups with no recent impressions: R1 `ait.v2.live.2f60e3d012a8440e` (`보상형-설문결과`) and R2 `ait.v2.live.b2cbe7034b754c70` (`보상형-분석대시보드`), scheduled for deletion after 2026-06-02 if still unshown. Code scan confirmed live IDs in `.env` + `src/lib/ads/config.ts` and R1/R2 wiring. R2 `/dashboard/analysis` CTA now opens `/coaching/result` after reward instead of a no-op, and fullscreen `impression` SDK callbacks now emit local diagnostics. Actual Toss device `R3CXB0QH0LY` launched deployment `019e53a0-3658-7c2e-9d58-68766b1a2890`: R1 `/onboarding/survey-result` and R2 `/dashboard/analysis` both opened `com.google.android.gms.ads.AdActivity`. Latest AIT deployment `019e61bd-9356-72f9-99d7-03031aabec4b` was built/uploaded with `toss-ait-build-ops` (RN 0.84/0.72 `0 errors / 0 warnings`, SHA256 `6b487d0b13255801ebc4cbdbfd3a4a05c8e02d185abe5c59831c803c9684eea4`, live ad IDs 7, test IDs 0), and actual Toss verified the new R2 CTA text `광고 보고 AI 코칭 열기` plus rewarded flow into `/coaching/result` (`AI 행동 진단`). R2 required a temporary subscription `is_active=false` toggle to expose the free CTA; the `PRO_MONTHLY` row was restored to `is_active=true` immediately after validation. Remaining action: check Apps in Toss console after propagation and verify both ad groups have fresh impressions.
+
 Current Training Academy Sync: 2026-05-23 (KST) — Phase 7 A-2 cold-start uplift + UX consistency. `getRecommendationsFromCoaching(refs, completed)` helper가 cold-start path(`total_logs < 5`)에서도 코칭 reference로 primary/secondary 직접 산출하도록 분기됐고, `/training/academy`의 "오늘의 훈련" 카드는 `activeProgress`(in_progress 첫 항목) 대신 `recommendation.primary` 기반으로 동작한다. `progressMap.get(primary)`로 진행률 옵셔널 동기, 진행 중이 아니면 일차/진행률 숨김 + "오늘 시작하기 →" CTA. `RecommendedCurriculumCard`의 `scoreStyles.value`는 `width:36 → minWidth:52` + `numberOfLines={1}` 안전망 추가로 `20/100` 줄바꿈 해결. 검증: `tsc --noEmit` PASS, `engine.test.ts` 13/13 PASS (Phase 7 A-2 4건 신규 포함), AIT `019e53a0-3658-7c2e-9d58-68766b1a2890` 빌드/업로드, 번들 스캔 PASS(supabase URL inline, brandIcon HTTPS `static.toss.im/appsintoss/24957/...`, isDevToolsEnabled=false, ait-ad-test-* 0), DEV `viva.republica.toss.test`/PROD `viva.republica.toss` 양쪽 academy 진입 후 메이 데이터로 "씩씩한 독립심 클래스 + 오늘 시작하기 + 추천 점수 20/100 한 줄" 렌더 확인(`qa-screenshots/05-23-ait-upload/30~44.png`). BE는 FE only 패치라 재배포 불필요 — `/health` 200, `/api/v1/coaching/generate-focused` 401(인증 미들웨어 동작) 확인. 일지: `docs/daily/05-23/coaching-recommendation-overhaul.md` Phase 10 섹션.
 
 Current Challenge Submission: 2026-05-22 (KST) — 사용자 보고 기준으로 Apps in Toss `출시하기`를 완료했고, 토스 앱에서 한글 미니앱 이름 검색으로 노출 확인 가능한 상태다. 앱인토스 바이브코딩 챌린지 출품 폼의 `미니앱 공유하기 URL`은 실제 토스 앱에서 미니앱 진입 후 상단 내비게이션 바 공유하기로 복사한 공개 URL `https://minion.toss.im/L1o5uCsg`를 사용한다. 콘솔 private/deployment URL, 앱 내부 deep link, B2B 보호자 리포트용으로 생성된 별도 공유 링크와 혼동하지 않는다. 문서 정합성은 REG-001/APP-001 운영 상태로 업데이트했으며, 출품 마감은 신청서 안내 기준 2026-05-24.
@@ -165,10 +169,10 @@ vibehub-media 하네스 이식 완료:
 | UI-TRAINING-PERSONALIZATION-001 | 훈련 추천 개인화 | QA | `getRecommendationsV2` ScoreBand, `useBehaviorAnalytics` useQuery, academy 3섹션(AI추천/관련훈련/전체), cold start fallback, RecommendedCurriculumCard, RelatedCurriculumCarousel, StreakBadge, `useStepAttempts`+`AttemptHistorySheet` 실데이터 연결 완료(2026-04-23), tsc 0 errors | 실기기 시각 QA (AttemptHistorySheet 렌더 + InsightSummaryBar 애니) |
 | UI-TRAINING-DETAIL-001 | 훈련 상세 UX | Done | `training_step_attempts` DB 마이그레이션+RLS, StepCompletionSheet 2경로, StepAttemptHistory(PRO), ReactionTrendBar(PRO), detail.tsx useSubmitStepAttempt 연결, RecordModal B2B 훈련이력 탭, StreakBadge/ReactionTrendBar/AttemptHistorySheet 실데이터 배치 완료(2026-04-23), 스텝 체크 저장 버그 수정+reaction DB 저장 ADB E2E 확인(2026-04-27) | — |
 | AI-TRAIN-001 | 훈련 데이터 플라이휠 | InProgress | AI 코칭 저장 → 구조화 필드 기반 품질 태깅 → 후보 플래그 → 관리자 review API 승인/반려 → 텔레그램 검수 재료 수집 v1. 2026-05-13: 후보 목록/후보 payload admin API, `coaching-review-telegram-daily.md`, queue/feedback/offset 상태 파일 추가. 승인 후 후보 파일까지만 생성하고 앱 커리큘럼은 미반영 | 실제 daily synthetic 재실행 persistence 확인, 텔레그램 봇 실발송 DRY_RUN→1건 테스트, action별 behavior matching 고도화, 50건 개선 리포트 운영, pg_cron/실행환경 등록, Fine-tune job 생성 |
-| IAP-001 | 결제 | QA | 구독 화면, useIsPro, verifyAndGrant, Edge v12, iap.test 11케이스, 서버 3시나리오+복구 재검증 증적 + DB 영속(5건) 확인, `getPendingOrders`/`completeProductGrant` 실 SDK 연결, 실기기 Sandbox 3시나리오 패널 확인 + false-success/loading 잔여 버그 수정 및 새 AIT 업로드 후 버튼 복귀 확인(2026-05-07), backend hardcoded fallback 재점검 완료, Railway redeploy SUCCESS + `/health` 200 | 최신 AIT 업로드 후 IAP 성공 재검증 |
+| IAP-001 | 결제 | Done | 구독 화면, useIsPro, verifyAndGrant, real mTLS, `getPendingOrders`/`completeProductGrant` 실 SDK 연결, 실패/복구 UI, false-success/loading 수정, 최신 AIT 유료 성공에서 DB `PAYMENT_COMPLETED/granted` + `completeProductGrant done` 확인 | product/SDK/Edge 변경 시 회귀 재검증 |
 | MSG-001 | 알림 | QA | Edge v3 실배포, 쿨다운, noti_history 영속, 우회차단, 테스트 통과, Smart Message 승인 캠페인 `TAILLOG_BEHAVIOR_REMIND`, 실기기 current user HTTP 200 + noti_history success=true(2026-05-07) | 추가 캠페인 등록 및 회귀 발송 |
-| AD-001 | 광고 | QA | 타입, real FullScreen SDK wrapper, useRewardedAd, R1/R2/R3/B1~B3/I1 통합, live Ad Group ID 7종 상수 fallback, 최신 AIT `019e00dd...` B1/B2/B3 실 SDK 호출 + `ad_error` 상세 payload 확보(`code=1007`) | Toss 지원 환경에서 render success/no-fill 최종 판정 |
-| B2B-001 | B2B 운영 | In Progress | P1~P7, 스키마 정합, roleGuard test 8케이스, BE-P7, `/ops/setup` 페이지(2026-04-21), `create_organization` RPC(2026-04-21), `assign-b2b-role` Edge(2026-04-21), B2B 무료 전환(2026-04-21), `/dashboard` B2B 배너(2026-04-21), `/ops/dog-add` 페이지(2026-04-21), `createOrgDog()` API(2026-04-21), Metro-off actual Toss 40마리/공유 CTA/B2B-B2C 2회 반복 PASS(2026-05-21), FastAPI verify_parent_phone_last4 endpoint + `/parent/reports?token` 보호자 인증 DEV_LOCAL PASS(2026-05-21) | 공유 후 앱 복귀 3회 수동 반복 증적 |
+| AD-001 | 광고 | QA | 타입, real FullScreen SDK wrapper, useRewardedAd, R1/R2/R3/B1~B3/I1 통합, live Ad Group ID 7종 상수 fallback, R1/R2 actual Toss AdActivity 진입 및 R2 reward flow into `/coaching/result` PASS(2026-05-26) | Apps in Toss console impression 갱신 확인 |
+| B2B-001 | B2B 운영 | In Progress | P1~P7, 스키마 정합, roleGuard test 8케이스, BE-P7, Metro-off actual Toss 40마리/공유 CTA/B2B-B2C 2회 반복 PASS(2026-05-21), FastAPI verify_parent_phone_last4 endpoint + `/parent/reports?token` 보호자 인증 DEV_LOCAL PASS, share-return 3-cycle DEV_LOCAL PASS | `/ops/today`, `/ops/settings`, `/parent/reports` route board 최종 QA |
 | REG-001 | 등록 | Done | legal, toss-disconnect, mTLS 구현, 약관 2종, 사업자등록/배포 완료 | 콘솔 테스트 콜백 검증 |
 
 ## Phase 진행 현황
@@ -189,10 +193,10 @@ vibehub-media 하네스 이식 완료:
 | 도메인 | 상태 | 남은 것 |
 |--------|------|---------|
 | FE->BE 연결 | 완료 | adb reverse 방식 전환 완료, Wi-Fi 백업 가능 |
-| AUTH | 진행 | 실기기 200/400 증적 확보, 문서/스크린샷 정리 |
-| IAP | QA | Edge v13 get-order-status + frontend SDK event-order patch 완료. 새 `.ait` `019e0105...` 업로드 후 성공 최종 재검증 |
+| AUTH | 진행 | fresh AIT login happy-path PASS(2026-05-26), 콘솔 callback/negative path 운영 증적 정리 |
+| IAP | 완료 | 최신 paid success + grant + completeProductGrant 증적 확보 |
 | MSG | QA | `TAILLOG_BEHAVIOR_REMIND` 실발송 200 + noti_history success=true 확인 |
-| AD | QA | live Ad Group ID 상수 fallback 적용, 새 `.ait` test id 0개. 업로드 후 mock fallback 제거 + B1/B2/B3 `ad_error` 상세 payload 확인(`code=1007`) |
+| AD | QA | live Ad Group ID 상수 fallback 적용, R1/R2 actual Toss AdActivity 및 R2 reward flow PASS. 콘솔 impression 갱신 확인 잔여 |
 | UI | 진행 | 실기기 비주얼 QA |
 | Edge 7종 | 진행 | happy-path payload 실검증 잔여 |
 | BE (FastAPI) | 완료 | - |
@@ -221,7 +225,7 @@ vibehub-media 하네스 이식 완료:
 | BE 단위 | 완료 | pytest 39 tests |
 | Edge 단위 | 완료 | 31 tests, 12 suites |
 | BE<->DB 통합 | 미구현 | FastAPI + 실 Supabase 연결 테스트 필요 |
-| E2E | 부분 | 로그인 + Edge smoke, IAP/AD happy-path 미검증 |
+| E2E | 부분 | 로그인, AI coaching, IAP, R1/R2 Ads, B2B share 조각 증적 확보. 통합 route sweep 잔여 |
 | 성능 | 부분 | `/ops/today` 40마리 실제 Toss 렌더 PASS; API p95 < 300ms 별도 계측 필요 |
 
 ## 크리티컬 패스 블로커
@@ -232,10 +236,10 @@ vibehub-media 하네스 이식 완료:
 3. ~~P1 Ready 페이지 4개~~ → ✅ 완료 (2026-04-02, 16/21→19/21 Done)
 
 ### HIGH
-4. IAP E2E 테스트 (Sandbox 결제 플로우)
-5. B2B RPC 함수 (`verify_parent_phone_last4`)
-6. Ads 실 Ad Group ID 교체 + 검증
-7. B2B P2/P2+ route QA (`/ops/today`, `/ops/settings`, `/parent/reports`) → board 기준 `QA`, B2B-001 parity는 In Progress
+4. 통합 real-device route sweep
+5. Apps in Toss console impression 갱신 확인
+6. B2B P2/P2+ route QA (`/ops/today`, `/ops/settings`, `/parent/reports`) → board 기준 `QA`, B2B-001 parity는 In Progress
+7. 콘솔 callback/인증서 만료 캘린더 등 운영 증적 정리
 
 ## 최신 AUTH 증적 (2026-02-28)
 
@@ -308,13 +312,13 @@ vibehub-media 하네스 이식 완료:
 | 영역 | 완성도 | 핵심 잔여 |
 |------|--------|----------|
 | FE 페이지 | 95% | `PAGE-UPGRADE-BOARD.md` 기준 Done 14 / QA 11 |
-| FE 컴포넌트 | 90% | mock 3곳 전환 |
+| FE 컴포넌트 | 90% | report/marketing 실모드 및 남은 시각 QA |
 | Backend | 95% | BE↔DB 통합 테스트 |
 | DB/Infra | 95% | ~~mTLS 실 인증서~~ ✅ 완료 |
-| Toss SDK | 85% | ~~SDK 2.x~~ ✅ + Ads 실 ID 교체 |
-| 테스트 | 60% | E2E/성능 부분 검증, IAP/AD happy-path 잔여 |
+| Toss SDK | 90% | ~~SDK 2.x~~ ✅ + Ads/IAP 실 SDK 주요 경로 증적 확보 |
+| 테스트 | 65% | 조각 E2E는 확보, 통합 route sweep/API p95 계측 잔여 |
 | 퍼블리싱 | 55% | mTLS 완료, 심사 요건 일부 미충족 |
-| **종합** | **82%** | 실기기 E2E + Ads ID + B2B QA 잔여 |
+| **종합** | **91%** | 통합 실기기 sweep + 콘솔 impression + B2B QA 잔여 |
 
 ## 비고
 

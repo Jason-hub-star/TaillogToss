@@ -9,6 +9,7 @@ const mockGetUser = jest.fn();
 const mockSignOut = jest.fn();
 const mockUpdateUser = jest.fn();
 const mockRefreshSession = jest.fn();
+const mockGetSession = jest.fn();
 const mockStorageSetItem = jest.fn();
 const mockStorageGetItem = jest.fn();
 const mockStorageRemoveItem = jest.fn();
@@ -31,12 +32,13 @@ jest.mock('lib/api/supabase', () => ({
       signOut: (...args: unknown[]) => mockSignOut(...args),
       updateUser: (...args: unknown[]) => mockUpdateUser(...args),
       refreshSession: (...args: unknown[]) => mockRefreshSession(...args),
+      getSession: (...args: unknown[]) => mockGetSession(...args),
     },
   },
   isSupabaseConfigured: () => mockIsConfigured(),
 }));
 
-import { loginWithToss, setSessionFromBridgeResponse } from '../auth';
+import { assignB2BRole, getSession, loginWithToss, setSessionFromBridgeResponse, withdrawUser } from '../auth';
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -45,6 +47,7 @@ beforeEach(() => {
   mockSignOut.mockResolvedValue({ error: null });
   mockUpdateUser.mockResolvedValue({ error: null });
   mockRefreshSession.mockResolvedValue({ error: null });
+  mockGetSession.mockResolvedValue({ data: { session: null }, error: null });
   mockStorageSetItem.mockResolvedValue(undefined);
   mockStorageGetItem.mockResolvedValue(null);
   mockStorageRemoveItem.mockResolvedValue(undefined);
@@ -191,5 +194,123 @@ describe('setSessionFromBridgeResponse', () => {
 
     expect(result).toBe(false);
     expect(mockSignOut).toHaveBeenCalled();
+  });
+});
+
+describe('getSession', () => {
+  it('세션이 없으면 null 반환', async () => {
+    mockGetSession.mockResolvedValue({ data: { session: null }, error: null });
+
+    await expect(getSession()).resolves.toBeNull();
+    expect(mockGetUser).not.toHaveBeenCalled();
+  });
+
+  it('저장 세션 access token이 non-JWT면 signOut 후 null 반환', async () => {
+    mockGetSession.mockResolvedValue({
+      data: { session: { access_token: 'sb_access_mock', user: { id: 'user-1' } } },
+      error: null,
+    });
+
+    await expect(getSession()).resolves.toBeNull();
+    expect(mockGetUser).not.toHaveBeenCalled();
+    expect(mockSignOut).toHaveBeenCalled();
+  });
+
+  it('저장 세션 JWT가 Supabase getUser 검증에 실패하면 signOut 후 null 반환', async () => {
+    mockGetSession.mockResolvedValue({
+      data: { session: { access_token: 'header.payload.signature', user: { id: 'user-1' } } },
+      error: null,
+    });
+    mockGetUser.mockResolvedValueOnce({ data: { user: null }, error: new Error('Invalid JWT') });
+
+    await expect(getSession()).resolves.toBeNull();
+    expect(mockGetUser).toHaveBeenCalledWith('header.payload.signature');
+    expect(mockSignOut).toHaveBeenCalled();
+  });
+
+  it('저장 세션 JWT가 Supabase getUser 검증을 통과하면 세션 반환', async () => {
+    const session = { access_token: 'header.payload.signature', user: { id: 'user-1' } };
+    mockGetSession.mockResolvedValue({ data: { session }, error: null });
+
+    await expect(getSession()).resolves.toBe(session);
+    expect(mockGetUser).toHaveBeenCalledWith('header.payload.signature');
+    expect(mockSignOut).not.toHaveBeenCalled();
+  });
+});
+
+describe('protected Edge callers', () => {
+  it('withdrawUser는 JWT 형식이 아닌 저장 세션을 Edge에 보내지 않고 로그아웃한다', async () => {
+    mockGetSession.mockResolvedValue({
+      data: { session: { access_token: 'sb_access_mock' } },
+      error: null,
+    });
+
+    await expect(withdrawUser('user-1')).rejects.toThrow('INVALID_SESSION');
+
+    expect(mockGetUser).not.toHaveBeenCalled();
+    expect(mockSignOut).toHaveBeenCalled();
+    expect(mockInvoke).not.toHaveBeenCalled();
+  });
+
+  it('withdrawUser는 JWT 검증 실패 시 Edge 호출 전에 차단한다', async () => {
+    mockGetSession.mockResolvedValue({
+      data: { session: { access_token: 'header.payload.signature' } },
+      error: null,
+    });
+    mockGetUser.mockResolvedValueOnce({ data: { user: null }, error: new Error('Invalid JWT') });
+
+    await expect(withdrawUser('user-1')).rejects.toThrow('INVALID_SESSION');
+
+    expect(mockGetUser).toHaveBeenCalledWith('header.payload.signature');
+    expect(mockSignOut).toHaveBeenCalled();
+    expect(mockInvoke).not.toHaveBeenCalled();
+  });
+
+  it('withdrawUser는 세션이 비어 있으면 refresh 후 검증된 JWT만 전달한다', async () => {
+    mockGetSession.mockResolvedValue({ data: { session: null }, error: null });
+    mockRefreshSession.mockResolvedValue({
+      data: { session: { access_token: 'header.payload.signature' } },
+      error: null,
+    });
+    mockInvoke.mockResolvedValue({ data: { ok: true }, error: null });
+
+    await expect(withdrawUser('user-1')).resolves.toBeUndefined();
+
+    expect(mockGetUser).toHaveBeenCalledWith('header.payload.signature');
+    expect(mockInvoke).toHaveBeenCalledWith('withdraw-user', expect.objectContaining({
+      body: { userId: 'user-1' },
+      headers: { Authorization: 'Bearer header.payload.signature' },
+    }));
+  });
+
+  it('assignB2BRole은 JWT 검증 실패 시 Edge 호출 전에 차단한다', async () => {
+    mockGetSession.mockResolvedValue({
+      data: { session: { access_token: 'header.payload.signature' } },
+      error: null,
+    });
+    mockGetUser.mockResolvedValueOnce({ data: { user: null }, error: new Error('Invalid JWT') });
+
+    await expect(assignB2BRole('trainer')).rejects.toThrow('INVALID_SESSION');
+
+    expect(mockGetUser).toHaveBeenCalledWith('header.payload.signature');
+    expect(mockSignOut).toHaveBeenCalled();
+    expect(mockInvoke).not.toHaveBeenCalled();
+  });
+
+  it('assignB2BRole은 검증된 JWT만 Authorization 헤더에 붙인다', async () => {
+    mockGetSession.mockResolvedValue({
+      data: { session: { access_token: 'header.payload.signature' } },
+      error: null,
+    });
+    mockInvoke.mockResolvedValue({ data: { ok: true }, error: null });
+
+    await expect(assignB2BRole('org_owner')).resolves.toBeUndefined();
+
+    expect(mockGetUser).toHaveBeenCalledWith('header.payload.signature');
+    expect(mockInvoke).toHaveBeenCalledWith('assign-b2b-role', expect.objectContaining({
+      body: { role: 'org_owner' },
+      headers: { Authorization: 'Bearer header.payload.signature' },
+    }));
+    expect(mockRefreshSession).toHaveBeenCalled();
   });
 });

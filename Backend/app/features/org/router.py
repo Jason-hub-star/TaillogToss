@@ -22,6 +22,15 @@ router = APIRouter()
 # 조직 조회/수정
 # ──────────────────────────────────────
 
+@router.get("/mine", response_model=Optional[schemas.MyOrgResponse])
+async def get_my_org(
+    user_id: str = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db),
+):
+    """현재 유저의 조직 + 멤버십 조회"""
+    return await service.get_my_org(db, user_id)
+
+
 @router.get("/{org_id}", response_model=schemas.OrgResponse)
 async def get_org(
     org_id: UUID,
@@ -31,6 +40,25 @@ async def get_org(
     """조직 상세 조회"""
     await service.verify_org_membership(db, org_id, user_id)
     return await service.get_org(db, org_id)
+
+
+@router.get("/{org_id}/subscription", response_model=Optional[schemas.OrgSubscriptionResponse])
+async def get_org_subscription(
+    org_id: UUID,
+    user_id: str = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db),
+):
+    """조직 B2B 구독 상태 조회 (JWT 조직 멤버십 검증)."""
+    return await service.get_current_org_subscription(db, org_id, user_id)
+
+
+@router.get("/subscription/trainer/mine", response_model=Optional[schemas.OrgSubscriptionResponse])
+async def get_my_trainer_subscription(
+    user_id: str = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db),
+):
+    """훈련사 개인 B2B 구독 상태 조회 (JWT 본인 기준)."""
+    return await service.get_current_trainer_subscription(db, user_id)
 
 
 @router.patch("/{org_id}", response_model=schemas.OrgResponse)
@@ -120,6 +148,17 @@ async def enroll_dog(
     return await service.enroll_dog(db, user_id, data)
 
 
+@router.post("/dogs/create", response_model=schemas.OrgDogResponse,
+             status_code=status.HTTP_201_CREATED)
+async def create_org_dog(
+    data: schemas.CreateOrgDogRequest,
+    user_id: str = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db),
+):
+    """센터 강아지 생성 + 입소 + PII 저장"""
+    return await service.create_org_dog(db, user_id, data)
+
+
 @router.patch("/dogs/{org_dog_id}/discharge")
 async def discharge_dog(
     org_dog_id: UUID,
@@ -144,6 +183,17 @@ async def assign_dog(
 ):
     """담당자 배정"""
     return await service.assign_dog(db, user_id, data)
+
+
+@router.patch("/assignments/unassign")
+async def unassign_dog(
+    data: schemas.UnassignDogRequest,
+    user_id: str = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db),
+):
+    """담당자 배정 해제"""
+    await service.unassign_dog(db, user_id, data)
+    return {"success": True}
 
 
 @router.get("/{org_id}/assignments", response_model=List[schemas.DogAssignmentResponse])

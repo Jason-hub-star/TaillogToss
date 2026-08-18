@@ -98,4 +98,48 @@ else
   echo "[patch] ReactDevToolsSettingsManager.js — 이미 존재, 건너뜀"
 fi
 
+# ─── 5. @supabase/auth-js default localhost URL 제거 ─────────────────────
+# TaillogToss는 createClient(SUPABASE_URL, ...)로 실제 URL을 항상 전달한다.
+# 하지만 auth-js의 미사용 fallback 상수 http://localhost:9999가 AIT 번들에 남아
+# release bundle security scan을 오염시키므로 non-local placeholder로 교체한다.
+SUPABASE_AUTH_CONSTANT_FILES=(
+  "$NM/@supabase/auth-js/src/lib/constants.ts"
+  "$NM/@supabase/auth-js/dist/main/lib/constants.js"
+  "$NM/@supabase/auth-js/dist/main/lib/constants.d.ts"
+  "$NM/@supabase/auth-js/dist/module/lib/constants.js"
+  "$NM/@supabase/auth-js/dist/module/lib/constants.d.ts"
+)
+python3 - "${SUPABASE_AUTH_CONSTANT_FILES[@]}" <<'PYEOF'
+import sys
+
+replacements = {
+    "'http://localhost:9999'": "'https://supabase-auth-placeholder.invalid'",
+    '"http://localhost:9999"': '"https://supabase-auth-placeholder.invalid"',
+}
+patched = 0
+skipped = 0
+missing = 0
+
+for path in sys.argv[1:]:
+    try:
+        src = open(path, encoding='utf-8').read()
+    except FileNotFoundError:
+        missing += 1
+        continue
+
+    next_src = src
+    for old, new in replacements.items():
+        next_src = next_src.replace(old, new)
+
+    if next_src != src:
+        open(path, 'w', encoding='utf-8').write(next_src)
+        patched += 1
+    elif 'supabase-auth-placeholder.invalid' in src:
+        skipped += 1
+    else:
+        print(f"[patch] @supabase/auth-js GOTRUE_URL — 예상 문자열 없음: {path}")
+
+print(f"[patch] @supabase/auth-js GOTRUE_URL — localhost fallback 제거/확인 patched={patched} skipped={skipped} missing={missing}")
+PYEOF
+
 echo "[patch-node-modules] 모든 패치 완료 ✓"

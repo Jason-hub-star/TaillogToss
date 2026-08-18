@@ -7,6 +7,7 @@ import { useState, useCallback, useRef, useEffect } from 'react';
 import type { AdPlacement, RewardedAdState } from 'types/ads';
 import { DEFAULT_AD_FALLBACK } from 'types/ads';
 import { getAdGroupId, getAdsSdk } from 'lib/ads/config';
+import { setFullscreenAdActive } from 'lib/ads/adCoordination';
 import { tracker } from 'lib/analytics/tracker';
 import { buildAdDiagnostics } from 'lib/ads/diagnostics';
 
@@ -56,6 +57,7 @@ export function useRewardedAd(
       mountedRef.current = false;
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
       // 공식 SDK cleanup 패턴
+      setFullscreenAdActive(false);
       getAdsSdk().destroy();
     };
   }, []);
@@ -69,11 +71,12 @@ export function useRewardedAd(
     if (getDailyCount(placement) >= DEFAULT_AD_FALLBACK.daily_limit) {
       setAdState('no_fill');
       tracker.adNoFill(placement, 'daily_limit', buildAdDiagnostics(placement, 'daily_limit'));
-      if (DEFAULT_AD_FALLBACK.unlock_on_no_fill) onRewarded();
       return;
     }
 
     setAdState('loading');
+    // AIT 2026-07-10: 로드 시작 시 배너를 억제해 Android 동시로드 이벤트 실패를 피한다.
+    setFullscreenAdActive(true);
     tracker.adRequested(placement, buildAdDiagnostics(placement, 'fullscreen_load_requested'));
 
     const sdk = getAdsSdk();
@@ -82,9 +85,9 @@ export function useRewardedAd(
     // 타임아웃 폴백
     timeoutRef.current = setTimeout(() => {
       if (!mountedRef.current) return;
+      setFullscreenAdActive(false);
       setAdState('no_fill');
       tracker.adNoFill(placement, 'timeout', buildAdDiagnostics(placement, 'fullscreen_load_timeout'));
-      if (DEFAULT_AD_FALLBACK.unlock_on_no_fill) onRewarded();
     }, DEFAULT_AD_FALLBACK.timeout_ms);
 
     sdk.loadFullScreenAd({
@@ -97,10 +100,15 @@ export function useRewardedAd(
         let rewardHandled = false;
 
         sdk.showFullScreenAd({
+          onImpression: () => {
+            if (!mountedRef.current || rewardHandled) return;
+            tracker.adImpression(placement, buildAdDiagnostics(placement, 'fullscreen_impression'));
+          },
           onRewarded: () => {
             if (!mountedRef.current || rewardHandled) return;
             rewardHandled = true;
             if (timeoutRef.current) clearTimeout(timeoutRef.current);
+            setFullscreenAdActive(false);
             incrementDailyCount(placement);
             setAdState('rewarded');
             tracker.adRewarded(placement, buildAdDiagnostics(placement, 'fullscreen_rewarded'));
@@ -109,6 +117,7 @@ export function useRewardedAd(
           onClosed: () => {
             if (!mountedRef.current || rewardHandled) return;
             if (timeoutRef.current) clearTimeout(timeoutRef.current);
+            setFullscreenAdActive(false);
             setAdState('no_fill');
             tracker.adNoFill(
               placement,
@@ -119,9 +128,9 @@ export function useRewardedAd(
           onError: (error) => {
             if (!mountedRef.current || rewardHandled) return;
             if (timeoutRef.current) clearTimeout(timeoutRef.current);
+            setFullscreenAdActive(false);
             setAdState('error');
             tracker.adError(placement, buildAdDiagnostics(placement, 'fullscreen_show_error', error));
-            if (DEFAULT_AD_FALLBACK.unlock_on_no_fill) onRewarded();
             onError?.();
           },
         });
@@ -129,9 +138,9 @@ export function useRewardedAd(
       onError: (error) => {
         if (!mountedRef.current) return;
         if (timeoutRef.current) clearTimeout(timeoutRef.current);
+        setFullscreenAdActive(false);
         setAdState('error');
         tracker.adError(placement, buildAdDiagnostics(placement, 'fullscreen_load_error', error));
-        if (DEFAULT_AD_FALLBACK.unlock_on_no_fill) onRewarded();
         onError?.();
       },
     });

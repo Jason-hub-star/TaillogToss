@@ -14,8 +14,6 @@ export function resolveEffectiveSessionRole(input: {
 }): User['role'] {
   if (input.preferredFlow === 'B2C') return 'user';
   if (isB2BAuthRole(input.publicRole)) return input.publicRole;
-  if (isB2BAuthRole(input.sessionRole) || input.sessionRole === 'user') {
-    return input.sessionRole;
-  }
+  if (input.sessionRole === 'user') return 'user';
   return 'user';
 }

@@ -85,7 +85,7 @@ describe('useRewardedAd', () => {
     expect(onRewarded).toHaveBeenCalledTimes(1);
   });
 
-  it('SDK loadFullScreenAd 에러 시 error 상태 + 무광고 폴백으로 onRewarded 호출', async () => {
+  it('SDK loadFullScreenAd 에러 시 error 상태로 전환하고 보상은 지급하지 않음', async () => {
     const onRewarded = jest.fn();
     const onError = jest.fn();
 
@@ -102,8 +102,24 @@ describe('useRewardedAd', () => {
     });
 
     expect(result.current.adState).toBe('error');
-    expect(onRewarded).toHaveBeenCalledTimes(1); // unlock_on_no_fill
+    expect(onRewarded).not.toHaveBeenCalled();
     expect(onError).toHaveBeenCalledTimes(1);
+  });
+
+  it('광고 타임아웃은 no_fill 처리하지만 보상 콜백을 호출하지 않음', async () => {
+    const onRewarded = jest.fn();
+    const { result } = renderHook(() => useRewardedAd('R2', onRewarded));
+
+    await act(async () => {
+      result.current.showAd();
+    });
+
+    await act(async () => {
+      jest.advanceTimersByTime(5000);
+    });
+
+    expect(result.current.adState).toBe('no_fill');
+    expect(onRewarded).not.toHaveBeenCalled();
   });
 
   it('loading 중 중복 showAd 호출 무시', async () => {

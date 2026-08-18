@@ -7,6 +7,7 @@ User-invocable slash commands for TaillogToss.
 | `/evidence-review` | `evidence-review.md` | 완료 근거와 잔여 리스크 점검 |
 | `/handoff` | `handoff.md` | 다음 세션 재진입 캡슐 작성 |
 | `/profile-recommend` | `profile-recommend.md` | 작업 프로필 선택 |
+| `/skill-audit` | `skill-audit.md` | 반복 워크플로우 스킬 후보 감사 |
 | `/learn` | `learn.md` | 교정 → feedback memory 저장 |
 | `/doc-update` | `doc-update.md` | 코드 변경 후 문서 자동 갱신 |
 | `/self-review` | `self-review.md` | working tree 자기 리뷰 |

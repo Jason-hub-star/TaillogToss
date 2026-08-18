@@ -5,6 +5,7 @@
 
 const mockInvoke = jest.fn();
 const mockFrom = jest.fn();
+const mockRequestBackend = jest.fn();
 const mockGetSession = jest.fn();
 const mockRefreshSession = jest.fn();
 const mockGetUser = jest.fn();
@@ -29,6 +30,10 @@ jest.mock('@apps-in-toss/framework', () => ({
   },
 }));
 
+jest.mock('../backend', () => ({
+  requestBackend: (...args: unknown[]) => mockRequestBackend(...args),
+}));
+
 jest.mock('lib/api/supabase', () => ({
   supabase: {
     functions: { invoke: (...args: unknown[]) => mockInvoke(...args) },
@@ -45,10 +50,16 @@ jest.mock('lib/api/supabase', () => ({
   }),
 }));
 
-import { verifyAndGrant, recoverPendingOrders, createOneTimePurchaseOrder } from '../iap';
+import {
+  verifyAndGrant,
+  recoverPendingOrders,
+  recoverPendingOrdersB2B,
+  createOneTimePurchaseOrder,
+} from '../iap';
 
 beforeEach(() => {
   jest.clearAllMocks();
+  mockRequestBackend.mockResolvedValue([]);
   mockCreateOneTimePurchaseOrder.mockReturnValue(jest.fn());
   mockGetSession.mockResolvedValue({
     data: { session: { access_token: 'eyJ.base.session' } },
@@ -174,15 +185,16 @@ describe('verifyAndGrant', () => {
   });
 
   it('B2B context 포함 시 body에 orgId/trainerUserId 전달', async () => {
-    mockInvoke.mockResolvedValue({ data: { ok: true }, error: null });
-    await verifyAndGrant(receipt, { orgId: 'org-1', trainerUserId: 'trainer-1' });
+    mockRequestBackend.mockResolvedValueOnce({ data: { grant_status: 'granted' } });
+    await verifyAndGrant(receipt, { orgId: 'org-1' });
 
-    expect(mockInvoke).toHaveBeenCalledWith(
-      'verify-iap-order',
+    expect(mockInvoke).not.toHaveBeenCalled();
+    expect(mockRequestBackend).toHaveBeenCalledWith(
+      '/api/v1/subscription/iap/verify',
       expect.objectContaining({
+        method: 'POST',
         body: expect.objectContaining({
           orgId: 'org-1',
-          trainerUserId: 'trainer-1',
         }),
       }),
     );
@@ -200,41 +212,27 @@ describe('verifyAndGrant', () => {
 
 describe('recoverPendingOrders', () => {
   it('부분 복구: 3건 중 2건 성공 시 2 반환', async () => {
-    const pendingQueryChain = {
-      select: jest.fn().mockReturnThis(),
-      eq: jest.fn().mockReturnThis(),
-      order: jest.fn().mockResolvedValue({
-        data: [
-          {
-            toss_order_id: 'ord_a',
-            product_id: 'ait.0000020829.09e69bf9.90a91624b0.7443236299',
-            id: 'id_a',
-          },
-          {
-            toss_order_id: 'ord_b',
-            product_id: 'ait.0000020829.b0b00d71.17c5290dc1.7444362301',
-            id: 'id_b',
-          },
-          {
-            toss_order_id: 'ord_c',
-            product_id: 'ait.0000020829.32dc32cf.49e67a4cfa.7443541064',
-            id: 'id_c',
-          },
-        ],
-        error: null,
-      }),
-    };
-    const staleLookupChain = {
-      select: jest.fn().mockReturnThis(),
-      eq: jest.fn().mockReturnThis(),
-      order: jest.fn().mockReturnThis(),
-      limit: jest.fn().mockResolvedValue({ data: [], error: null }),
-    };
-    mockFrom
-      .mockReturnValueOnce(pendingQueryChain)
-      .mockReturnValueOnce(staleLookupChain)
-      .mockReturnValueOnce(staleLookupChain)
-      .mockReturnValueOnce(staleLookupChain);
+    mockRequestBackend
+      .mockResolvedValueOnce([
+        {
+          order_id: 'ord_a',
+          product_id: 'ait.0000020829.09e69bf9.90a91624b0.7443236299',
+          transaction_id: 'ord_a',
+        },
+        {
+          order_id: 'ord_b',
+          product_id: 'ait.0000020829.b0b00d71.17c5290dc1.7444362301',
+          transaction_id: 'ord_b',
+        },
+        {
+          order_id: 'ord_c',
+          product_id: 'ait.0000020829.32dc32cf.49e67a4cfa.7443541064',
+          transaction_id: 'ord_c',
+        },
+      ])
+      .mockResolvedValueOnce({})
+      .mockResolvedValueOnce({})
+      .mockResolvedValueOnce({});
 
     // 1번째, 3번째 성공 / 2번째 실패
     mockInvoke
@@ -247,12 +245,7 @@ describe('recoverPendingOrders', () => {
   });
 
   it('빈 목록 시 0 반환', async () => {
-    const chainMock = {
-      select: jest.fn().mockReturnThis(),
-      eq: jest.fn().mockReturnThis(),
-      order: jest.fn().mockResolvedValue({ data: [], error: null }),
-    };
-    mockFrom.mockReturnValue(chainMock);
+    mockRequestBackend.mockResolvedValueOnce([]);
 
     const recovered = await recoverPendingOrders('user-1');
     expect(recovered).toBe(0);
@@ -277,22 +270,12 @@ describe('recoverPendingOrders', () => {
     mockGetPendingOrders.mockResolvedValue({
       orders: [{ orderId: 'known_failed_ord', sku: 'ait.0000020829.b0b00d71.17c5290dc1.7444362301' }],
     });
-    const terminalRecordChain = {
-      select: jest.fn().mockReturnThis(),
-      eq: jest.fn().mockReturnThis(),
-      order: jest.fn().mockReturnThis(),
-      limit: jest.fn().mockResolvedValue({
-        data: [
-          {
-            product_id: 'ait.0000020829.b0b00d71.17c5290dc1.7444362301',
-            grant_status: 'grant_failed',
-            toss_status: 'NOT_FOUND',
-          },
-        ],
-        error: null,
-      }),
-    };
-    mockFrom.mockReturnValue(terminalRecordChain);
+    mockRequestBackend.mockResolvedValueOnce({
+      product_id: 'ait.0000020829.b0b00d71.17c5290dc1.7444362301',
+      grant_status: 'grant_failed',
+      toss_status: 'NOT_FOUND',
+      terminal_reason: 'grant_failed:NOT_FOUND',
+    });
 
     const recovered = await recoverPendingOrders('user-1');
 
@@ -316,6 +299,34 @@ describe('recoverPendingOrders', () => {
     expect(recovered).toBe(0);
     expect(mockInvoke).not.toHaveBeenCalled();
     expect(mockCompleteProductGrant).not.toHaveBeenCalled();
+  });
+});
+
+describe('recoverPendingOrdersB2B', () => {
+  it('B2B pending 복구는 backend-scoped 조회와 proxy 검증만 사용한다', async () => {
+    mockRequestBackend
+      .mockResolvedValueOnce([
+        { order_id: 'ord-b2b', product_id: 'center_basic', transaction_id: 'ord-b2b' },
+      ])
+      .mockResolvedValueOnce({ data: { grant_status: 'granted' } });
+
+    const recovered = await recoverPendingOrdersB2B('org-1', undefined);
+
+    expect(recovered).toBe(1);
+    expect(mockFrom).not.toHaveBeenCalled();
+    expect(mockInvoke).not.toHaveBeenCalled();
+    expect(mockRequestBackend).toHaveBeenNthCalledWith(
+      1,
+      '/api/v1/subscription/orders/pending/b2b?org_id=org-1',
+    );
+    expect(mockRequestBackend).toHaveBeenNthCalledWith(
+      2,
+      '/api/v1/subscription/iap/verify',
+      expect.objectContaining({
+        method: 'POST',
+        body: expect.objectContaining({ orgId: 'org-1' }),
+      }),
+    );
   });
 });
 

@@ -1,6 +1,6 @@
 Diagram-ID: arch-04
 Owner: b2b
-Last-Verified: 2026-03-01
+Last-Verified: 2026-06-02
 Parity-IDs: B2B-001, AI-001
 Source-of-Truth:
 - src/lib/api/org.ts

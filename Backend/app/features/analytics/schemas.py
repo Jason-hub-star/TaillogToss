@@ -26,6 +26,18 @@ class StepAttemptResponse(BaseModel):
     created_at: str
 
 
+class StepAttemptCreate(BaseModel):
+    step_id: str
+    curriculum_id: str
+    day_number: int
+    attempt_number: int = 1
+    reaction: Optional[str] = None
+    situation_tags: Optional[List[str]] = None
+    method_used: Optional[str] = None
+    what_worked: Optional[str] = None
+    what_didnt_work: Optional[str] = None
+
+
 class BehaviorAnalyticsResponse(BaseModel):
     dog_id: str
     analysis_days: int

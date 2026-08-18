@@ -17,6 +17,31 @@ export interface WithdrawDeps {
   fetchFn: typeof fetch;
 }
 
+type CleanupAction = 'set_null' | 'delete';
+
+interface UserReferenceCleanup {
+  table: string;
+  column: string;
+  action: CleanupAction;
+}
+
+const USER_REFERENCE_CLEANUPS: UserReferenceCleanup[] = [
+  { table: 'behavior_logs', column: 'recorded_by', action: 'set_null' },
+  { table: 'training_sessions', column: 'user_id', action: 'set_null' },
+  { table: 'training_goals', column: 'user_id', action: 'set_null' },
+  { table: 'ai_recommendation_snapshots', column: 'user_id', action: 'set_null' },
+  { table: 'ai_recommendation_feedback', column: 'user_id', action: 'set_null' },
+  { table: 'case_intakes', column: 'author_user_id', action: 'set_null' },
+  { table: 'org_dogs', column: 'parent_user_id', action: 'set_null' },
+  { table: 'pii_access_log', column: 'accessor_id', action: 'set_null' },
+  { table: 'parent_interactions', column: 'parent_user_id', action: 'set_null' },
+  { table: 'parent_interactions', column: 'responded_by', action: 'set_null' },
+  { table: 'daily_reports', column: 'created_by_trainer_id', action: 'delete' },
+  { table: 'dog_assignments', column: 'trainer_user_id', action: 'delete' },
+  { table: 'org_subscriptions', column: 'trainer_user_id', action: 'delete' },
+  { table: 'ai_cost_usage_org', column: 'trainer_user_id', action: 'delete' },
+];
+
 function defaultDeps(): WithdrawDeps {
   return {
     getEnv: (key) => (typeof Deno !== 'undefined' ? Deno.env.get(key) : undefined),
@@ -64,6 +89,167 @@ async function verifyJwtOwner(
   return data?.id ? { userId: data.id } : null;
 }
 
+function isMissingRestTarget(status: number, body: string): boolean {
+  if (status === 404) return true;
+  return body.includes('PGRST204') || body.includes('PGRST205') || body.includes('Could not find');
+}
+
+async function applyUserReferenceCleanup(
+  supabaseUrl: string,
+  adminHeaders: Record<string, string>,
+  userId: string,
+  cleanup: UserReferenceCleanup,
+  fetchFn: typeof fetch,
+): Promise<{ ok: true } | { ok: false; message: string }> {
+  const filter = `${cleanup.column}=eq.${encodeURIComponent(userId)}`;
+  const url = `${supabaseUrl}/rest/v1/${cleanup.table}?${filter}`;
+  const init: RequestInit = cleanup.action === 'delete'
+    ? { method: 'DELETE', headers: { ...adminHeaders, Prefer: 'return=minimal' } }
+    : {
+        method: 'PATCH',
+        headers: { ...adminHeaders, Prefer: 'return=minimal' },
+        body: JSON.stringify({ [cleanup.column]: null }),
+      };
+
+  const res = await fetchFn(url, init);
+  if (res.ok) return { ok: true };
+
+  const body = await res.text().catch(() => '');
+  if (isMissingRestTarget(res.status, body)) return { ok: true };
+
+  return {
+    ok: false,
+    message: `${cleanup.table}.${cleanup.column} cleanup failed: ${res.status} ${body}`,
+  };
+}
+
+async function selectIds(
+  supabaseUrl: string,
+  adminHeaders: Record<string, string>,
+  path: string,
+  fetchFn: typeof fetch,
+): Promise<{ ok: true; ids: string[] } | { ok: false; message: string }> {
+  const res = await fetchFn(`${supabaseUrl}/rest/v1/${path}`, {
+    headers: adminHeaders,
+  });
+  if (!res.ok) {
+    const body = await res.text().catch(() => '');
+    if (isMissingRestTarget(res.status, body)) return { ok: true, ids: [] };
+    return { ok: false, message: `${path} select failed: ${res.status} ${body}` };
+  }
+
+  const body = await res.text().catch(() => '');
+  let rows: unknown;
+  try {
+    rows = body ? JSON.parse(body) : [];
+  } catch {
+    rows = [];
+  }
+
+  if (!Array.isArray(rows)) return { ok: true, ids: [] };
+  return {
+    ok: true,
+    ids: rows
+      .map((row) => (row as { id?: unknown }).id)
+      .filter((id): id is string => typeof id === 'string'),
+  };
+}
+
+async function clearPiiAccessOrgDogReferences(
+  supabaseUrl: string,
+  adminHeaders: Record<string, string>,
+  userId: string,
+  fetchFn: typeof fetch,
+): Promise<{ ok: true } | { ok: false; message: string }> {
+  const dogIdsResult = await selectIds(
+    supabaseUrl,
+    adminHeaders,
+    `dogs?user_id=eq.${encodeURIComponent(userId)}&select=id`,
+    fetchFn,
+  );
+  if (!dogIdsResult.ok) return dogIdsResult;
+
+  const orgDogIds = new Set<string>();
+  const parentOrgDogsResult = await selectIds(
+    supabaseUrl,
+    adminHeaders,
+    `org_dogs?parent_user_id=eq.${encodeURIComponent(userId)}&select=id`,
+    fetchFn,
+  );
+  if (!parentOrgDogsResult.ok) return parentOrgDogsResult;
+  parentOrgDogsResult.ids.forEach((id) => orgDogIds.add(id));
+
+  if (dogIdsResult.ids.length > 0) {
+    const dogFilter = dogIdsResult.ids.map(encodeURIComponent).join(',');
+    const dogOrgDogsResult = await selectIds(
+      supabaseUrl,
+      adminHeaders,
+      `org_dogs?dog_id=in.(${dogFilter})&select=id`,
+      fetchFn,
+    );
+    if (!dogOrgDogsResult.ok) return dogOrgDogsResult;
+    dogOrgDogsResult.ids.forEach((id) => orgDogIds.add(id));
+  }
+
+  const ids = [...orgDogIds];
+  if (ids.length === 0) return { ok: true };
+
+  const orgDogFilter = ids.map(encodeURIComponent).join(',');
+  const res = await fetchFn(
+    `${supabaseUrl}/rest/v1/pii_access_log?org_dog_id=in.(${orgDogFilter})`,
+    {
+      method: 'PATCH',
+      headers: { ...adminHeaders, Prefer: 'return=minimal' },
+      body: JSON.stringify({ org_dog_id: null }),
+    },
+  );
+  if (res.ok) return { ok: true };
+
+  const body = await res.text().catch(() => '');
+  if (isMissingRestTarget(res.status, body)) return { ok: true };
+  return {
+    ok: false,
+    message: `pii_access_log.org_dog_id cleanup failed: ${res.status} ${body}`,
+  };
+}
+
+async function clearUserReferences(
+  supabaseUrl: string,
+  adminHeaders: Record<string, string>,
+  userId: string,
+  fetchFn: typeof fetch,
+): Promise<{ ok: true } | { ok: false; message: string }> {
+  const orgDogPiiCleanup = await clearPiiAccessOrgDogReferences(
+    supabaseUrl,
+    adminHeaders,
+    userId,
+    fetchFn,
+  );
+  if (!orgDogPiiCleanup.ok) return orgDogPiiCleanup;
+
+  for (const cleanup of USER_REFERENCE_CLEANUPS) {
+    const result = await applyUserReferenceCleanup(supabaseUrl, adminHeaders, userId, cleanup, fetchFn);
+    if (!result.ok) return result;
+  }
+
+  const ownerCleanup = await applyUserReferenceCleanup(
+    supabaseUrl,
+    adminHeaders,
+    userId,
+    { table: 'organizations', column: 'owner_user_id', action: 'set_null' },
+    fetchFn,
+  );
+  if (ownerCleanup.ok) return { ok: true };
+
+  return applyUserReferenceCleanup(
+    supabaseUrl,
+    adminHeaders,
+    userId,
+    { table: 'organizations', column: 'owner_user_id', action: 'delete' },
+    fetchFn,
+  );
+}
+
 export async function handleWithdraw(
   authHeader: string | null,
   body: unknown,
@@ -96,6 +282,17 @@ export async function handleWithdraw(
     apikey: serviceRoleKey,
     Authorization: `Bearer ${serviceRoleKey}`,
   };
+
+  // Step 0: nullable/no-action references cleanup for older deployed schemas.
+  const cleanupResult = await clearUserReferences(
+    supabaseUrl,
+    adminHeaders,
+    userId,
+    deps.fetchFn,
+  );
+  if (!cleanupResult.ok) {
+    return fail('REFERENCE_CLEANUP_FAILED', cleanupResult.message, 500);
+  }
 
   // Step 1: public.users DELETE (CASCADE)
   const deletePublicRes = await deps.fetchFn(

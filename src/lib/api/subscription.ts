@@ -3,7 +3,7 @@
  * Parity: IAP-001
  */
 import { getSupabasePublicConfig, supabase } from './supabase';
-import { requestBackend, withBackendFallback } from './backend';
+import { requestBackend } from './backend';
 import { recoverPendingOrders } from './iap';
 import type { Subscription, TossOrder, PurchaseRequest } from 'types/subscription';
 
@@ -143,21 +143,14 @@ function normalizeSubscription(row: Subscription | null): Subscription | null {
   };
 }
 
+function devLog(...args: Parameters<typeof console.log>): void {
+  if (__DEV__) console.log(...args);
+}
+
 /** 현재 구독 상태 */
 export async function getSubscription(userId: string): Promise<Subscription | null> {
-  const row = await withBackendFallback(
-    async () => normalizeSubscription(await requestBackend<Subscription | null>('/api/v1/subscription/')),
-    async () => {
-      const { data, error } = await supabase
-        .from('subscriptions')
-        .select('*')
-        .eq('user_id', userId)
-        .single();
-      if (error && error.code !== 'PGRST116') throw error;
-      return normalizeSubscription(data as Subscription | null);
-    },
-  );
-  return row;
+  void userId;
+  return normalizeSubscription(await requestBackend<Subscription | null>('/api/v1/subscription/'));
 }
 
 /** IAP 구매 검증 (Edge Function) */
@@ -182,7 +175,7 @@ export async function verifyIAPOrder(request: PurchaseRequest): Promise<TossOrde
   if (__DEV__) {
     const { anonKey } = getSupabasePublicConfig();
     const { data: tokenUserData, error: tokenUserError } = await supabase.auth.getUser(firstToken);
-    console.log('[IAP-001] verifyIAPOrder token debug', {
+    devLog('[IAP-001] verifyIAPOrder token debug', {
       tokenPreview: `${firstToken.slice(0, 12)}...${firstToken.slice(-8)}`,
       tokenLength: firstToken.length,
       isAnonKey: firstToken === anonKey,
@@ -203,7 +196,7 @@ export async function verifyIAPOrder(request: PurchaseRequest): Promise<TossOrde
       refreshedToken && (await isUsableAccessToken(refreshedToken)) ? refreshedToken : firstToken;
     if (__DEV__) {
       const { anonKey } = getSupabasePublicConfig();
-      console.log('[IAP-001] verifyIAPOrder retry token debug', {
+      devLog('[IAP-001] verifyIAPOrder retry token debug', {
         source: retryToken === firstToken ? 'first' : 'refreshed',
         isAnonKey: retryToken === anonKey,
       });
@@ -225,7 +218,7 @@ export async function verifyIAPOrder(request: PurchaseRequest): Promise<TossOrde
   const errStatus = getInvokeHttpStatus(error);
   if (!isTestEnvironment() && error && (errStatus === 404 || errStatus === 408)) {
     if (__DEV__) {
-      console.log(`[IAP-001] verifyIAPOrder legacy ${errStatus} → FastAPI proxy`);
+      devLog(`[IAP-001] verifyIAPOrder legacy ${errStatus} → FastAPI proxy`);
     }
     data = await requestBackend<TossOrder, typeof payload>('/api/v1/subscription/iap/verify', {
       method: 'POST',
@@ -240,27 +233,14 @@ export async function verifyIAPOrder(request: PurchaseRequest): Promise<TossOrde
 
 /** 주문 이력 조회 */
 export async function getOrders(userId: string): Promise<TossOrder[]> {
-  return withBackendFallback(
-    async () => {
-      const rows = await requestBackend<BackendOrderHistory[]>('/api/v1/subscription/orders');
-      return rows.map((row) => mapBackendOrder(userId, row));
-    },
-    async () => {
-      const { data, error } = await supabase
-        .from('toss_orders')
-        .select('*')
-        .eq('user_id', userId)
-        .order('created_at', { ascending: false });
-      if (error) throw error;
-      return data as TossOrder[];
-    },
-  );
+  const rows = await requestBackend<BackendOrderHistory[]>('/api/v1/subscription/orders');
+  return rows.map((row) => mapBackendOrder(userId, row));
 }
 
 /** 구독 복원 — 앱 시작 pending 복구 후 최신 구독 상태를 재조회한다. */
 export async function restoreSubscription(userId: string): Promise<Subscription | null> {
-  console.log('[IAP-001] restoreSubscription start', { userId });
+  devLog('[IAP-001] restoreSubscription start', { userId });
   const recovered = await recoverPendingOrders(userId);
-  console.log('[IAP-001] restoreSubscription recovered pending orders', { userId, recovered });
+  devLog('[IAP-001] restoreSubscription recovered pending orders', { userId, recovered });
   return getSubscription(userId);
 }

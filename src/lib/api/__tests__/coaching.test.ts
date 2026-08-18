@@ -4,23 +4,10 @@
  */
 
 const mockRequestBackend = jest.fn();
-const mockWithBackendFallback = jest.fn();
+const mockFrom = jest.fn();
 
 jest.mock('lib/api/backend', () => ({
   requestBackend: (...args: unknown[]) => mockRequestBackend(...args),
-  withBackendFallback: (...args: unknown[]) => mockWithBackendFallback(...args),
-}));
-
-const mockSingle = jest.fn();
-const mockLimit = jest.fn(() => ({ single: mockSingle }));
-const mockOrder = jest.fn(() => ({ limit: mockLimit }));
-const mockUpdate = jest.fn(() => ({ eq: jest.fn().mockResolvedValue({ error: null }) }));
-const mockEq = jest.fn(() => ({ order: mockOrder }));
-const mockSelect = jest.fn(() => ({ eq: mockEq }));
-const mockFrom = jest.fn((_table: string) => ({ select: mockSelect, update: mockUpdate }));
-
-jest.mock('lib/api/supabase', () => ({
-  supabase: { from: (name: string) => mockFrom(name) },
 }));
 
 import {
@@ -37,9 +24,6 @@ import {
 
 beforeEach(() => {
   jest.clearAllMocks();
-  mockWithBackendFallback.mockImplementation(
-    async (runBackend: () => Promise<unknown>) => runBackend(),
-  );
 });
 
 // ── async generation jobs ──
@@ -273,41 +257,30 @@ describe('getDailyUsage', () => {
   });
 });
 
-// ── getCoachings (withBackendFallback) ──
+// ── getCoachings ──
 
 describe('getCoachings', () => {
-  it('backend 우선으로 코칭 목록을 조회한다', async () => {
+  it('백엔드 전용으로 코칭 목록을 조회한다', async () => {
     const mockList = [{ id: 'c-1' }, { id: 'c-2' }];
     mockRequestBackend.mockResolvedValue(mockList);
 
     const result = await getCoachings('dog-1');
 
+    expect(mockRequestBackend).toHaveBeenCalledWith('/api/v1/coaching/dog-1');
+    expect(mockFrom).not.toHaveBeenCalled();
     expect(result).toHaveLength(2);
     expect(result[0]!.id).toBe('c-1');
   });
 
-  it('backend 실패 시 Supabase fallback으로 전환한다', async () => {
-    mockWithBackendFallback.mockImplementation(
-      async (_runBackend: () => Promise<unknown>, runFallback: () => Promise<unknown>) => {
-        return runFallback();
-      },
-    );
+  it('백엔드 실패 시 ai_coaching Supabase fallback을 사용하지 않는다', async () => {
+    mockRequestBackend.mockRejectedValue({ status: 503 });
 
-    mockEq.mockReturnValue({
-      order: jest.fn().mockReturnValue({
-        data: [{ id: 'c-fb-1', dog_id: 'dog-1' }],
-        error: null,
-      }),
-    });
-
-    const result = await getCoachings('dog-1');
-
-    expect(mockFrom).toHaveBeenCalledWith('ai_coaching');
-    expect(result).toHaveLength(1);
+    await expect(getCoachings('dog-1')).rejects.toEqual(expect.objectContaining({ status: 503 }));
+    expect(mockFrom).not.toHaveBeenCalled();
   });
 });
 
-// ── getLatestCoaching (withBackendFallback) ──
+// ── getLatestCoaching ──
 
 describe('getLatestCoaching', () => {
   it('최신 코칭을 반환한다', async () => {
@@ -316,6 +289,8 @@ describe('getLatestCoaching', () => {
 
     const result = await getLatestCoaching('dog-1');
 
+    expect(mockRequestBackend).toHaveBeenCalledWith('/api/v1/coaching/dog-1/latest');
+    expect(mockFrom).not.toHaveBeenCalled();
     expect(result?.id).toBe('c-latest');
   });
 
@@ -325,6 +300,13 @@ describe('getLatestCoaching', () => {
     const result = await getLatestCoaching('dog-1');
 
     expect(result).toBeNull();
+  });
+
+  it('백엔드 실패 시 ai_coaching Supabase fallback을 사용하지 않는다', async () => {
+    mockRequestBackend.mockRejectedValue({ status: 503 });
+
+    await expect(getLatestCoaching('dog-1')).rejects.toEqual(expect.objectContaining({ status: 503 }));
+    expect(mockFrom).not.toHaveBeenCalled();
   });
 });
 
@@ -343,5 +325,15 @@ describe('submitCoachingFeedback', () => {
         body: { score: 5 },
       },
     );
+    expect(mockFrom).not.toHaveBeenCalled();
+  });
+
+  it('백엔드 실패 시 ai_coaching Supabase update fallback을 사용하지 않는다', async () => {
+    mockRequestBackend.mockRejectedValue({ status: 403 });
+
+    await expect(submitCoachingFeedback('coaching-1', 5)).rejects.toEqual(
+      expect.objectContaining({ status: 403 }),
+    );
+    expect(mockFrom).not.toHaveBeenCalled();
   });
 });

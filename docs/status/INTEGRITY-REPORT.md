@@ -1,55 +1,65 @@
 # Code-Doc Integrity Report
 
-**Last Run:** 2026-03-01 18:06 UTC  
-**Result:** auto-fix applied
+**Generated:** 2026-06-16 02:11 (Asia/Seoul)
 
----
+## Summary
 
-## Route Summary
+| Metric | Count |
+|--------|-------|
+| Managed routes (DevMenu) | 20 |
+| Board routes | 25 |
+| Matrix routes | 22 |
+| All page routes (src/pages) | 28 |
+| Drift (board/matrix → managed mismatch) | 7 |
+| Auto-fixed | 0 |
+| Manual required | 5 |
+| Unmanaged routes | 8 |
 
-| Set | Count |
-|---|---|
-| managed_routes (DevMenu) | 21 |
-| board_routes (PAGE-UPGRADE-BOARD) | 21 |
-| matrix_routes (SKILL-DOC-MATRIX) | 21 |
-| all_page_routes (src/pages) | 24 |
+## Drift Details
 
-**Drift:** 0 route-set mismatches (managed == board == matrix ✓)
+### In board but NOT in DevMenu managed routes
+These routes appear in PAGE-UPGRADE-BOARD.md but are not listed as managed in DevMenu.tsx:
+- `/onboarding/stage1-form`
+- `/onboarding/stage2-form`
+- `/onboarding/stage3-form`
+- `/ops/dog-add`
+- `/ops/setup`
 
----
+### In matrix but NOT in DevMenu managed routes
+These routes appear in SKILL-DOC-MATRIX.md but are not listed as managed in DevMenu.tsx:
+- `/login`
+- `/onboarding/stage3-form`
 
-## Skill & Doc Validation
+### In managed but NOT in board: 0 — ✅ all managed routes are documented
 
-- Page skills checked: 21 — all SKILL.md files present ✓
-- Feature skills checked: 6 — all SKILL.md files present ✓
-- Required docs checked: 21 routes — all referenced docs exist ✓
-- **manual_required: 0**
+### In managed but NOT in matrix: 0 — ✅ all managed routes are in skill matrix
 
----
+## Unmanaged Routes (src/pages - DevMenu)
+Routes that exist in src/pages but are not in DevMenu:
+- `/_404`
+- `/coaching/CoachingDetailContent`
+- `/onboarding/stage1-form`
+- `/onboarding/stage2-form`
+- `/onboarding/stage3-form`
+- `/ops/dog-add`
+- `/ops/setup`
+- `/report/[shareToken]`
 
-## Daily Checkbox Auto-Fix
+## Daily Log Status
+- `05-27/page-coaching-result.md` — **Done** (all checkboxes ✅, board synced)
 
-| route | daily_date | checks | computed | board_before | board_after |
-|---|---|---|---|---|---|
-| `/onboarding/notification` | 3-01 | 9/9 | Done | QA | **Done** |
-| `/settings` | 3-02 | 5/5 | Done | QA | **Done** |
+## Manual Required
+The following board/matrix entries reference routes not in DevMenu and should be reviewed:
+1. `/onboarding/stage1-form` — in board; page exists in src/pages; not in DevMenu
+2. `/onboarding/stage2-form` — in board; page exists in src/pages; not in DevMenu
+3. `/onboarding/stage3-form` — in board + matrix; page exists; not in DevMenu
+4. `/ops/dog-add` — in board; page exists; not in DevMenu
+5. `/ops/setup` — in board; page exists; not in DevMenu
 
-**auto_fixed: 2** (status advanced QA → Done)
+→ Recommendation: Add to DevMenu or mark as intentionally-unmanaged in board
 
----
+## Auto-Fixed
+None (0 changes made)
 
-## Unmanaged Routes
-
-These routes exist in `src/pages/**` but are not in DevMenu.tsx (expected):
-
-| route | reason |
-|---|---|
-| `/` (index) | root redirect / shell |
-| `/_404` | error boundary |
-| `/report/[shareToken]` | dynamic share link (not a dev nav target) |
-
----
-
-## Errors
-
-none
+## Status
+No destructive changes made. All drifts are board/matrix having extra entries not in DevMenu — managed routes are fully documented. Last confirmed unchanged: 2026-06-16 (no commits since 2026-05-27).

@@ -3,9 +3,10 @@
  * 중첩 스크롤 제거, 하드웨어 뒤로가기 대응, 유효성 가이드 추가
  * Parity: UIUX-004
  */
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { View, BackHandler, StyleSheet, Text } from 'react-native';
 import { FormLayout } from 'components/shared/layouts/FormLayout';
+import { useDraftSave } from 'lib/hooks/useDraftSave';
 import type { SurveyData } from 'types/dog';
 import { Step1Profile } from './Step1Profile';
 import { Step2Problem } from './Step2Problem';
@@ -32,12 +33,12 @@ const INITIAL_DATA: SurveyData = {
   step4_triggers: { triggers: [], worst_time: 'random', custom_trigger: '' },
   step5_history: { past_attempts: [], professional_help: false },
   step6_goals: { goals: [], priority_behavior: 'anxiety' as any },
-  step7_preferences: { 
-    energy_score: 0, 
-    social_score: 0, 
-    mastered_commands: [], 
+  step7_preferences: {
+    energy_score: 0,
+    social_score: 0,
+    mastered_commands: [],
     rewards: { treats: 0, play: 0, praise: 0 },
-    notification_consent: true 
+    notification_consent: true
   },
   step8_health_context: {
     health: { has_pain: false, has_allergy: false, is_overweight: false, notes: '' },
@@ -48,11 +49,74 @@ const INITIAL_DATA: SurveyData = {
 export interface SurveyContainerProps {
   onComplete: (data: SurveyData) => void;
   onBack?: () => void;
+  draftKey?: string;
+  isSubmitting?: boolean;
 }
 
-export function SurveyContainer({ onComplete, onBack }: SurveyContainerProps) {
+function mergeSurveyData(draft: Partial<SurveyData> | null): SurveyData {
+  if (!draft) return INITIAL_DATA;
+  return {
+    ...INITIAL_DATA,
+    ...draft,
+    step1_basic: { ...INITIAL_DATA.step1_basic, ...draft.step1_basic },
+    step2_environment: {
+      ...INITIAL_DATA.step2_environment,
+      ...draft.step2_environment,
+      household: {
+        ...INITIAL_DATA.step2_environment.household,
+        ...draft.step2_environment?.household,
+      },
+    },
+    step3_behavior: { ...INITIAL_DATA.step3_behavior, ...draft.step3_behavior },
+    step4_triggers: { ...INITIAL_DATA.step4_triggers, ...draft.step4_triggers },
+    step5_history: { ...INITIAL_DATA.step5_history, ...draft.step5_history },
+    step6_goals: { ...INITIAL_DATA.step6_goals, ...draft.step6_goals },
+    step7_preferences: {
+      ...INITIAL_DATA.step7_preferences,
+      ...draft.step7_preferences,
+      rewards: {
+        ...INITIAL_DATA.step7_preferences.rewards,
+        ...draft.step7_preferences?.rewards,
+      },
+    },
+    step8_health_context: {
+      ...INITIAL_DATA.step8_health_context,
+      ...draft.step8_health_context,
+      health: {
+        ...INITIAL_DATA.step8_health_context.health,
+        ...draft.step8_health_context?.health,
+      },
+      environment_stress: {
+        ...INITIAL_DATA.step8_health_context.environment_stress,
+        ...draft.step8_health_context?.environment_stress,
+      },
+    },
+  };
+}
+
+export function SurveyContainer({
+  onComplete,
+  onBack,
+  draftKey = 'legacy_survey_anonymous',
+  isSubmitting = false,
+}: SurveyContainerProps) {
   const [step, setStep] = useState(1);
   const [data, setData] = useState<SurveyData>(INITIAL_DATA);
+  const hasRestoredDraftRef = useRef(false);
+  const { loadedDraft, isDraftLoading } = useDraftSave<Partial<SurveyData>>({
+    stageKey: draftKey,
+    data,
+    debounceMs: 700,
+  });
+
+  useEffect(() => {
+    if (isDraftLoading) return;
+    if (hasRestoredDraftRef.current) return;
+    hasRestoredDraftRef.current = true;
+    if (loadedDraft) {
+      setData(mergeSurveyData(loadedDraft));
+    }
+  }, [isDraftLoading, loadedDraft]);
 
   // 안드로이드 하드웨어 뒤로가기 처리
   useEffect(() => {
@@ -156,18 +220,18 @@ export function SurveyContainer({ onComplete, onBack }: SurveyContainerProps) {
       step={{ current: step, total: TOTAL_STEPS }}
       onBack={handlePrev}
       bottomCTA={{
-        label: step < TOTAL_STEPS ? '다음' : '완료',
+        label: isSubmitting && step === TOTAL_STEPS ? '저장하고 있어요' : step < TOTAL_STEPS ? '다음' : '완료',
         onPress: handleNext,
-        disabled: !isStepValid(),
+        disabled: isSubmitting || !isStepValid(),
       }}
     >
       <View style={styles.content}>
-        {renderStep()}
         {!isStepValid() && errorMsg && (
           <View style={styles.errorContainer}>
             <Text style={styles.errorText}>{errorMsg}</Text>
           </View>
         )}
+        {renderStep()}
       </View>
     </FormLayout>
   );
@@ -176,7 +240,7 @@ export function SurveyContainer({ onComplete, onBack }: SurveyContainerProps) {
 const styles = StyleSheet.create({
   content: { flex: 1 },
   errorContainer: {
-    marginTop: 24,
+    marginBottom: 16,
     padding: 16,
     backgroundColor: colors.backgroundSecondary,
     borderRadius: 12,

@@ -99,7 +99,7 @@ export function PhotoPicker({
       }
 
       if (__DEV__) {
-        console.info('[PhotoPicker] photo selection cancelled or empty');
+        if (__DEV__) console.info('[PhotoPicker] photo selection cancelled or empty');
       }
     } catch (error) {
       if (isPermissionLikeError(error)) {
@@ -117,7 +117,7 @@ export function PhotoPicker({
           Alert.alert(permissionTitle, permissionMessage);
         }
       } else {
-        console.error('[PhotoPicker] fetchAlbumPhotos error:', error);
+        if (__DEV__) console.error('[PhotoPicker] fetchAlbumPhotos error:', error);
         Alert.alert('사진을 선택하지 못했어요', '다시 시도해주세요.');
       }
     } finally {

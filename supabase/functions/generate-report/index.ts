@@ -39,7 +39,13 @@ interface GeneratedReportContent {
 const OPENAI_CHAT_COMPLETIONS_URL = 'https://api.openai.com/v1/chat/completions';
 const OPENAI_INPUT_PRICE_PER_M = 0.15;
 const OPENAI_OUTPUT_PRICE_PER_M = 0.6;
-const STAFF_MEMBERSHIP_ROLES = new Set(['owner', 'admin', 'trainer', 'staff', 'org_owner', 'org_staff']);
+const REPORT_MEMBERSHIP_ROLES = new Set(['owner', 'manager', 'staff', 'trainer']);
+
+interface ReportGenerationScope {
+  dog_id: string;
+  created_by_org_id: string | null;
+  created_by_trainer_id: string | null;
+}
 
 function defaultDeps(): GenerateReportDeps {
   return {
@@ -50,10 +56,6 @@ function defaultDeps(): GenerateReportDeps {
       return denoWithEnv.Deno?.env?.get(key);
     },
   };
-}
-
-function isAdminRole(role: EdgeContext['role']): boolean {
-  return role === 'trainer' || role === 'org_owner' || role === 'org_staff' || role === 'service_role';
 }
 
 function restHeaders(serviceKey: string): Record<string, string> {
@@ -82,8 +84,22 @@ async function fetchSingleRestRow<T>(
   return Array.isArray(rows) ? (rows[0] as T | undefined) ?? null : null;
 }
 
-async function hasReportMembershipAccess(
+async function fetchReportGenerationScope(
   reportId: string,
+  deps: GenerateReportDeps,
+  supabaseUrl: string,
+  serviceKey: string
+): Promise<ReportGenerationScope | null> {
+  return await fetchSingleRestRow<ReportGenerationScope>(
+    deps,
+    supabaseUrl,
+    serviceKey,
+    `daily_reports?select=dog_id,created_by_org_id,created_by_trainer_id&id=eq.${encodeURIComponent(reportId)}`
+  );
+}
+
+async function hasReportMembershipAccess(
+  report: ReportGenerationScope,
   context: EdgeContext,
   deps: GenerateReportDeps,
   supabaseUrl: string,
@@ -93,50 +109,58 @@ async function hasReportMembershipAccess(
     return false;
   }
 
-  const report = await fetchSingleRestRow<{
-    created_by_org_id: string | null;
-    created_by_trainer_id: string | null;
-  }>(
-    deps,
-    supabaseUrl,
-    serviceKey,
-    `daily_reports?select=created_by_org_id,created_by_trainer_id&id=eq.${encodeURIComponent(reportId)}`
-  );
   if (!report) {
     return false;
   }
 
-  if (report.created_by_trainer_id === context.userId) {
-    return true;
+  if (report.created_by_org_id) {
+    const membership = await fetchSingleRestRow<{ role: string; status: string }>(
+      deps,
+      supabaseUrl,
+      serviceKey,
+      [
+        'org_members?select=role,status',
+        `org_id=eq.${encodeURIComponent(report.created_by_org_id)}`,
+        `user_id=eq.${encodeURIComponent(context.userId)}`,
+        'status=eq.active',
+        'limit=1',
+      ].join('&')
+    );
+
+    return Boolean(
+      membership &&
+      membership.status === 'active' &&
+      REPORT_MEMBERSHIP_ROLES.has(membership.role)
+    );
   }
 
-  if (!report.created_by_org_id) {
-    return false;
-  }
+  return report.created_by_trainer_id === context.userId;
+}
 
-  const membership = await fetchSingleRestRow<{ role: string; status: string }>(
-    deps,
-    supabaseUrl,
-    serviceKey,
-    [
-      'org_members?select=role,status',
-      `org_id=eq.${encodeURIComponent(report.created_by_org_id)}`,
-      `user_id=eq.${encodeURIComponent(context.userId)}`,
-      'status=eq.active',
-      'limit=1',
-    ].join('&')
-  );
+function isDevLocalMode(getEnv: EnvGetter): boolean {
+  const candidates = [
+    getEnv('APP_ENV'),
+    getEnv('NODE_ENV'),
+    getEnv('DENO_ENV'),
+    getEnv('ENVIRONMENT'),
+    getEnv('TOSS_RUNTIME_MODE'),
+  ]
+    .map((value) => value?.trim().toLowerCase())
+    .filter(Boolean);
 
-  return Boolean(
-    membership &&
-    membership.status === 'active' &&
-    STAFF_MEMBERSHIP_ROLES.has(membership.role)
+  return candidates.some((value) =>
+    value === 'development' ||
+    value === 'dev' ||
+    value === 'test' ||
+    value === 'local' ||
+    value === 'dev_local'
   );
 }
 
 function resolveReportAiMode(getEnv: EnvGetter): ReportAiMode {
-  const mode = (getEnv('REPORT_AI_MODE') ?? 'mock').trim().toLowerCase();
-  return mode === 'real' ? 'real' : 'mock';
+  const mode = getEnv('REPORT_AI_MODE')?.trim().toLowerCase();
+  if (mode === 'mock' && isDevLocalMode(getEnv)) return 'mock';
+  return 'real';
 }
 
 function parseJsonPayload(raw: string): Record<string, unknown> | null {
@@ -260,13 +284,13 @@ export function createGenerateReportHandler(overrides?: Partial<GenerateReportDe
     request: GenerateReportRequest,
     context: EdgeContext
   ): Promise<EdgeResult<unknown>> => {
+    if (context.role !== 'service_role' && !context.userId) {
+      return fail('AUTH_FORBIDDEN', 'Only staff roles can generate reports', 403);
+    }
+
     const { report_id, dog_id, report_date } = request;
     if (!report_id || !dog_id || !report_date) {
       return fail('INVALID_PARAMS', 'report_id, dog_id, report_date 필수', 400);
-    }
-
-    if (!isAdminRole(context.role) && !context.userId) {
-      return fail('AUTH_FORBIDDEN', 'Only staff roles can generate reports', 403);
     }
 
     const supabaseUrl = deps.getEnv('SUPABASE_URL') ?? '';
@@ -276,8 +300,13 @@ export function createGenerateReportHandler(overrides?: Partial<GenerateReportDe
     }
 
     try {
-      const hasAccess = isAdminRole(context.role) ||
-        await hasReportMembershipAccess(report_id, context, deps, supabaseUrl, serviceKey);
+      const report = await fetchReportGenerationScope(report_id, deps, supabaseUrl, serviceKey);
+      if (!report || report.dog_id !== dog_id) {
+        return fail('AUTH_FORBIDDEN', 'Only staff roles can generate reports', 403);
+      }
+
+      const hasAccess = context.role === 'service_role' ||
+        await hasReportMembershipAccess(report, context, deps, supabaseUrl, serviceKey);
       if (!hasAccess) {
         return fail('AUTH_FORBIDDEN', 'Only staff roles can generate reports', 403);
       }
@@ -287,7 +316,7 @@ export function createGenerateReportHandler(overrides?: Partial<GenerateReportDe
         return generated;
       }
 
-      const updateRes = await deps.fetchImpl(`${supabaseUrl}/rest/v1/daily_reports?id=eq.${report_id}`, {
+      const updateRes = await deps.fetchImpl(`${supabaseUrl}/rest/v1/daily_reports?id=eq.${encodeURIComponent(report_id)}`, {
         method: 'PATCH',
         headers: {
           ...restHeaders(serviceKey),
@@ -305,14 +334,13 @@ export function createGenerateReportHandler(overrides?: Partial<GenerateReportDe
       });
 
       if (!updateRes.ok) {
-        const errText = await updateRes.text();
-        return fail('UPDATE_FAILED', errText, 500);
+        return fail('UPDATE_FAILED', 'Failed to update generated report', 500);
       }
 
       const updated = (await updateRes.json()) as unknown;
       return ok(Array.isArray(updated) ? (updated[0] ?? updated) : updated);
     } catch (err) {
-      return fail('INTERNAL', String(err), 500);
+      return fail('INTERNAL', err instanceof Error ? err.name : 'UnknownError', 500);
     }
   };
 }

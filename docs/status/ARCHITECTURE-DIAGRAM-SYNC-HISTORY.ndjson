@@ -1,1 +1,8 @@
 {"run_at":"2026-03-02T10:22:00Z","dry_run":false,"scanned":6,"changed":1,"stale":0,"errors":[],"changed_ids":["arch-06"]}
+{"run_at":"2026-05-27T02:05:00+09:00","dry_run":false,"scanned":6,"changed":0,"stale":0,"errors":[]}
+{"run_at":"2026-06-02T02:00:00+09:00","dry_run":false,"scanned":6,"changed":5,"stale":1,"errors":["src/pages/login.tsx missing — arch-02 stale"],"changed_ids":["arch-01","arch-03","arch-04","arch-05","arch-06"],"stale_ids":["arch-02"]}
+{"run_at":"2026-06-04T20:48:56+09:00","dry_run":false,"scanned":6,"changed":1,"stale":1,"errors":["src/pages/login.tsx missing — arch-02 stale"],"changed_ids":["arch-06"],"stale_ids":["arch-02"]}
+{"run_at":"2026-06-10T11:43:49+09:00","dry_run":false,"scanned":6,"changed":0,"stale":1,"errors":["src/pages/login.tsx missing — arch-02 stale"],"changed_ids":[],"stale_ids":["arch-02"]}
+{"run_at":"2026-06-13T00:00:32+09:00","dry_run":false,"scanned":6,"changed":0,"stale":1,"errors":["src/pages/login.tsx missing — arch-02 stale"],"changed_ids":[],"stale_ids":["arch-02"]}
+{"run_at":"2026-06-16T02:12:00+09:00","dry_run":false,"scanned":6,"changed":0,"stale":1,"errors":["src/pages/login.tsx missing (arch-02)"]}
+{"run_at":"2026-07-08T12:04:37+09:00","dry_run":false,"scanned":6,"changed":0,"stale":1,"errors":["src/pages/login.tsx missing (arch-02)"],"changed_ids":[],"stale_ids":["arch-02"]}

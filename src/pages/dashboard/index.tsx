@@ -222,7 +222,7 @@ function DashboardPage() {
         <StreakBanner logs={recentLogs} streakOverride={dashboardData?.stats.current_streak} />
 
         {/* B1: 배너 광고 — 무료 사용자 대시보드 홈 */}
-        {shouldShowDashboardAd && <BannerAd placement="B1" />}
+        {shouldShowDashboardAd && <BannerAd placement="B1" collapseAfterImpression={false} />}
 
         {dashboardLoading && !dashboardData && <SkeletonDashboard />}
 

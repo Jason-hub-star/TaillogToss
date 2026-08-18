@@ -129,10 +129,16 @@ class RealMTLSClient implements MTLSClient {
   private httpClient: Deno.HttpClient;
 
   constructor() {
-    const certChain = Deno.env.get('TOSS_CLIENT_CERT_BASE64');
-    const privateKey = Deno.env.get('TOSS_CLIENT_KEY_BASE64');
+    const certChain = readEnv('TOSS_CLIENT_CERT_BASE64');
+    const privateKey = readEnv('TOSS_CLIENT_KEY_BASE64');
     if (!certChain || !privateKey) {
       throw new Error('TOSS_CLIENT_CERT_BASE64 and TOSS_CLIENT_KEY_BASE64 must be set');
+    }
+    const denoRuntime = (globalThis as {
+      Deno?: { createHttpClient?: typeof Deno.createHttpClient };
+    }).Deno;
+    if (!denoRuntime?.createHttpClient) {
+      throw new Error('Deno.createHttpClient is required for real Toss mTLS calls');
     }
     const decodedCert = atob(certChain);
     const decodedKey = atob(privateKey);
@@ -144,9 +150,9 @@ class RealMTLSClient implements MTLSClient {
         cert: decodedCert,
         key: decodedKey,
       } as unknown as Parameters<typeof Deno.createHttpClient>[0];
-      this.httpClient = Deno.createHttpClient(legacyOptions);
+      this.httpClient = denoRuntime.createHttpClient(legacyOptions);
     } catch {
-      this.httpClient = Deno.createHttpClient({
+      this.httpClient = denoRuntime.createHttpClient({
         certChain: decodedCert,
         privateKey: decodedKey,
       });
@@ -489,7 +495,7 @@ class MockMTLSClient implements MTLSClient {
   }
 }
 
-export function createMTLSClient(mode: 'mock' | 'real' = 'mock'): MTLSClient {
+export function createMTLSClient(mode: 'mock' | 'real' = 'real'): MTLSClient {
   if (mode === 'real') {
     return new RealMTLSClient();
   }

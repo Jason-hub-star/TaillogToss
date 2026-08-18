@@ -30,6 +30,11 @@ interface SessionUserLike {
   user_metadata?: Record<string, unknown>;
 }
 
+interface SessionLike {
+  access_token?: string | null;
+  user?: SessionUserLike | null;
+}
+
 interface AuthContextValue extends AuthState {
   login: (user: User) => void;
   logout: () => void;
@@ -56,6 +61,26 @@ async function getPublicUserRole(userId: string): Promise<User['role'] | null> {
   } catch {
     return null;
   }
+}
+
+function isJwtLike(token: string): boolean {
+  return token.split('.').length === 3;
+}
+
+async function verifySessionUser(session: SessionLike | null | undefined): Promise<SessionUserLike | null> {
+  const accessToken = session?.access_token;
+  if (!accessToken || !isJwtLike(accessToken)) {
+    await authApi.logout().catch(() => undefined);
+    return null;
+  }
+
+  const { data, error } = await supabase.auth.getUser(accessToken);
+  if (error || !data.user) {
+    await authApi.logout().catch(() => undefined);
+    return null;
+  }
+
+  return data.user as SessionUserLike;
 }
 
 function buildUserFromSession(sessionUser: SessionUserLike, preferredFlow?: AuthEntryFlow | null): User {
@@ -205,9 +230,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION' || event === 'USER_UPDATED') {
         if (session?.user) {
           const applySessionState = async () => {
+            const verifiedUser = await verifySessionUser(session as SessionLike);
+            if (!mounted || !verifiedUser) {
+              if (mounted) {
+                setState({ user: null, isAuthenticated: false, isLoading: false, hasCompletedOnboarding: false });
+              }
+              return;
+            }
             const preferredFlow = await authApi.getPreferredAuthEntryFlow();
             const user = await buildUserFromSessionWithPublicRole(
-              session.user as SessionUserLike,
+              verifiedUser,
               preferredFlow,
             );
             if (!mounted) return;
@@ -219,7 +251,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             }));
           };
           void applySessionState();
-          deferAuthWork(() => syncSessionUser(session.user as SessionUserLike));
+          deferAuthWork(async () => {
+            const verifiedUser = await verifySessionUser(session as SessionLike);
+            if (!verifiedUser) return;
+            await syncSessionUser(verifiedUser);
+          });
         }
       } else if (event === 'SIGNED_OUT') {
         if (mounted) {

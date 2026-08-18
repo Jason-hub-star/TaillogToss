@@ -169,6 +169,23 @@ export interface DailyReport {
   created_at: string;
 }
 
+export type PublicDailyReport = Pick<
+  DailyReport,
+  | 'id'
+  | 'dog_id'
+  | 'report_date'
+  | 'template_type'
+  | 'behavior_summary'
+  | 'condition_notes'
+  | 'ai_coaching_oneliner'
+  | 'seven_day_comparison'
+  | 'highlight_photo_urls'
+  | 'generation_status'
+  | 'sent_at'
+  | 'expires_at'
+  | 'created_at'
+>;
+
 // ──────────────────────────────────────
 // 6. parent_interactions — 보호자 리액션/질문
 // ──────────────────────────────────────

@@ -236,7 +236,7 @@ function DogProfilePage() {
       try {
         finalImageUrl = await uploadDogProfileImage(user.id, activeDog.id, profileImageUrl);
       } catch (e) {
-        console.error('Image upload failed during profile save:', e);
+        if (__DEV__) console.error('Image upload failed during profile save:', e);
         Alert.alert('사진 저장 실패', '사진 업로드에 실패했어요. 다시 선택한 뒤 저장해주세요.');
         return;
       }
@@ -296,7 +296,7 @@ function DogProfilePage() {
       ]);
       navigation.goBack();
     } catch (error) {
-      console.error('[UIUX-006] dog profile save failed:', error);
+      if (__DEV__) console.error('[UIUX-006] dog profile save failed:', error);
       Alert.alert(
         '저장 실패',
         error instanceof Error ? error.message.slice(0, 180) : '프로필 저장에 실패했어요.',

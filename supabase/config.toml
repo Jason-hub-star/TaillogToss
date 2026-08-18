@@ -1,5 +1,9 @@
 # Supabase Edge Functions config — Phase 11 + REG contracts
-# verify_jwt=false: login-with-toss, legal, toss-disconnect (자체 인증)
+# verify_jwt=false:
+# - login-with-toss: public OAuth bridge, verifies Toss authCode via mTLS
+# - verify-iap-order / assign-b2b-role / withdraw-user: internal /auth/v1/user verification
+# - toss-disconnect: Basic Auth callback
+# - legal: public legal documents
 
 [functions.login-with-toss]
 enabled = true
@@ -40,3 +44,53 @@ entrypoint = "./functions/generate-report/index.ts"
 enabled = true
 verify_jwt = false
 entrypoint = "./functions/assign-b2b-role/index.ts"
+
+[functions.withdraw-user]
+enabled = true
+verify_jwt = false
+entrypoint = "./functions/withdraw-user/index.ts"
+
+[functions.process-referral]
+enabled = true
+verify_jwt = true
+entrypoint = "./functions/process-referral/index.ts"
+
+[functions.process-point-events]
+enabled = true
+verify_jwt = true
+entrypoint = "./functions/process-point-events/index.ts"
+
+[functions.seed-case-study]
+enabled = true
+verify_jwt = true
+entrypoint = "./functions/seed-case-study/index.ts"
+
+[functions.render-case-chart]
+enabled = true
+verify_jwt = true
+entrypoint = "./functions/render-case-chart/index.ts"
+
+[functions.seed-threads-from-blog]
+enabled = true
+verify_jwt = true
+entrypoint = "./functions/seed-threads-from-blog/index.ts"
+
+[functions.publish-to-threads]
+enabled = true
+verify_jwt = true
+entrypoint = "./functions/publish-to-threads/index.ts"
+
+[functions.publish-to-instagram]
+enabled = true
+verify_jwt = true
+entrypoint = "./functions/publish-to-instagram/index.ts"
+
+[functions.collect-social-insights]
+enabled = true
+verify_jwt = true
+entrypoint = "./functions/collect-social-insights/index.ts"
+
+[functions.generate-karrot-caption]
+enabled = true
+verify_jwt = true
+entrypoint = "./functions/generate-karrot-caption/index.ts"

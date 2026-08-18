@@ -217,3 +217,43 @@ async def get_step_attempts(
         )
         for r in rows
     ]
+
+
+async def create_step_attempt(
+    db: AsyncSession,
+    dog_id: UUID,
+    data: schemas.StepAttemptCreate,
+    recorded_by: str,
+) -> schemas.StepAttemptResponse:
+    """시행착오 기록 저장 — router에서 dog ownership 검증 후 호출."""
+    row = TrainingStepAttempt(
+        dog_id=dog_id,
+        step_id=data.step_id,
+        curriculum_id=data.curriculum_id,
+        day_number=data.day_number,
+        attempt_number=data.attempt_number,
+        reaction=data.reaction,
+        situation_tags=data.situation_tags,
+        method_used=data.method_used,
+        what_worked=data.what_worked,
+        what_didnt_work=data.what_didnt_work,
+        recorded_by=UUID(recorded_by),
+    )
+    db.add(row)
+    await db.commit()
+    await db.refresh(row)
+    return schemas.StepAttemptResponse(
+        id=str(row.id),
+        dog_id=str(row.dog_id),
+        step_id=row.step_id,
+        curriculum_id=row.curriculum_id,
+        day_number=row.day_number,
+        attempt_number=row.attempt_number,
+        reaction=row.reaction,
+        situation_tags=row.situation_tags,
+        method_used=row.method_used,
+        what_worked=row.what_worked,
+        what_didnt_work=row.what_didnt_work,
+        recorded_by=str(row.recorded_by) if row.recorded_by else None,
+        created_at=row.created_at.isoformat() if row.created_at else "",
+    )

@@ -1,0 +1,187 @@
+- generic [ref=e2]:
+  - complementary [ref=e3]:
+    - navigation [ref=e4]:
+      - generic [ref=e5]:
+        - list [ref=e6]:
+          - listitem [ref=e7]:
+            - link "홈 홈" [ref=e8] [cursor=pointer]:
+              - /url: /
+              - img "홈" [ref=e10]
+              - generic [ref=e11]: 홈
+          - listitem [ref=e12]:
+            - link "시작 시작" [ref=e13] [cursor=pointer]:
+              - /url: /overview-card
+              - img "시작" [ref=e15]
+              - generic [ref=e16]: 시작
+          - listitem [ref=e17]:
+            - link "디자인 디자인" [ref=e18] [cursor=pointer]:
+              - /url: /design/overview
+              - img "디자인" [ref=e20]
+              - generic [ref=e21]: 디자인
+          - listitem [ref=e22]:
+            - link "개발 개발" [ref=e23] [cursor=pointer]:
+              - /url: /development/overview
+              - img "개발" [ref=e25]
+              - generic [ref=e26]: 개발
+          - listitem [ref=e27]:
+            - link "출시 출시" [ref=e28] [cursor=pointer]:
+              - /url: /checklist/app-game
+              - img "출시" [ref=e30]
+              - generic [ref=e31]: 출시
+          - listitem [ref=e32]:
+            - link "마케팅 마케팅" [ref=e33] [cursor=pointer]:
+              - /url: /marketing/overview
+              - img "마케팅" [ref=e35]
+              - generic [ref=e36]: 마케팅
+          - listitem [ref=e37]:
+            - link "수익화 수익화" [ref=e38] [cursor=pointer]:
+              - /url: /revenue/overview
+              - img "수익화" [ref=e40]
+              - generic [ref=e41]: 수익화
+          - listitem [ref=e42]:
+            - link "API & SDK API & SDK" [ref=e43] [cursor=pointer]:
+              - /url: /api/overview
+              - img "API & SDK" [ref=e45]
+              - generic [ref=e46]: API & SDK
+          - listitem [ref=e47]:
+            - link "지원 지원" [ref=e48] [cursor=pointer]:
+              - /url: /faq
+              - img "지원" [ref=e50]
+              - generic [ref=e51]: 지원
+        - list
+      - generic [ref=e52]:
+        - generic [ref=e53]:
+          - heading "앱인토스 개발자센터 로고" [level=1] [ref=e56]:
+            - link "앱인토스 개발자센터 로고" [ref=e57] [cursor=pointer]:
+              - /url: /
+          - button "Search" [ref=e61] [cursor=pointer]:
+            - generic [ref=e62]: 검색
+            - generic [ref=e64]:
+              - generic [ref=e65]: ⌘
+              - generic [ref=e66]: K
+        - list [ref=e68]:
+          - listitem [ref=e69]:
+            - link "한 눈에 보기" [ref=e71] [cursor=pointer]:
+              - /url: /marketing/overview
+          - listitem [ref=e72]:
+            - button "세그먼트" [ref=e74] [cursor=pointer]:
+              - generic [ref=e75]: 세그먼트
+              - img [ref=e77]
+          - listitem [ref=e79]:
+            - button "스마트 발송" [ref=e81] [cursor=pointer]:
+              - generic [ref=e82]: 스마트 발송
+              - img [ref=e84]
+          - listitem [ref=e86]:
+            - button "프로모션 (토스 포인트)" [ref=e88] [cursor=pointer]:
+              - generic [ref=e89]: 프로모션 (토스 포인트)
+              - img [ref=e91]
+          - listitem [ref=e93]:
+            - button "게임 프로필 & 리더보드" [ref=e95] [cursor=pointer]:
+              - generic [ref=e96]: 게임 프로필 & 리더보드
+              - img [ref=e98]
+          - listitem [ref=e100]:
+            - button "공유 리워드" [ref=e102] [cursor=pointer]:
+              - generic [ref=e103]: 공유 리워드
+              - img [ref=e105]
+          - listitem [ref=e107]:
+            - link "OG 이미지" [ref=e109] [cursor=pointer]:
+              - /url: /marketing/open-graph
+          - listitem [ref=e110]:
+            - button "분석하기" [ref=e112] [cursor=pointer]:
+              - generic [ref=e113]: 분석하기
+              - img [ref=e115]
+          - listitem [ref=e117]:
+            - button "성장 가이드" [ref=e119] [cursor=pointer]:
+              - generic [ref=e120]: 성장 가이드
+              - img [ref=e122]
+  - text: 검색 ⌘
+  - generic [ref=e124]:
+    - link "Skip to content" [ref=e125] [cursor=pointer]:
+      - /url: "#VPContent"
+    - generic [ref=e130]:
+      - main [ref=e131]:
+        - generic [ref=e133]:
+          - heading "콘솔 가이드 Permalink to \"콘솔 가이드\"" [level=1] [ref=e134]:
+            - text: 콘솔 가이드
+            - link "Permalink to \"콘솔 가이드\"" [ref=e135] [cursor=pointer]:
+              - /url: "#콘솔-가이드"
+              - text: "#"
+          - generic [ref=e137]:
+            - button "Copy as Markdown" [ref=e138] [cursor=pointer]:
+              - img [ref=e140]
+              - text: Copy as Markdown
+            - button "Download as Markdown" [ref=e143] [cursor=pointer]:
+              - img [ref=e145]
+              - text: Download as Markdown
+          - heading "공유 리워드 등록하기 Permalink to \"공유 리워드 등록하기\"" [level=2] [ref=e148]:
+            - text: 공유 리워드 등록하기
+            - link "Permalink to \"공유 리워드 등록하기\"" [ref=e149] [cursor=pointer]:
+              - /url: "#공유-리워드-등록하기"
+              - text: "#"
+          - paragraph [ref=e150]: 앱인토스 콘솔 좌측 메뉴에서 ‘공유 리워드’ 메뉴를 선택해 주세요.
+          - paragraph [ref=e151]
+          - paragraph [ref=e152]
+          - heading "리워드 이름 Permalink to \"리워드 이름\"" [level=3] [ref=e153]:
+            - text: 리워드 이름
+            - link "Permalink to \"리워드 이름\"" [ref=e154] [cursor=pointer]:
+              - /url: "#리워드-이름"
+              - text: "#"
+          - paragraph [ref=e155]:
+            - text: 관리자가 내부에서 구분해 사용할 리워드 이름이에요.
+            - text: 운영 화면이나 정산 과정에서 식별하기 쉬운 이름으로 작성해 주세요.
+          - paragraph [ref=e156]: 예를 들면 다음과 같이 작성할 수 있어요.
+          - list [ref=e157]:
+            - listitem [ref=e158]: 출석 체크 보상 100 하트
+            - listitem [ref=e159]: 친구 초대 이벤트 보석 지급
+            - listitem [ref=e160]: 신규 가입 웰컴 리워드
+          - paragraph [ref=e161]: 사용자에게 노출되는 문구와 다를 수 있으니, 운영 목적에 맞게 구체적으로 작성하는 것이 좋아요.
+          - heading "리워드 화면 Permalink to \"리워드 화면\"" [level=3] [ref=e162]:
+            - text: 리워드 화면
+            - link "Permalink to \"리워드 화면\"" [ref=e163] [cursor=pointer]:
+              - /url: "#리워드-화면"
+              - text: "#"
+          - paragraph [ref=e164]: 사용자에게 실제로 지급할 리워드 정보를 입력해요.
+          - list [ref=e165]:
+            - listitem [ref=e166]:
+              - strong [ref=e167]: 리워드
+              - text: 지급할 리워드의 단위를 입력해요.
+              - text: 예를 들어
+              - code [ref=e168]: 하트
+              - text: ","
+              - code [ref=e169]: 보석
+              - text: ","
+              - code [ref=e170]: 포인트
+              - text: 처럼 사용자가 인지하는 보상 이름을 작성해 주세요.
+            - listitem [ref=e171]:
+              - strong [ref=e172]: 수량 및 금액
+              - text: 사용자에게 지급할 리워드 수량이에요.
+              - text: 이벤트나 정책에 따라 지급하려는 정확한 수량과 금액을 입력해 주세요.
+              - text: 예를 들어 하트 100개를 지급하려면 수량에 100을 입력해요.
+          - heading "등록 전 확인 사항 Permalink to \"등록 전 확인 사항\"" [level=3] [ref=e173]:
+            - text: 등록 전 확인 사항
+            - link "Permalink to \"등록 전 확인 사항\"" [ref=e174] [cursor=pointer]:
+              - /url: "#등록-전-확인-사항"
+              - text: "#"
+          - paragraph [ref=e175]:
+            - text: 리워드는 발송 제한, 초기화 기준 등 운영 정책에 따라 제약이 있을 수 있어요.
+            - text: 등록하기 전에 반드시 주의사항과
+            - link "가이드" [ref=e176] [cursor=pointer]:
+              - /url: /reward/intro.html#발송-제한-및-초기화-기준
+            - text: 를 확인해 주세요.
+          - paragraph [ref=e177]: 등록하기 버튼을 누르면 등록한 공유 리워드 정보를 확인할 수 있어요.
+          - paragraph [ref=e178]
+      - contentinfo [ref=e179]:
+        - separator [ref=e180]
+        - list [ref=e181]:
+          - listitem [ref=e182]:
+            - link "문의하기↗" [ref=e183] [cursor=pointer]:
+              - /url: https://apps-in-toss.channel.io/workflows/787658
+          - listitem [ref=e184]:
+            - link "자주 묻는 질문↗" [ref=e185] [cursor=pointer]:
+              - /url: /faq.html
+          - listitem [ref=e186]:
+            - link "개발자 커뮤니티↗" [ref=e187] [cursor=pointer]:
+              - /url: https://techchat-apps-in-toss.toss.im/
+          - listitem [ref=e188]:
+            - link "GitHub↗" [ref=e189] [cursor=pointer]:
+              - /url: https://github.com/toss?q=apps-in-toss&type=all

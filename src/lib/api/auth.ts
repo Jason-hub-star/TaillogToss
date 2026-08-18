@@ -5,6 +5,8 @@
 import { supabase } from './supabase';
 import { isSupabaseConfigured } from './supabase';
 import { Storage } from '@apps-in-toss/framework';
+import { clearCompletedSurvey } from 'lib/utils/completedSurveyStorage';
+import { clearAllDrafts } from 'lib/utils/draftStorage';
 import type { TossLoginResponse } from 'types/auth';
 
 type TossLoginReferrer = 'DEFAULT' | 'SANDBOX' | string;
@@ -99,6 +101,50 @@ function isJwtLike(token: string): boolean {
   return token.split('.').length === 3;
 }
 
+async function clearInvalidSession(): Promise<void> {
+  try {
+    await supabase.auth.signOut();
+  } catch {
+    // Local cleanup is best-effort; callers still fail closed on invalid sessions.
+  }
+}
+
+async function validateAccessToken(accessToken: string | null | undefined): Promise<string> {
+  if (!accessToken) {
+    throw new Error('NO_SESSION');
+  }
+  if (!isJwtLike(accessToken)) {
+    await clearInvalidSession();
+    throw new Error('INVALID_SESSION');
+  }
+
+  const { data, error } = await supabase.auth.getUser(accessToken);
+  if (error || !data.user) {
+    await clearInvalidSession();
+    throw new Error('INVALID_SESSION');
+  }
+
+  return accessToken;
+}
+
+async function getVerifiedAccessToken(options?: { refreshIfMissing?: boolean }): Promise<string> {
+  const { data: sessionData, error } = await supabase.auth.getSession();
+  if (error) throw error;
+
+  let accessToken = sessionData.session?.access_token;
+  if (!accessToken && options?.refreshIfMissing) {
+    const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
+    if (refreshError) throw refreshError;
+    accessToken = refreshData.session?.access_token;
+  }
+
+  return validateAccessToken(accessToken);
+}
+
+function devLog(...args: Parameters<typeof console.log>): void {
+  if (__DEV__) console.log(...args);
+}
+
 /**
  * Edge 브릿지 응답 토큰으로 Supabase 세션을 설정한다.
  * 현재 mock 토큰 형식(sb_access_...)이면 세션 설정을 건너뛴다.
@@ -113,17 +159,17 @@ export async function setSessionFromBridgeResponse(payload: TossLoginResponse): 
     return false;
   }
 
-  console.log('[AUTH-001] supabase setSession start');
+  devLog('[AUTH-001] supabase setSession start');
   const { error } = await supabase.auth.setSession({
     access_token: payload.access_token,
     refresh_token: payload.refresh_token,
   });
   if (error) throw error;
-  console.log('[AUTH-001] supabase setSession done');
+  devLog('[AUTH-001] supabase setSession done');
 
-  console.log('[AUTH-001] supabase getUser verify start');
+  devLog('[AUTH-001] supabase getUser verify start');
   const { data: userData, error: userError } = await supabase.auth.getUser(payload.access_token);
-  console.log('[AUTH-001] supabase getUser verify done', { ok: Boolean(userData.user), hasError: Boolean(userError) });
+  devLog('[AUTH-001] supabase getUser verify done', { ok: Boolean(userData.user), hasError: Boolean(userError) });
   if (userError || !userData.user) {
     await supabase.auth.signOut();
     return false;
@@ -144,9 +190,7 @@ export async function logout(): Promise<void> {
  * Toss 연동해제는 toss-disconnect 콜백에서 Toss가 별도 호출.
  */
 export async function withdrawUser(userId: string): Promise<void> {
-  const { data: sessionData } = await supabase.auth.getSession();
-  const accessToken = sessionData?.session?.access_token;
-  if (!accessToken) throw new Error('NO_SESSION');
+  const accessToken = await getVerifiedAccessToken({ refreshIfMissing: true });
 
   const { error: invokeError, data } = await supabase.functions.invoke('withdraw-user', {
     body: { userId },
@@ -158,6 +202,8 @@ export async function withdrawUser(userId: string): Promise<void> {
     throw new Error((data as { error?: { code?: string } })?.error?.code ?? 'WITHDRAW_FAILED');
   }
 
+  await clearCompletedSurvey(userId);
+  await clearAllDrafts();
   await logout();
 }
 
@@ -165,7 +211,22 @@ export async function withdrawUser(userId: string): Promise<void> {
 export async function getSession() {
   const { data, error } = await supabase.auth.getSession();
   if (error) throw error;
-  return data.session;
+  const session = data.session;
+  if (!session) return null;
+
+  const accessToken = session.access_token;
+  if (!accessToken || !isJwtLike(accessToken)) {
+    await supabase.auth.signOut();
+    return null;
+  }
+
+  const { data: userData, error: userError } = await supabase.auth.getUser(accessToken);
+  if (userError || !userData.user) {
+    await supabase.auth.signOut();
+    return null;
+  }
+
+  return session;
 }
 
 /**
@@ -174,9 +235,7 @@ export async function getSession() {
  * 갱신된 세션의 user_metadata.role에 새 역할이 반영됨.
  */
 export async function assignB2BRole(role: 'org_owner' | 'trainer' = 'org_owner'): Promise<void> {
-  const { data: sessionData } = await supabase.auth.getSession();
-  const accessToken = sessionData?.session?.access_token;
-  if (!accessToken) throw new Error('NO_SESSION');
+  const accessToken = await getVerifiedAccessToken();
 
   const { error, data } = await supabase.functions.invoke('assign-b2b-role', {
     body: { role },

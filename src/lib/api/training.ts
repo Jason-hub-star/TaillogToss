@@ -2,14 +2,11 @@
  * 훈련 API — 진행 상태 CRUD
  * Parity: UI-001
  */
-import { supabase } from './supabase';
-import { requestBackend, withBackendFallback } from './backend';
+import { requestBackend } from './backend';
 import { measureStartupAsync } from 'lib/performance/startupPerformance';
 import type { TrainingProgress, CurriculumId, PlanVariant } from 'types/training';
 import {
   normalizeVariant,
-  getCurrentUserId,
-  isMissingRelationError,
   parseStepIdentifier,
   summarizeBackendRows,
   type BackendTrainingStatusRow,
@@ -45,73 +42,34 @@ export async function startTraining(
   curriculumId: CurriculumId,
   variant: PlanVariant = 'A'
 ): Promise<TrainingProgress> {
-  return withBackendFallback<TrainingProgress>(
-    async () => {
-      const created = await requestBackend<
-        BackendTrainingStatusRow,
-        { dog_id: string; curriculum_id: string; stage_id: string; step_number: number; status: string; current_variant: string; memo: string | null }
-      >('/api/v1/training/status', {
-        method: 'POST',
-        body: {
-          dog_id: dogId,
-          curriculum_id: curriculumId,
-          stage_id: 'day_1',
-          step_number: 0,
-          status: 'HIDDEN_BY_AI',
-          current_variant: variant,
-          memo: null,
-        },
-      });
-      clearTrainingRowsCache(dogId);
-      return {
-        id: created.id,
-        dog_id: created.dog_id,
-        curriculum_id: curriculumId,
-        current_day: 1,
-        current_variant: normalizeVariant(created.current_variant),
-        status: 'in_progress',
-        completed_steps: [],
-        memo: created.memo ?? null,
-        started_at: created.created_at,
-        updated_at: created.created_at,
-      };
+  const created = await requestBackend<
+    BackendTrainingStatusRow,
+    { dog_id: string; curriculum_id: string; stage_id: string; step_number: number; status: string; current_variant: string; memo: string | null }
+  >('/api/v1/training/status', {
+    method: 'POST',
+    body: {
+      dog_id: dogId,
+      curriculum_id: curriculumId,
+      stage_id: 'day_1',
+      step_number: 0,
+      status: 'HIDDEN_BY_AI',
+      current_variant: variant,
+      memo: null,
     },
-    async () => {
-      const userId = await getCurrentUserId();
-      const { data, error } = await supabase
-        .from('user_training_status')
-        .upsert(
-          {
-            user_id: userId,
-            dog_id: dogId,
-            curriculum_id: curriculumId,
-            stage_id: 'day_1',
-            step_number: 0,
-            status: 'HIDDEN_BY_AI',
-            current_variant: variant,
-            memo: null,
-          },
-          { onConflict: 'user_id,curriculum_id,stage_id,step_number' },
-        )
-        .select()
-        .single();
-      if (error) throw error;
-      clearTrainingRowsCache(dogId);
-      const row = data as BackendTrainingStatusRow;
-      return {
-        id: row.id,
-        dog_id: row.dog_id,
-        curriculum_id: curriculumId,
-        current_day: 1,
-        current_variant: normalizeVariant(row.current_variant),
-        status: 'in_progress' as const,
-        completed_steps: [],
-        memo: row.memo ?? null,
-        started_at: row.created_at,
-        updated_at: row.created_at,
-      };
-    },
-  );
+  });
+  clearTrainingRowsCache(dogId);
+  return {
+    id: created.id,
+    dog_id: created.dog_id,
+    curriculum_id: curriculumId,
+    current_day: 1,
+    current_variant: normalizeVariant(created.current_variant),
+    status: 'in_progress',
+    completed_steps: [],
+    memo: created.memo ?? null,
+    started_at: created.created_at,
+    updated_at: created.created_at,
+  };
 }
 
 /** 스텝 완료 처리 */
@@ -121,50 +79,21 @@ export async function completeStep(
   _currentSteps: string[],
   dogId: string,
 ): Promise<void> {
-  return withBackendFallback(
-    async () => {
-      const parsed = parseStepIdentifier(stepId);
-      if (!parsed) throw new Error('TRAINING_STEP_ID_INVALID');
-      await requestBackend('/api/v1/training/status', {
-        method: 'POST',
-        body: {
-          dog_id: dogId,
-          curriculum_id: parsed.curriculumId,
-          stage_id: `day_${parsed.day}`,
-          step_number: parsed.stepNumber,
-          status: 'COMPLETED',
-          current_variant: 'A',
-          memo: null,
-        },
-      });
-      clearTrainingRowsCache(dogId);
+  const parsed = parseStepIdentifier(stepId);
+  if (!parsed) throw new Error('TRAINING_STEP_ID_INVALID');
+  await requestBackend('/api/v1/training/status', {
+    method: 'POST',
+    body: {
+      dog_id: dogId,
+      curriculum_id: parsed.curriculumId,
+      stage_id: `day_${parsed.day}`,
+      step_number: parsed.stepNumber,
+      status: 'COMPLETED',
+      current_variant: 'A',
+      memo: null,
     },
-    async () => {
-      const parsed = parseStepIdentifier(stepId);
-      if (!parsed) return;
-      const userId = await getCurrentUserId();
-      const { error } = await supabase
-        .from('user_training_status')
-        .upsert(
-          {
-            user_id: userId,
-            dog_id: dogId,
-            curriculum_id: parsed.curriculumId,
-            stage_id: `day_${parsed.day}`,
-            step_number: parsed.stepNumber,
-            status: 'COMPLETED',
-            current_variant: 'A',
-            memo: null,
-          },
-          { onConflict: 'user_id,curriculum_id,stage_id,step_number' },
-        );
-      if (error) {
-        if (isMissingRelationError(error)) return;
-        throw error;
-      }
-      clearTrainingRowsCache(dogId);
-    },
-  );
+  });
+  clearTrainingRowsCache(dogId);
 }
 
 /** 스텝 완료 해제 (COMPLETED → HIDDEN_BY_AI) */
@@ -172,50 +101,21 @@ export async function uncompleteStep(
   stepId: string,
   dogId: string,
 ): Promise<void> {
-  return withBackendFallback(
-    async () => {
-      const parsed = parseStepIdentifier(stepId);
-      if (!parsed) throw new Error('TRAINING_STEP_ID_INVALID');
-      await requestBackend('/api/v1/training/status', {
-        method: 'POST',
-        body: {
-          dog_id: dogId,
-          curriculum_id: parsed.curriculumId,
-          stage_id: `day_${parsed.day}`,
-          step_number: parsed.stepNumber,
-          status: 'HIDDEN_BY_AI',
-          current_variant: 'A',
-          memo: null,
-        },
-      });
-      clearTrainingRowsCache(dogId);
+  const parsed = parseStepIdentifier(stepId);
+  if (!parsed) throw new Error('TRAINING_STEP_ID_INVALID');
+  await requestBackend('/api/v1/training/status', {
+    method: 'POST',
+    body: {
+      dog_id: dogId,
+      curriculum_id: parsed.curriculumId,
+      stage_id: `day_${parsed.day}`,
+      step_number: parsed.stepNumber,
+      status: 'HIDDEN_BY_AI',
+      current_variant: 'A',
+      memo: null,
     },
-    async () => {
-      const parsed = parseStepIdentifier(stepId);
-      if (!parsed) return;
-      const userId = await getCurrentUserId();
-      const { error } = await supabase
-        .from('user_training_status')
-        .upsert(
-          {
-            user_id: userId,
-            dog_id: dogId,
-            curriculum_id: parsed.curriculumId,
-            stage_id: `day_${parsed.day}`,
-            step_number: parsed.stepNumber,
-            status: 'HIDDEN_BY_AI',
-            current_variant: 'A',
-            memo: null,
-          },
-          { onConflict: 'user_id,curriculum_id,stage_id,step_number' },
-        );
-      if (error) {
-        if (isMissingRelationError(error)) return;
-        throw error;
-      }
-      clearTrainingRowsCache(dogId);
-    },
-  );
+  });
+  clearTrainingRowsCache(dogId);
 }
 
 /** Plan Variant 변경 */
@@ -223,11 +123,9 @@ export async function changeVariant(
   progressId: string,
   variant: PlanVariant
 ): Promise<void> {
-  const { error } = await supabase
-    .from('user_training_status')
-    .update({ current_variant: variant })
-    .eq('id', progressId);
-  if (error) throw error;
+  void progressId;
+  void variant;
+  throw new Error('TRAINING_VARIANT_CHANGE_REQUIRES_BACKEND_ENDPOINT');
 }
 
 /** 행동 분석 데이터 조회 (로그 기반 추천 엔진용) */

@@ -13,6 +13,7 @@ import {
 import { FormLayout } from 'components/shared/layouts/FormLayout';
 import { useSubmitStage2 } from 'lib/hooks/useSurvey';
 import { useDraftSave } from 'lib/hooks/useDraftSave';
+import { usePageGuard } from 'lib/hooks/usePageGuard';
 import { ICONS } from 'lib/data/iconSources';
 import { useActiveDog } from 'stores/ActiveDogContext';
 import { colors, typography, spacing } from 'styles/tokens';
@@ -102,6 +103,10 @@ const REWARDS = [
 
 function Stage2FormPage() {
   const navigation = useNavigation();
+  const { isReady } = usePageGuard({
+    currentPath: '/onboarding/stage2-form',
+    skipOnboarding: true,
+  });
   const params = Route.useParams() as RouteParams;
   const { activeDog } = useActiveDog();
   const targetDogId = params.dogId ?? activeDog?.id;
@@ -195,6 +200,8 @@ function Stage2FormPage() {
   const handleSkip = useCallback(() => {
     navigation.navigate('/dashboard');
   }, [navigation]);
+
+  if (!isReady) return null;
 
   return (
     <FormLayout

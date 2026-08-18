@@ -1,6 +1,6 @@
 /**
  * mTLS 모드 자동 감지 — 4종 Edge Function 공통
- * cert+key 환경변수가 있으면 real, 없으면 mock (로컬 개발 안전)
+ * 운영 환경에서는 cert/key가 없거나 mock이 명시돼도 real로 판정해 S2S 호출이 fail-closed 되게 한다.
  */
 
 export function readEnv(name: string): string | undefined {
@@ -12,11 +12,58 @@ export function readEnv(name: string): string | undefined {
   return fromDeno;
 }
 
-export function resolveMtlsMode(): 'real' | 'mock' {
-  const explicit = readEnv('TOSS_MTLS_MODE')?.trim().toLowerCase();
+type EnvReader = (name: string) => string | undefined;
+
+function isProductionLike(read: EnvReader): boolean {
+  const candidates = [
+    read('APP_ENV'),
+    read('NODE_ENV'),
+    read('DENO_ENV'),
+    read('ENVIRONMENT'),
+    read('TOSS_RUNTIME_MODE'),
+  ]
+    .map((value) => value?.trim().toLowerCase())
+    .filter(Boolean);
+
+  return candidates.some((value) =>
+    value === 'production' ||
+    value === 'prod' ||
+    value === 'sandbox_real' ||
+    value === 'prod_read' ||
+    value === 'prod_ready'
+  );
+}
+
+function isExplicitDevLocal(read: EnvReader): boolean {
+  const candidates = [
+    read('APP_ENV'),
+    read('NODE_ENV'),
+    read('DENO_ENV'),
+    read('ENVIRONMENT'),
+    read('TOSS_RUNTIME_MODE'),
+  ]
+    .map((value) => value?.trim().toLowerCase())
+    .filter(Boolean);
+
+  return candidates.some((value) =>
+    value === 'development' ||
+    value === 'dev' ||
+    value === 'test' ||
+    value === 'local' ||
+    value === 'dev_local'
+  );
+}
+
+export function resolveMtlsModeWithEnv(read: EnvReader): 'real' | 'mock' {
+  if (isProductionLike(read)) return 'real';
+
+  const explicit = read('TOSS_MTLS_MODE')?.trim().toLowerCase();
   if (explicit === 'real') return 'real';
-  if (explicit === 'mock') return 'mock';
-  const cert = readEnv('TOSS_CLIENT_CERT_BASE64');
-  const key = readEnv('TOSS_CLIENT_KEY_BASE64');
-  return cert && key ? 'real' : 'mock';
+  if (explicit === 'mock' && isExplicitDevLocal(read)) return 'mock';
+  if (!explicit && isExplicitDevLocal(read)) return 'mock';
+  return 'real';
+}
+
+export function resolveMtlsMode(): 'real' | 'mock' {
+  return resolveMtlsModeWithEnv(readEnv);
 }

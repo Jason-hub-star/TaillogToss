@@ -37,4 +37,6 @@ Toss 서버 간 통신(mTLS)은 반드시 여기서 처리. FastAPI에 mTLS 구�
 - [x] login-with-toss: Rate-limit + Nonce + PII 로그 금지
 - [x] verify-iap-order: 멱등키 + 서킷브레이커 + 5xx만 재시도(최대2회)
 - [x] send-smart-message: 빈도 제한 (cooldownPolicy.ts, 10분1회/하루3회, 22~08시 금지)
-- [ ] grant-toss-points: key 1회 사용 제한 + 에러코드 분기
+- [x] grant-toss-points: key 1회 사용 제한 (`usedGrantKeys` Set) + 에러코드 분기 (`mapTossCode`) + 5000pt 상한 검증 (4114 사전 차단)
+- [x] marketingPiiGuard: 콘텐츠 발행 직전 PII 검사 (한글이름/일시/견종/전화/이메일)
+- [x] _shared/marketingPiiGuard.ts: 마케팅 콘텐츠 발행 전 PII 검사 (Phase 1B, L11 잠금)

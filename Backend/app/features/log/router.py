@@ -15,10 +15,45 @@ from app.core.exceptions import ForbiddenException
 from app.core.security import get_current_user_id
 from app.features.log import repository, schemas, service
 from app.features.org.service import verify_org_membership
-from app.shared.models import OrgDog
+from app.shared.models import DogAssignment, OrgDog
 from app.shared.utils.ownership import verify_dog_ownership
 
 router = APIRouter()
+
+
+def _role_value(role: object) -> str:
+    return str(role.value) if hasattr(role, "value") else str(role)
+
+
+async def verify_org_log_access(db: AsyncSession, org_id: UUID, dog_id: UUID, user_id: str) -> None:
+    """조직 기록 권한 확인: 관리자/스태프는 조직 전체, 트레이너는 본인 배정만."""
+    member = await verify_org_membership(db, org_id, user_id)
+    org_dog_result = await db.execute(
+        select(OrgDog).where(
+            OrgDog.org_id == org_id,
+            OrgDog.dog_id == dog_id,
+            OrgDog.status == "active",
+        )
+    )
+    if not org_dog_result.scalar_one_or_none():
+        raise ForbiddenException("Dog is not active in this organization")
+
+    member_role = _role_value(member.role)
+    if member_role in {"owner", "manager", "staff", "org_owner", "org_staff"}:
+        return
+
+    assignment_result = await db.execute(
+        select(DogAssignment).where(
+            DogAssignment.org_id == org_id,
+            DogAssignment.dog_id == dog_id,
+            DogAssignment.trainer_user_id == UUID(user_id),
+            DogAssignment.status == "active",
+        )
+    )
+    if assignment_result.scalar_one_or_none():
+        return
+
+    raise ForbiddenException("Dog is not assigned to this trainer")
 
 
 @router.post("/quick", response_model=schemas.LogResponse, status_code=status.HTTP_201_CREATED)
@@ -30,16 +65,7 @@ async def create_quick_log(
 ):
     """빠른 기록 생성"""
     if data.org_id:
-        await verify_org_membership(db, data.org_id, user_id)
-        org_dog_result = await db.execute(
-            select(OrgDog).where(
-                OrgDog.org_id == data.org_id,
-                OrgDog.dog_id == data.dog_id,
-                OrgDog.status == "active",
-            )
-        )
-        if not org_dog_result.scalar_one_or_none():
-            raise ForbiddenException("Dog is not active in this organization")
+        await verify_org_log_access(db, data.org_id, data.dog_id, user_id)
     else:
         await verify_dog_ownership(db, data.dog_id, user_id=user_id)
     return await service.create_quick_log(db, data, x_timezone, recorded_by=user_id)
@@ -54,7 +80,7 @@ async def create_detailed_log(
 ):
     """ABC 상세 기록 생성"""
     await verify_dog_ownership(db, data.dog_id, user_id=user_id)
-    return await service.create_detailed_log(db, data, x_timezone)
+    return await service.create_detailed_log(db, data, x_timezone, recorded_by=user_id)
 
 
 @router.get("/{dog_id}", response_model=List[schemas.LogResponse])

@@ -14,9 +14,9 @@ import { FormLayout } from 'components/shared/layouts/FormLayout';
 import { DogPhotoPicker } from 'components/features/dog/DogPhotoPicker';
 import { useSubmitStage1 } from 'lib/hooks/useSurvey';
 import { useDraftSave } from 'lib/hooks/useDraftSave';
+import { usePageGuard } from 'lib/hooks/usePageGuard';
 import { useAuth } from 'stores/AuthContext';
-import { uploadDogProfileImage } from 'lib/api/dog';
-import { supabase } from 'lib/api/supabase';
+import { updateDog, uploadDogProfileImage } from 'lib/api/dog';
 import { ICONS } from 'lib/data/iconSources';
 import { colors, typography, spacing } from 'styles/tokens';
 import type { DogSex, SurveyStage1Request } from 'types/dog';
@@ -52,6 +52,10 @@ const APPROX_BIRTH_MAP: Record<ApproxAge, string> = {
 
 function Stage1FormPage() {
   const navigation = useNavigation();
+  const { isReady } = usePageGuard({
+    currentPath: '/onboarding/stage1-form',
+    skipOnboarding: true,
+  });
   const { user } = useAuth();
   const submitStage1 = useSubmitStage1(user?.id ?? '');
 
@@ -118,7 +122,7 @@ function Stage1FormPage() {
         if (profileImageUrl) {
           try {
             const publicUrl = await uploadDogProfileImage(user.id, dog.id, profileImageUrl);
-            await supabase.from('dogs').update({ profile_image_url: publicUrl }).eq('id', dog.id);
+            await updateDog(dog.id, { profile_image_url: publicUrl });
           } catch (e) {
             if (__DEV__) console.warn('[APP-001] photo upload failed (non-fatal):', e);
           }
@@ -131,6 +135,8 @@ function Stage1FormPage() {
       },
     });
   }, [isValid, user, name, breed, sex, isNeutered, weightText, approxAge, birthdateText, profileImageUrl, submitStage1, navigation]);
+
+  if (!isReady) return null;
 
   return (
     <FormLayout

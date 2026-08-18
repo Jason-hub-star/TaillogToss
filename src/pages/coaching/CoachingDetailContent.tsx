@@ -13,6 +13,7 @@ import { CoachingContextInput } from 'components/features/coaching/CoachingConte
 import { RewardedAdButton } from 'components/shared/ads/RewardedAdButton';
 import { ICONS } from 'lib/data/iconSources';
 import type { CoachingResult } from 'types/coaching';
+import type { CurriculumId } from 'types/training';
 
 const TREND_LABEL: Record<string, string> = {
   improving: '개선 중',
@@ -31,7 +32,7 @@ export interface CoachingDetailContentProps {
   isPro: boolean;
   activeDog: { id: string; name: string; profile_image_url?: string | null } | null;
   onToggleActionItem: (itemId: string) => void;
-  onNavigateToTraining: () => void;
+  onNavigateToTraining: (curriculumId?: CurriculumId | null) => void;
   onNavigateToSubscription: () => void;
   onStarPress: (score: 1 | 2 | 3 | 4 | 5) => void;
   selectedScore: number;
@@ -174,7 +175,7 @@ export function CoachingDetailContent({
         <View style={styles.adBanner}>
           <RewardedAdButton
             placement="R3"
-            label="광고 보고 코칭 결과 확인하기"
+            label="광고 보고 무료 코칭 응원하기"
             onRewarded={() => {}}
           />
         </View>
@@ -188,6 +189,7 @@ export function CoachingDetailContent({
         dogName={activeDog?.name}
         dogImageUrl={activeDog?.profile_image_url}
         isPro={isPro}
+        generatedAt={coaching.created_at}
       />
 
       {/* Pro 업그레이드 유도 CTA — 무료 유저만 */}
@@ -200,7 +202,7 @@ export function CoachingDetailContent({
           <View style={styles.insightCTACopy}>
             <Text style={styles.insightCTATitle}>PRO로 더 정밀하게 보기</Text>
             <Text style={styles.insightCTADesc}>
-              무료 코칭은 일반 설문과 기록 기반이에요. 상담지까지 반영하면 7일 플랜, 위험신호, 전문가 질문을 함께 볼 수 있어요.
+              받은 진단은 끝까지 볼 수 있어요. PRO는 상담지 기반 세부 근거와 하루 10회 코칭으로 더 자주, 더 깊게 도와드려요.
             </Text>
           </View>
           <Text style={styles.insightCTAArrow}>›</Text>

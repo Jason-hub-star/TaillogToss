@@ -1,16 +1,18 @@
 # 배포 전 최종 게이트 감사표
 
-> Last Updated: 2026-05-19 KST
+> Last Updated: 2026-05-22 KST
 > Scope: AUTH-001, APP-001, UI-001, LOG-001, AI-001, PRO-INTAKE-001, IAP-001, MSG-001, AD-001, B2B-001, REG-001
 > Sources: `PROJECT-STATUS.md`, `11-FEATURE-PARITY-MATRIX.md`, `PROGRESS-CHECKLIST.md`, `MISSING-AND-UNIMPLEMENTED.md`, `PRELAUNCH-BLOCKER-SCAN.md`, `docs/ref/AIT-PUBLISHING-READINESS.md`
+
+> Snapshot note: this audit is retained as the 2026-05-22 release/submission snapshot. For current work intake, treat `PROJECT-STATUS.md`, `11-FEATURE-PARITY-MATRIX.md`, `PAGE-UPGRADE-BOARD.md`, and `PROGRESS-CHECKLIST.md` as fresher; 2026-05-26/05-27 Ads/Login/Coaching evidence supersedes some PARTIAL rows below.
 
 ## Executive Verdict
 
 | Verdict | Meaning | Release Decision |
 |---|---|---|
-| BLOCKED | 최신 QR/콘솔 진입은 확인됐지만, 실사용 QA에서 P0/P1 핫픽스가 필요함 | 현재 상태로는 최종 배포 승인 요청을 진행하지 않는다 |
+| RELEASED / SUBMISSION-READY | 사용자 보고 기준 실제 토스 앱에서 한글 미니앱 이름 검색 노출 및 공개 공유 URL 캡처 완료 | 챌린지 출품 폼에는 `https://minion.toss.im/L1o5uCsg`를 사용한다 |
 
-현재 빌드와 주요 구현은 상당 부분 준비되어 있고 최신 ADB에서 AIT 실행, fresh Toss Login -> Supabase session bridge, IAP 결제 -> 서버 grant -> `completeProductGrant()` 증적까지 추가 확인됐다. 2026-05-19 기준으로 Backend 5개 모델-DB 정합성 버그 수정(commit 2dc579b, Railway 배포 완료) 및 개발모드 E2E Wave 1~9 로컬 완전 검증이 완료됐다. 다만 실기기 E2E 검증과 퍼블리싱 심사 준비가 남아있어 “구현 완료”와 “실기기 검증”을 분리해 판단한다.
+현재 빌드와 주요 구현은 상당 부분 준비되어 있고 최신 ADB에서 AIT 실행, fresh Toss Login -> Supabase session bridge, IAP 결제 -> 서버 grant -> `completeProductGrant()` 증적까지 추가 확인됐다. 2026-05-22 사용자 보고 기준으로 `출시하기` 후 실제 토스 검색 노출과 미니앱 공개 공유 URL `https://minion.toss.im/L1o5uCsg` 확보가 완료되었으므로, 이 문서는 출시 차단 판정이 아니라 출품/운영 잔여 액션 추적 문서로 전환한다.
 
 ## Status Rubric
 
@@ -34,20 +36,20 @@
 | Smart Message | MSG-001 | PASS | `log_reminder` current-user HTTP 200 and `noti_history.success=true` evidence exists | Additional campaigns are not release-critical for v1 | Treat only `log_reminder` as v1 scope; keep other campaigns post-release |
 | Ads | AD-001 | PARTIAL | Live adGroupId wiring and SDK calls verified; fallback path exists | Current environment returns `code=1007`; supported-environment render/no-fill final 판정 missing | Decide release scope: keep graceful fallback, then verify render/no-fill after supported environment opens |
 | B2B trainer flow | B2B-001 | PARTIAL | Org setup, role, dog add/profile work exists; B2C release can proceed | 40-dog FlatList, share link, B2C regression, `verify_parent_phone_last4` final checks remain | Do not block B2C release; gate B2B claims separately |
-| Registration / console | REG-001 | PARTIAL | App info, review candidate, mTLS real mode, bundle size and AI disclosure work are documented; official console URL was reached; latest spouse-phone QA confirms QR entry works, review request button is enabled, and dev button is absent | Business category, support channel, cert expiry calendar, callback final checks, and final review packet attachment still need operator confirmation | Keep console evidence, complete remaining non-code publishing checks, and submit only after QA hotfix retest |
+| Registration / console | REG-001 | PASS/PARTIAL | App info, review candidate, mTLS real mode, bundle size and AI disclosure work are documented; official console URL was reached; latest spouse-phone QA confirms QR entry works, review request button is enabled, and dev button is absent; 2026-05-22 사용자 보고 기준 실제 토스 검색 노출 및 공개 공유 URL `https://minion.toss.im/L1o5uCsg` 확보 완료 | Business category, support channel, cert expiry calendar, callback final checks remain operational follow-ups | Paste the captured public mini-app URL into the challenge form |
 | Prelaunch QA hotfix | UI-001 / LOG-001 / AD-001 | PARTIAL | Local hotfix now covers quick-log save completion, quick-log ad removal, beginner/free training boundary, Pro Day 1 preview, I1 daily cap, B2B route guard, AI hero tap target, checklist marker cleanup, and Imagen blue icon replacement; local AIT build `019e2520-b4ac-778b-8182-40c0718038dc` / SHA256 `bc2c3aefb30a651215f612b8dc0622cba9e3b628b28005191796715032aeadd0` passed bundle scans | AIT deploy/console QR refresh is blocked by missing local deploy API key/profile; spouse-phone QR/device QA remains pending | Add Apps in Toss deploy API key/profile, deploy the new AIT, then rerun spouse-phone QR/device QA |
 | Security / privacy | REG-001 | PARTIAL | mTLS real mode documented for critical functions, privacy delegation text and AI disclosure exist | Secret rotation/token hygiene and expiry calendar remain operational risks | Rotate leaked Telegram bot token, register mTLS expiry calendar, confirm production env values |
 | Performance / reliability | APP-001 | PARTIAL | Cached-first and startup markers improved; standalone first paint evidence exists | Railway sleep/cold-start and first backend call latency remain | Decide: keep-warm/paid no-sleep, or accept v1 risk with clear monitoring |
 | Automation / AI data loop | AI-TRAIN-001 | PARTIAL | Telegram review material collection v1 and orchestrator cleanup implemented | Production bot token should be rotated; loop intentionally does not auto-publish curriculum | Keep as internal ops only until 50+ reviewed samples and separate improvement approval |
 
-## Hard Blockers
+## Operational Follow-ups
 
-| Priority | Blocker | Why It Blocks | Owner Action |
+| Priority | Follow-up | Why It Matters | Owner Action |
 |---|---|---|---|
-| P0 | Real-device confirmation for quick-log and B2B route guard | Local hotfix is implemented, but release decision needs device evidence that save returns to dashboard and B2C accidental B2B entry returns to `/dashboard` | Verify on the rebuilt AIT after bottom nav icon replacement |
+| P0 | 바이브코딩 챌린지 공개 공유 URL 제출 | 공개 URL `https://minion.toss.im/L1o5uCsg` 확보 완료. 출품 폼 입력만 남음 | 출품 폼 `미니앱 공유하기 URL`에 붙여넣기 |
+| P1 | Real-device confirmation for quick-log and B2B route guard | Local hotfix is implemented, but release decision needs device evidence that save returns to dashboard and B2C accidental B2B entry returns to `/dashboard` | Verify on the rebuilt AIT after bottom nav icon replacement |
 | P1 | Real-device core action sweep | Route render proof exists, but action proof is still fragmented | Sweep dashboard -> quick log create -> analysis refresh -> training detail -> coaching generate -> profile save -> settings |
-| P1 | Ad intrusion and training monetization boundary | Review and user trust can suffer if ads dominate core actions or Pro appears before basic value | Reduce quick-log/core-action ad footprint and keep basic training free/light before Pro |
-| P1 | Publishing operations checks | Non-code console mismatches can cause review rejection | Confirm business category, support channel, callback, certificate expiry calendar |
+| P2 | Publishing operations checks | Non-code console mismatches can cause later operations issues | Confirm business category, support channel, callback, certificate expiry calendar |
 
 ## Release Scope Recommendation
 

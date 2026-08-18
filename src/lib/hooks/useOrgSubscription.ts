@@ -6,7 +6,7 @@ import { useEffect, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { queryPolicy } from 'lib/api/queryConfig';
 import { queryKeys } from 'lib/api/queryKeys';
-import { supabase } from 'lib/api/supabase';
+import { requestBackend } from 'lib/api/backend';
 import { tracker } from 'lib/analytics/tracker';
 import {
   createOneTimePurchaseOrder,
@@ -17,30 +17,12 @@ import type { OrgSubscription } from 'types/b2b';
 
 /** 조직 구독 조회 */
 async function getOrgSubscription(orgId: string): Promise<OrgSubscription | null> {
-  const { data, error } = await supabase
-    .from('org_subscriptions')
-    .select('*')
-    .eq('org_id', orgId)
-    .in('status', ['active', 'trial'])
-    .order('created_at', { ascending: false })
-    .limit(1)
-    .single();
-  if (error && error.code !== 'PGRST116') throw error;
-  return data as OrgSubscription | null;
+  return requestBackend<OrgSubscription | null>(`/api/v1/org/${orgId}/subscription`);
 }
 
 /** 훈련사 개인 구독 조회 */
-async function getTrainerSubscription(trainerId: string): Promise<OrgSubscription | null> {
-  const { data, error } = await supabase
-    .from('org_subscriptions')
-    .select('*')
-    .eq('trainer_user_id', trainerId)
-    .in('status', ['active', 'trial'])
-    .order('created_at', { ascending: false })
-    .limit(1)
-    .single();
-  if (error && error.code !== 'PGRST116') throw error;
-  return data as OrgSubscription | null;
+async function getTrainerSubscription(): Promise<OrgSubscription | null> {
+  return requestBackend<OrgSubscription | null>('/api/v1/org/subscription/trainer/mine');
 }
 
 export function useOrgSubscription(orgId: string | undefined) {
@@ -55,7 +37,7 @@ export function useOrgSubscription(orgId: string | undefined) {
 export function useTrainerSubscription(trainerId: string | undefined) {
   return useQuery({
     queryKey: queryKeys.orgSubscription.trainerCurrent(trainerId ?? ''),
-    queryFn: () => getTrainerSubscription(trainerId!),
+    queryFn: () => getTrainerSubscription(),
     enabled: !!trainerId,
     ...queryPolicy.long,
   });

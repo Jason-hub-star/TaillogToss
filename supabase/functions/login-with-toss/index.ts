@@ -43,6 +43,10 @@ interface LoginFailureState {
   blockedUntil?: number;
 }
 
+interface ConsumedAuthCodeState {
+  consumedAt: number;
+}
+
 interface TossStatusError extends Error {
   status?: number;
   code?: string;
@@ -74,6 +78,42 @@ interface LoginHandlerDeps {
 }
 
 const loginFailures = new Map<string, LoginFailureState>();
+const consumedAuthCodes = new Map<string, ConsumedAuthCodeState>();
+const AUTH_CODE_REPLAY_TTL_MS = 10 * 60 * 1000;
+
+function pruneConsumedAuthCodes(nowMs: number): void {
+  for (const [fingerprint, state] of consumedAuthCodes.entries()) {
+    if (nowMs - state.consumedAt > AUTH_CODE_REPLAY_TTL_MS) {
+      consumedAuthCodes.delete(fingerprint);
+    }
+  }
+}
+
+async function authCodeFingerprint(authorizationCode: string, _referrer?: TossLoginReferrer): Promise<string> {
+  const digest = await crypto.subtle.digest(
+    'SHA-256',
+    new TextEncoder().encode(authorizationCode),
+  );
+  return bytesToBase64(new Uint8Array(digest));
+}
+
+async function hasConsumedAuthCode(
+  authorizationCode: string,
+  referrer: TossLoginReferrer,
+  nowMs: number,
+): Promise<boolean> {
+  pruneConsumedAuthCodes(nowMs);
+  return consumedAuthCodes.has(await authCodeFingerprint(authorizationCode, referrer));
+}
+
+async function rememberConsumedAuthCode(
+  authorizationCode: string,
+  referrer: TossLoginReferrer,
+  nowMs: number,
+): Promise<void> {
+  pruneConsumedAuthCodes(nowMs);
+  consumedAuthCodes.set(await authCodeFingerprint(authorizationCode, referrer), { consumedAt: nowMs });
+}
 
 function updateLoginFailure(clientKey: string, nowMs: number): number {
   const prev = loginFailures.get(clientKey) ?? { consecutiveFailures: 0 };
@@ -143,6 +183,10 @@ function bytesToBase64(bytes: Uint8Array): string {
     binary += String.fromCharCode(b);
   }
   return btoa(binary);
+}
+
+function isJwtLike(token: string): boolean {
+  return token.split('.').length === 3;
 }
 
 async function deriveBridgePassword(tossUserKey: string): Promise<string> {
@@ -395,9 +439,9 @@ async function bridgeSessionWithSupabase(input: BridgeSessionInput): Promise<Bri
   };
 }
 
-function defaultLoginDeps(): LoginHandlerDeps {
+function defaultLoginDeps(overrides?: Partial<LoginHandlerDeps>): LoginHandlerDeps {
   return {
-    mTLSClient: createMTLSClient(resolveMtlsMode()),
+    mTLSClient: overrides?.mTLSClient ?? createMTLSClient(resolveMtlsMode()),
     peppers: resolvePeppersFromEnv({
       SUPER_SECRET_PEPPER: readEnv('SUPER_SECRET_PEPPER'),
       SUPER_SECRET_PEPPER_V1: readEnv('SUPER_SECRET_PEPPER_V1'),
@@ -428,7 +472,7 @@ function normalizeRequest(input: LoginWithTossRequest): LoginWithTossRequest {
 }
 
 export function createLoginWithTossHandler(overrides?: Partial<LoginHandlerDeps>) {
-  const deps = { ...defaultLoginDeps(), ...(overrides ?? {}) };
+  const deps = { ...defaultLoginDeps(overrides), ...(overrides ?? {}) };
 
   return async (
     input: LoginWithTossRequest,
@@ -466,11 +510,16 @@ export function createLoginWithTossHandler(overrides?: Partial<LoginHandlerDeps>
       });
     }
 
+    if (await hasConsumedAuthCode(request.authorizationCode, request.referrer, nowMs)) {
+      return fail('AUTH_CODE_REUSED', 'authorizationCode was already consumed', 400);
+    }
+
     try {
       const token = await deps.mTLSClient.exchangeAuthorizationCode(
         request.authorizationCode,
         request.referrer
       );
+      await rememberConsumedAuthCode(request.authorizationCode, request.referrer, nowMs);
       const profile = await deps.mTLSClient.fetchLoginProfile(token.accessToken);
       const encryptedPiiCount = [
         profile.name,
@@ -514,6 +563,9 @@ export function createLoginWithTossHandler(overrides?: Partial<LoginHandlerDeps>
         nowIso: timestamp,
         flow: request.flow ?? 'B2C',
       });
+      if (!isJwtLike(bridgeSession.accessToken)) {
+        throw toStatusError('Invalid token payload from Supabase Auth', 502, 'SUPABASE_AUTH_TOKEN_INVALID');
+      }
 
       const response: LoginWithTossResponse = {
         access_token: bridgeSession.accessToken,
@@ -557,7 +609,6 @@ export function createLoginWithTossHandler(overrides?: Partial<LoginHandlerDeps>
           referrer: request.referrer,
           upstreamStatus,
           upstreamCode,
-          errorMessage: upstreamMessage ?? 'unknown',
         })
       );
 
@@ -565,7 +616,6 @@ export function createLoginWithTossHandler(overrides?: Partial<LoginHandlerDeps>
       if (retryAfterSeconds > 0) details.retryAfterSeconds = retryAfterSeconds;
       if (upstreamStatus !== undefined) details.upstreamStatus = upstreamStatus;
       if (upstreamCode !== undefined) details.upstreamCode = upstreamCode;
-      if (upstreamMessage) details.upstreamMessage = upstreamMessage;
 
       return fail('AUTH_LOGIN_FAILED', 'Failed to complete Toss login', 502, {
         retryable: true,
@@ -575,4 +625,9 @@ export function createLoginWithTossHandler(overrides?: Partial<LoginHandlerDeps>
   };
 }
 
-export const handleLoginWithToss = createLoginWithTossHandler();
+let defaultHandler: ReturnType<typeof createLoginWithTossHandler> | null = null;
+
+export const handleLoginWithToss: ReturnType<typeof createLoginWithTossHandler> = (input, context) => {
+  defaultHandler ??= createLoginWithTossHandler();
+  return defaultHandler(input, context);
+};

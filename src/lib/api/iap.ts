@@ -89,14 +89,14 @@ export function createOneTimePurchaseOrder({
   const emitGrantFailed = () => {
     if (!active || settled) return;
     settled = true;
-    console.log('[IAP-001] grant event', { type: 'GRANT_FAILED', sku });
+    devLog('[IAP-001] grant event', { type: 'GRANT_FAILED', sku });
     onEvent?.({ type: 'GRANT_FAILED' });
   };
 
   const emitGrantCompleted = (result?: PurchaseResult) => {
     if (!active || settled) return;
     settled = true;
-    console.log('[IAP-001] grant event', {
+    devLog('[IAP-001] grant event', {
       type: 'GRANT_COMPLETED',
       sku,
       orderId: result?.orderId,
@@ -104,7 +104,7 @@ export function createOneTimePurchaseOrder({
     onEvent?.({ type: 'GRANT_COMPLETED', result });
   };
 
-  console.log('[IAP-001] createOneTimePurchaseOrder start', { sku });
+  devLog('[IAP-001] createOneTimePurchaseOrder start', { sku });
   onEvent?.({ type: 'PURCHASE_STARTED' });
 
   const cleanup = IAP.createOneTimePurchaseOrder({
@@ -112,11 +112,11 @@ export function createOneTimePurchaseOrder({
       sku,
       processProductGrant: async ({ orderId }) => {
         let granted = false;
-        console.log('[IAP-001] processProductGrant start', { sku, orderId });
+        devLog('[IAP-001] processProductGrant start', { sku, orderId });
         try {
           granted = await processProductGrant({ orderId });
         } catch (e) {
-          console.warn('[IAP-001] processProductGrant failed', {
+          devWarn('[IAP-001] processProductGrant failed', {
             sku,
             orderId,
             message: e instanceof Error ? e.message : String(e),
@@ -124,18 +124,18 @@ export function createOneTimePurchaseOrder({
         }
         if (!active) return false;
         grantApproved = granted;
-        console.log('[IAP-001] processProductGrant done', { sku, orderId, granted });
+        devLog('[IAP-001] processProductGrant done', { sku, orderId, granted });
         if (!granted) {
           emitGrantFailed();
           return false;
         }
         // 서버 지급 완료 후 SDK에 영수증 소비 신호 전달
         try {
-          console.log('[IAP-001] completeProductGrant start', { sku, orderId });
+          devLog('[IAP-001] completeProductGrant start', { sku, orderId });
           await IAP.completeProductGrant({ params: { orderId } });
-          console.log('[IAP-001] completeProductGrant done', { sku, orderId });
+          devLog('[IAP-001] completeProductGrant done', { sku, orderId });
         } catch (e) {
-          console.warn('[IAP-001] completeProductGrant failed (non-fatal)', {
+          devWarn('[IAP-001] completeProductGrant failed (non-fatal)', {
             sku,
             orderId,
             message: e instanceof Error ? e.message : String(e),
@@ -148,7 +148,7 @@ export function createOneTimePurchaseOrder({
     onEvent: (event) => {
       if (!active || settled) return;
       const sdkEventType = String((event as { type?: unknown }).type ?? '');
-      console.log('[IAP-001] sdk event', { sku, type: sdkEventType });
+      devLog('[IAP-001] sdk event', { sku, type: sdkEventType });
       if (sdkEventType === 'GRANT_FAILED' || sdkEventType === 'failed') {
         emitGrantFailed();
         return;
@@ -162,7 +162,7 @@ export function createOneTimePurchaseOrder({
     onError: (error) => {
       if (!active || settled) return;
       const code = (error as { code?: string })?.code;
-      console.warn('[IAP-001] sdk error', {
+      devWarn('[IAP-001] sdk error', {
         sku,
         code,
         message: error instanceof Error ? error.message : String(error),
@@ -203,20 +203,35 @@ export async function verifyAndGrant(
   const firstToken = await resolveAccessTokenForInvoke();
   if (!firstToken) {
     if (__DEV__) {
-      console.warn('[IAP-001] verify-iap-order skipped: missing/invalid auth jwt');
+      devWarn('[IAP-001] verify-iap-order skipped: missing/invalid auth jwt');
     }
     return false;
   }
   if (__DEV__) {
     const { anonKey } = getSupabasePublicConfig();
     const { data: tokenUserData, error: tokenUserError } = await supabase.auth.getUser(firstToken);
-    console.log('[IAP-001] verify-iap-order token debug', {
+    devLog('[IAP-001] verify-iap-order token debug', {
       tokenPreview: `${firstToken.slice(0, 12)}...${firstToken.slice(-8)}`,
       tokenLength: firstToken.length,
       isAnonKey: firstToken === anonKey,
       tokenUserId: tokenUserData.user?.id ?? null,
       tokenUserError: tokenUserError?.message ?? null,
     });
+  }
+
+  if (b2bContext?.orgId || b2bContext?.trainerUserId) {
+    try {
+      const proxyData = await requestBackend<unknown>('/api/v1/subscription/iap/verify', {
+        method: 'POST',
+        body,
+      });
+      return parseIapGrantResult(proxyData, receipt);
+    } catch (proxyErr) {
+      if (__DEV__) {
+        devWarn('[IAP-001/B2B-001] B2B FastAPI proxy failed', proxyErr);
+      }
+      return false;
+    }
   }
 
   // Toss mini-app은 /functions/v1/ 를 네트워크 레벨에서 차단 (404도 아닌 hang)
@@ -243,7 +258,7 @@ export async function verifyAndGrant(
   error = firstInvoke.error;
 
   if (__DEV__ && error) {
-    console.warn('[IAP-001] firstInvoke error', {
+    devWarn('[IAP-001] firstInvoke error', {
       status: getInvokeHttpStatus(error),
       error,
     });
@@ -255,7 +270,7 @@ export async function verifyAndGrant(
       refreshedToken && (await isUsableAccessToken(refreshedToken)) ? refreshedToken : firstToken;
     if (__DEV__) {
       const { anonKey } = getSupabasePublicConfig();
-      console.log('[IAP-001] verify-iap-order retry token debug', {
+      devLog('[IAP-001] verify-iap-order retry token debug', {
         source: retryToken === firstToken ? 'first' : 'refreshed',
         isAnonKey: retryToken === anonKey,
       });
@@ -279,7 +294,7 @@ export async function verifyAndGrant(
   const errStatus = getInvokeHttpStatus(error);
   if (!isTestEnvironment() && error && (errStatus === 404 || errStatus === 408)) {
     if (__DEV__) {
-      console.log(`[IAP-001] verify-iap-order ${errStatus} → FastAPI proxy`);
+      devLog(`[IAP-001] verify-iap-order ${errStatus} → FastAPI proxy`);
     }
     try {
       data = await requestBackend<unknown>('/api/v1/subscription/iap/verify', {
@@ -289,14 +304,14 @@ export async function verifyAndGrant(
       error = null;
     } catch (proxyErr) {
       if (__DEV__) {
-        console.warn('[IAP-001] FastAPI proxy failed', proxyErr);
+        devWarn('[IAP-001] FastAPI proxy failed', proxyErr);
       }
     }
   }
 
   if (error) {
     if (__DEV__) {
-      console.warn('[IAP-001] verify-iap-order invoke failed', {
+      devWarn('[IAP-001] verify-iap-order invoke failed', {
         status: getInvokeHttpStatus(error),
         error,
       });
@@ -304,6 +319,10 @@ export async function verifyAndGrant(
     return false;
   }
 
+  return parseIapGrantResult(data, receipt);
+}
+
+function parseIapGrantResult(data: unknown, receipt: IAPReceipt): boolean {
   // Edge envelope({ ok, data })와 평탄 응답({ grant_status })을 모두 지원한다.
   const payload = data as
     | {
@@ -322,7 +341,7 @@ export async function verifyAndGrant(
   const grantStatus = payload?.grant_status ?? payload?.data?.grant_status;
   if (grantStatus) {
     const granted = grantStatus === 'granted';
-    console.log('[IAP-001] verifyAndGrant result', {
+    devLog('[IAP-001] verifyAndGrant result', {
       orderId: receipt.orderId,
       productId: receipt.productId,
       grantStatus,
@@ -334,7 +353,7 @@ export async function verifyAndGrant(
   const tossStatus = payload?.toss_status ?? payload?.data?.toss_status;
   if (tossStatus) {
     const granted = tossStatus === 'PAYMENT_COMPLETED';
-    console.log('[IAP-001] verifyAndGrant result', {
+    devLog('[IAP-001] verifyAndGrant result', {
       orderId: receipt.orderId,
       productId: receipt.productId,
       tossStatus,
@@ -345,7 +364,7 @@ export async function verifyAndGrant(
 
   const okFlag = payload?.ok ?? payload?.data?.ok;
   const granted = okFlag === true;
-  console.log('[IAP-001] verifyAndGrant result', {
+  devLog('[IAP-001] verifyAndGrant result', {
     orderId: receipt.orderId,
     productId: receipt.productId,
     ok: okFlag,
@@ -370,6 +389,19 @@ interface PendingOrderTerminalRecord {
   toss_status: string;
 }
 
+interface BackendPendingOrder {
+  order_id: string;
+  product_id: string;
+  transaction_id: string;
+}
+
+interface BackendStalePendingStatus {
+  product_id?: string | null;
+  grant_status?: string | null;
+  toss_status?: string | null;
+  terminal_reason?: string | null;
+}
+
 const KNOWN_IAP_PRODUCT_IDS = new Set(
   [...Object.values(IAP_PRODUCTS), ...Object.values(B2B_IAP_PRODUCTS)].map((product) => product.product_id)
 );
@@ -377,6 +409,14 @@ const KNOWN_IAP_PRODUCT_IDS = new Set(
 const TERMINAL_GRANT_STATUSES = new Set(['grant_failed', 'refunded']);
 const TERMINAL_TOSS_STATUSES = new Set(['NOT_FOUND', 'FAILED', 'REFUNDED']);
 const STALE_PENDING_SUPPRESSION_PREFIX = 'iap_stale_pending_suppress_v1';
+
+function devLog(...args: Parameters<typeof console.log>): void {
+  if (__DEV__) console.log(...args);
+}
+
+function devWarn(...args: Parameters<typeof console.warn>): void {
+  if (__DEV__) console.warn(...args);
+}
 
 function isKnownIapProductId(productId: string): boolean {
   return KNOWN_IAP_PRODUCT_IDS.has(productId);
@@ -432,20 +472,27 @@ async function resolveStalePendingOrderReason(
   userId: string,
   order: PendingOrder,
 ): Promise<string | null> {
+  void userId;
   if (!isKnownIapProductId(order.productId)) {
     return 'unknown_product';
   }
 
-  const { data, error } = await supabase
-    .from('toss_orders')
-    .select('product_id, grant_status, toss_status')
-    .eq('user_id', userId)
-    .eq('toss_order_id', order.orderId)
-    .order('created_at', { ascending: false })
-    .limit(1);
-
-  if (error) {
-    console.warn('[IAP-001] stale pending lookup failed', {
+  let record: PendingOrderTerminalRecord | null = null;
+  try {
+    const query = `toss_order_id=${encodeURIComponent(order.orderId)}&product_id=${encodeURIComponent(order.productId)}`;
+    const status = await requestBackend<BackendStalePendingStatus>(
+      `/api/v1/subscription/orders/stale-status?${query}`,
+    );
+    if (status.product_id && status.grant_status && status.toss_status) {
+      record = {
+        product_id: status.product_id,
+        grant_status: status.grant_status,
+        toss_status: status.toss_status,
+      };
+    }
+    if (status.terminal_reason) return status.terminal_reason;
+  } catch (error) {
+    devWarn('[IAP-001] stale pending lookup failed', {
       orderId: order.orderId,
       productId: order.productId,
       message: error instanceof Error ? error.message : String(error),
@@ -453,7 +500,6 @@ async function resolveStalePendingOrderReason(
     return null;
   }
 
-  const record = (Array.isArray(data) ? data[0] : null) as PendingOrderTerminalRecord | null;
   if (!record || record.product_id !== order.productId) {
     return null;
   }
@@ -467,20 +513,20 @@ async function resolveStalePendingOrderReason(
 }
 
 async function dismissStalePendingOrder(order: PendingOrder, reason: string): Promise<void> {
-  console.warn('[IAP-001] dismissing stale pending order', {
+  devWarn('[IAP-001] dismissing stale pending order', {
     orderId: order.orderId,
     productId: order.productId,
     reason,
   });
   try {
     await IAP.completeProductGrant({ params: { orderId: order.orderId } });
-    console.log('[IAP-001] stale pending order dismissed', {
+    devLog('[IAP-001] stale pending order dismissed', {
       orderId: order.orderId,
       productId: order.productId,
       reason,
     });
   } catch (error) {
-    console.warn('[IAP-001] stale pending dismiss failed', {
+    devWarn('[IAP-001] stale pending dismiss failed', {
       orderId: order.orderId,
       productId: order.productId,
       reason,
@@ -494,7 +540,7 @@ async function dismissStalePendingOrder(order: PendingOrder, reason: string): Pr
  * 실 SDK(IAP.getPendingOrders)를 우선 조회하고, 미지원/실패 시 DB pending 이력으로 폴백한다.
  */
 export async function getPendingOrders(userId: string): Promise<PendingOrder[]> {
-  console.log('[IAP-001] getPendingOrders start', { userId });
+  devLog('[IAP-001] getPendingOrders start', { userId });
   try {
     const pending = typeof IAP.getPendingOrders === 'function'
       ? await IAP.getPendingOrders()
@@ -505,35 +551,29 @@ export async function getPendingOrders(userId: string): Promise<PendingOrder[]> 
         productId: order.sku,
         transactionId: order.orderId,
       }));
-      console.log('[IAP-001] getPendingOrders sdk result', { count: orders.length });
+      devLog('[IAP-001] getPendingOrders sdk result', { count: orders.length });
       return orders;
     }
-    console.log('[IAP-001] getPendingOrders sdk result', { count: 0 });
+    devLog('[IAP-001] getPendingOrders sdk result', { count: 0 });
   } catch (error) {
-    console.warn('[IAP-001] getPendingOrders SDK failed, falling back to DB', error);
+    devWarn('[IAP-001] getPendingOrders SDK failed, falling back to DB', error);
   }
 
-  const { data, error } = await supabase
-    .from('toss_orders')
-    .select('toss_order_id, product_id, id')
-    .eq('user_id', userId)
-    .eq('grant_status', 'pending')
-    .order('created_at', { ascending: true });
-
-  if (error || !data) {
-    console.warn('[IAP-001] getPendingOrders db failed', {
+  try {
+    const data = await requestBackend<BackendPendingOrder[]>('/api/v1/subscription/orders/pending');
+    const orders = data.map((row) => ({
+      orderId: row.order_id,
+      productId: row.product_id,
+      transactionId: row.transaction_id,
+    }));
+    devLog('[IAP-001] getPendingOrders backend result', { count: orders.length });
+    return orders;
+  } catch (error) {
+    devWarn('[IAP-001] getPendingOrders backend failed', {
       message: error instanceof Error ? error.message : String(error),
     });
     return [];
   }
-
-  const orders = data.map((row) => ({
-    orderId: row.toss_order_id ?? row.id,
-    productId: row.product_id,
-    transactionId: row.toss_order_id ?? row.id,
-  }));
-  console.log('[IAP-001] getPendingOrders db result', { count: orders.length });
-  return orders;
 }
 
 /**
@@ -541,7 +581,7 @@ export async function getPendingOrders(userId: string): Promise<PendingOrder[]> 
  * 서버 검증/지급 후 실 SDK completeProductGrant로 Toss pending 상태를 닫는다.
  */
 export async function completeProductGrant(order: PendingOrder): Promise<boolean> {
-  console.log('[IAP-001] pending completeProductGrant start', {
+  devLog('[IAP-001] pending completeProductGrant start', {
     orderId: order.orderId,
     productId: order.productId,
   });
@@ -552,21 +592,21 @@ export async function completeProductGrant(order: PendingOrder): Promise<boolean
   });
   if (granted) {
     try {
-      console.log('[IAP-001] completeProductGrant start', {
+      devLog('[IAP-001] completeProductGrant start', {
         orderId: order.orderId,
         productId: order.productId,
       });
       await IAP.completeProductGrant({ params: { orderId: order.orderId } });
-      console.log('[IAP-001] completeProductGrant done', {
+      devLog('[IAP-001] completeProductGrant done', {
         orderId: order.orderId,
         productId: order.productId,
       });
     } catch (error) {
-      console.warn('[IAP-001] completeProductGrant SDK failed after server grant', error);
+      devWarn('[IAP-001] completeProductGrant SDK failed after server grant', error);
     }
     tracker.iapPurchaseSuccess(order.productId);
   } else {
-    console.warn('[IAP-001] pending completeProductGrant skipped: server grant failed', {
+    devWarn('[IAP-001] pending completeProductGrant skipped: server grant failed', {
       orderId: order.orderId,
       productId: order.productId,
     });
@@ -578,13 +618,13 @@ export async function completeProductGrant(order: PendingOrder): Promise<boolean
  * recoverPendingOrders — 앱 시작 시 미완료 주문 일괄 복구
  */
 export async function recoverPendingOrders(userId: string): Promise<number> {
-  console.log('[IAP-001] recoverPendingOrders start', { userId });
+  devLog('[IAP-001] recoverPendingOrders start', { userId });
   const pending = await getPendingOrders(userId);
   let recovered = 0;
   for (const order of pending) {
     const suppressedReason = await getSuppressedStalePendingReason(userId, order);
     if (suppressedReason) {
-      console.log('[IAP-001] stale pending order suppressed', {
+      devLog('[IAP-001] stale pending order suppressed', {
         orderId: order.orderId,
         productId: order.productId,
         reason: suppressedReason,
@@ -600,7 +640,7 @@ export async function recoverPendingOrders(userId: string): Promise<number> {
     const ok = await completeProductGrant(order);
     if (ok) recovered++;
   }
-  console.log('[IAP-001] recoverPendingOrders done', {
+  devLog('[IAP-001] recoverPendingOrders done', {
     userId,
     pending: pending.length,
     recovered,
@@ -614,7 +654,7 @@ export async function recoverPendingOrders(userId: string): Promise<number> {
 
 /**
  * getPendingOrdersB2B — B2B 미완료 주문 조회
- * org_id 또는 trainer_user_id 기준으로 toss_orders에서 grant_status='pending' 필터
+ * 서버가 JWT 사용자와 org/trainer scope를 검증한 뒤 pending 주문만 반환한다.
  */
 export async function getPendingOrdersB2B(
   orgId?: string,
@@ -622,26 +662,25 @@ export async function getPendingOrdersB2B(
 ): Promise<PendingOrder[]> {
   if (!orgId && !trainerUserId) return [];
 
-  let query = supabase
-    .from('toss_orders')
-    .select('toss_order_id, product_id, id')
-    .eq('grant_status', 'pending')
-    .order('created_at', { ascending: true });
+  const query = orgId
+    ? `org_id=${encodeURIComponent(orgId)}`
+    : `trainer_user_id=${encodeURIComponent(trainerUserId!)}`;
 
-  if (orgId) {
-    query = query.eq('org_id', orgId);
-  } else if (trainerUserId) {
-    query = query.eq('trainer_user_id', trainerUserId);
+  try {
+    const data = await requestBackend<BackendPendingOrder[]>(
+      `/api/v1/subscription/orders/pending/b2b?${query}`,
+    );
+    return data.map((row) => ({
+      orderId: row.order_id,
+      productId: row.product_id,
+      transactionId: row.transaction_id,
+    }));
+  } catch (error) {
+    devWarn('[IAP-001/B2B-001] getPendingOrdersB2B backend failed', {
+      message: error instanceof Error ? error.message : String(error),
+    });
+    return [];
   }
-
-  const { data, error } = await query;
-  if (error || !data) return [];
-
-  return data.map((row) => ({
-    orderId: row.toss_order_id ?? row.id,
-    productId: row.product_id,
-    transactionId: row.toss_order_id ?? row.id,
-  }));
 }
 
 /**

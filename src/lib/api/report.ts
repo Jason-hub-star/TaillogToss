@@ -4,8 +4,8 @@
  */
 import { getTossShareLink, share } from '@apps-in-toss/framework';
 import { supabase } from './supabase';
-import { requestBackend, requestBackendPublic, withBackendFallback } from './backend';
-import type { DailyReport, ParentInteraction, ReportTemplateType } from 'types/b2b';
+import { requestBackend, requestBackendPublic } from './backend';
+import type { DailyReport, ParentInteraction, PublicDailyReport, ReportTemplateType } from 'types/b2b';
 
 interface EdgeResult<T> {
   ok: boolean;
@@ -19,6 +19,38 @@ interface EdgeResult<T> {
 
 const REPORT_APP_DEEP_LINK_BASE = 'intoss://taillog-app';
 
+function isJwtLike(token: string): boolean {
+  return token.split('.').length === 3;
+}
+
+async function clearInvalidSession(): Promise<void> {
+  try {
+    await supabase.auth.signOut();
+  } catch {
+    // Local cleanup is best-effort; protected Edge calls still fail closed.
+  }
+}
+
+async function getVerifiedAccessToken(): Promise<string> {
+  const { data, error } = await supabase.auth.getSession();
+  if (error) throw error;
+
+  const accessToken = data.session?.access_token;
+  if (!accessToken) throw new Error('NO_SESSION');
+  if (!isJwtLike(accessToken)) {
+    await clearInvalidSession();
+    throw new Error('INVALID_SESSION');
+  }
+
+  const { data: userData, error: userError } = await supabase.auth.getUser(accessToken);
+  if (userError || !userData.user) {
+    await clearInvalidSession();
+    throw new Error('INVALID_SESSION');
+  }
+
+  return accessToken;
+}
+
 export function buildReportDeepLink(shareToken: string): string {
   return `${REPORT_APP_DEEP_LINK_BASE}/parent/reports?token=${encodeURIComponent(shareToken)}`;
 }
@@ -28,84 +60,37 @@ function buildReportShareMessage(tossShareUrl: string): string {
 }
 
 async function persistReportShareUrl(reportId: string, tossShareUrl: string): Promise<DailyReport> {
-  const { data, error } = await supabase
-    .from('daily_reports')
-    .update({ toss_share_url: tossShareUrl })
-    .eq('id', reportId)
-    .select()
-    .single();
-  if (error) throw error;
-  return data as DailyReport;
+  return requestBackend<DailyReport, { toss_share_url: string }>(`/api/v1/report/${reportId}`, {
+    method: 'PATCH',
+    body: { toss_share_url: tossShareUrl },
+  });
 }
 
 /** 리포트 목록 (조직 기준, 날짜 필터) */
 export async function getOrgReports(orgId: string, date?: string): Promise<DailyReport[]> {
-  return withBackendFallback(
-    () => {
-      const qs = date ? `?date=${encodeURIComponent(date)}` : '';
-      return requestBackend<DailyReport[]>(`/api/v1/report/org/${orgId}${qs}`);
-    },
-    async () => {
-      let query = supabase
-        .from('daily_reports')
-        .select('*')
-        .eq('created_by_org_id', orgId)
-        .order('report_date', { ascending: false });
-      if (date) {
-        query = query.eq('report_date', date);
-      }
-      const { data, error } = await query;
-      if (error) throw error;
-      return data as DailyReport[];
-    },
-  );
+  const qs = date ? `?date=${encodeURIComponent(date)}` : '';
+  return requestBackend<DailyReport[]>(`/api/v1/report/org/${orgId}${qs}`);
 }
 
 /** 리포트 목록 (강아지 기준) */
 export async function getDogReports(dogId: string): Promise<DailyReport[]> {
-  return withBackendFallback(
-    () => requestBackend<DailyReport[]>(`/api/v1/report/dog/${dogId}`),
-    async () => {
-      const { data, error } = await supabase
-        .from('daily_reports')
-        .select('*')
-        .eq('dog_id', dogId)
-        .order('report_date', { ascending: false });
-      if (error) throw error;
-      return data as DailyReport[];
-    },
-  );
+  return requestBackend<DailyReport[]>(`/api/v1/report/dog/${dogId}`);
 }
 
 /** 리포트 상세 조회 */
 export async function getReport(reportId: string): Promise<DailyReport> {
-  return withBackendFallback(
-    () => requestBackend<DailyReport>(`/api/v1/report/${reportId}`),
-    async () => {
-      const { data, error } = await supabase
-        .from('daily_reports')
-        .select('*')
-        .eq('id', reportId)
-        .single();
-      if (error) throw error;
-      return data as DailyReport;
-    },
-  );
+  return requestBackend<DailyReport>(`/api/v1/report/${reportId}`);
 }
 
 /** 공유 토큰으로 리포트 조회 (비인증 보호자) */
-export async function getReportByShareToken(token: string): Promise<DailyReport> {
-  return withBackendFallback(
-    () => requestBackendPublic<DailyReport>(`/api/v1/report/share/${encodeURIComponent(token)}`),
-    async () => {
-      const { data, error } = await supabase
-        .from('daily_reports')
-        .select('*')
-        .eq('share_token', token)
-        .single();
-      if (error) throw error;
-      return data as DailyReport;
-    },
+export async function getReportByShareToken(token: string, last4: string): Promise<PublicDailyReport> {
+  const normalizedLast4 = last4.replace(/[^0-9]/g, '').slice(0, 4);
+  if (normalizedLast4.length !== 4) {
+    throw new Error('REPORT_SHARE_PHONE_VERIFICATION_REQUIRED');
+  }
+
+  return requestBackendPublic<PublicDailyReport>(
+    `/api/v1/report/share/${encodeURIComponent(token)}?last4=${encodeURIComponent(normalizedLast4)}`,
   );
 }
 
@@ -116,29 +101,17 @@ export async function verifyParentPhoneLast4(input: {
   const last4 = input.last4.replace(/[^0-9]/g, '').slice(0, 4);
   if (last4.length !== 4) return false;
 
-  return withBackendFallback(
-    async () => {
-      const result = await requestBackendPublic<{ verified: boolean }, { share_token: string; last4: string }>(
-        '/api/v1/report/share/verify-parent-phone',
-        {
-          method: 'POST',
-          body: {
-            share_token: input.share_token,
-            last4,
-          },
-        },
-      );
-      return result.verified;
-    },
-    async () => {
-      const { data, error } = await supabase.rpc('verify_parent_phone_last4', {
-        p_share_token: input.share_token,
-        p_last_four: last4,
-      });
-      if (error) throw error;
-      return data === true;
+  const result = await requestBackendPublic<{ verified: boolean }, { share_token: string; last4: string }>(
+    '/api/v1/report/share/verify-parent-phone',
+    {
+      method: 'POST',
+      body: {
+        share_token: input.share_token,
+        last4,
+      },
     },
   );
+  return result.verified;
 }
 
 async function createPendingReport(input: {
@@ -148,33 +121,14 @@ async function createPendingReport(input: {
   created_by_org_id?: string;
   created_by_trainer_id?: string;
 }): Promise<DailyReport> {
-  return withBackendFallback(
-    () =>
-      requestBackend<DailyReport, typeof input>('/api/v1/report/', {
-        method: 'POST',
-        body: input,
-      }),
-    async () => {
-      const { data, error } = await supabase
-        .from('daily_reports')
-        .insert({
-          dog_id: input.dog_id,
-          report_date: input.report_date,
-          template_type: input.template_type,
-          created_by_org_id: input.created_by_org_id ?? null,
-          created_by_trainer_id: input.created_by_trainer_id ?? null,
-          generation_status: 'pending',
-          highlight_photo_urls: [],
-        })
-        .select()
-        .single();
-      if (error) throw error;
-      return data as DailyReport;
-    },
-  );
+  return requestBackend<DailyReport, typeof input>('/api/v1/report/', {
+    method: 'POST',
+    body: input,
+  });
 }
 
 async function generateReportViaEdge(report: DailyReport): Promise<DailyReport> {
+  const accessToken = await getVerifiedAccessToken();
   const { data, error } = await supabase.functions.invoke<EdgeResult<DailyReport>>(
     'generate-report',
     {
@@ -183,6 +137,7 @@ async function generateReportViaEdge(report: DailyReport): Promise<DailyReport> 
         dog_id: report.dog_id,
         report_date: report.report_date,
       },
+      headers: { Authorization: `Bearer ${accessToken}` },
     },
   );
 
@@ -226,25 +181,7 @@ async function finalizeReportShare(report: DailyReport): Promise<DailyReport> {
 
 /** 리포트 발송 (share_token 생성 + toss_share_url 저장 + 공유시트 호출) */
 export async function sendReport(reportId: string): Promise<DailyReport> {
-  const report = await withBackendFallback(
-    () => requestBackend<DailyReport>(`/api/v1/report/${reportId}/send`, { method: 'PATCH' }),
-    async () => {
-      const shareToken = crypto.randomUUID();
-      const { data, error } = await supabase
-        .from('daily_reports')
-        .update({
-          share_token: shareToken,
-          generation_status: 'sent',
-          sent_at: new Date().toISOString(),
-          expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // 30일
-        })
-        .eq('id', reportId)
-        .select()
-        .single();
-      if (error) throw error;
-      return data as DailyReport;
-    },
-  );
+  const report = await requestBackend<DailyReport>(`/api/v1/report/${reportId}/send`, { method: 'PATCH' });
   return finalizeReportShare(report);
 }
 
@@ -253,23 +190,10 @@ export async function updateReport(
   reportId: string,
   updates: Partial<Pick<DailyReport, 'behavior_summary' | 'condition_notes' | 'ai_coaching_oneliner'>>
 ): Promise<DailyReport> {
-  return withBackendFallback(
-    () =>
-      requestBackend<DailyReport, typeof updates>(`/api/v1/report/${reportId}`, {
-        method: 'PATCH',
-        body: updates,
-      }),
-    async () => {
-      const { data, error } = await supabase
-        .from('daily_reports')
-        .update(updates)
-        .eq('id', reportId)
-        .select()
-        .single();
-      if (error) throw error;
-      return data as DailyReport;
-    },
-  );
+  return requestBackend<DailyReport, typeof updates>(`/api/v1/report/${reportId}`, {
+    method: 'PATCH',
+    body: updates,
+  });
 }
 
 /** 보호자 인터랙션 생성 */
@@ -277,45 +201,18 @@ export async function createInteraction(input: {
   report_id: string;
   parent_user_id?: string;
   parent_identifier?: string;
+  share_token?: string;
+  last4?: string;
   interaction_type: ParentInteraction['interaction_type'];
   content?: string;
 }): Promise<ParentInteraction> {
-  return withBackendFallback(
-    () =>
-      requestBackendPublic<ParentInteraction, typeof input>('/api/v1/report/interactions', {
-        method: 'POST',
-        body: input,
-      }),
-    async () => {
-      const { data, error } = await supabase
-        .from('parent_interactions')
-        .insert({
-          report_id: input.report_id,
-          parent_user_id: input.parent_user_id ?? null,
-          parent_identifier: input.parent_identifier ?? null,
-          interaction_type: input.interaction_type,
-          content: input.content ?? null,
-        })
-        .select()
-        .single();
-      if (error) throw error;
-      return data as ParentInteraction;
-    },
-  );
+  return requestBackendPublic<ParentInteraction, typeof input>('/api/v1/report/interactions', {
+    method: 'POST',
+    body: input,
+  });
 }
 
 /** 리포트 인터랙션 목록 조회 */
 export async function getReportInteractions(reportId: string): Promise<ParentInteraction[]> {
-  return withBackendFallback(
-    () => requestBackend<ParentInteraction[]>(`/api/v1/report/${reportId}/interactions`),
-    async () => {
-      const { data, error } = await supabase
-        .from('parent_interactions')
-        .select('*')
-        .eq('report_id', reportId)
-        .order('created_at', { ascending: true });
-      if (error) throw error;
-      return data as ParentInteraction[];
-    },
-  );
+  return requestBackend<ParentInteraction[]>(`/api/v1/report/${reportId}/interactions`);
 }

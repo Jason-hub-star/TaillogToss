@@ -60,9 +60,9 @@ interface VerifyIapDeps {
   now: () => Date;
 }
 
-function defaultDeps(): VerifyIapDeps {
+function defaultDeps(overrides?: Partial<VerifyIapDeps>): VerifyIapDeps {
   return {
-    mTLSClient: createMTLSClient(resolveMtlsMode()),
+    mTLSClient: overrides?.mTLSClient ?? createMTLSClient(resolveMtlsMode()),
     breaker: iapCircuitBreaker,
     idempotency: edgeIdempotencyStore,
     now: () => new Date(),
@@ -123,7 +123,7 @@ function withIapTimeout<T>(promise: Promise<T>): Promise<T> {
 }
 
 export function createVerifyIapOrderHandler(overrides?: Partial<VerifyIapDeps>) {
-  const deps = { ...defaultDeps(), ...(overrides ?? {}) };
+  const deps = { ...defaultDeps(overrides), ...(overrides ?? {}) };
 
   return async (
     request: VerifyIapOrderRequest,
@@ -205,4 +205,9 @@ export function createVerifyIapOrderHandler(overrides?: Partial<VerifyIapDeps>) 
   };
 }
 
-export const handleVerifyIapOrder = createVerifyIapOrderHandler();
+let defaultHandler: ReturnType<typeof createVerifyIapOrderHandler> | null = null;
+
+export const handleVerifyIapOrder: ReturnType<typeof createVerifyIapOrderHandler> = (request, context) => {
+  defaultHandler ??= createVerifyIapOrderHandler();
+  return defaultHandler(request, context);
+};

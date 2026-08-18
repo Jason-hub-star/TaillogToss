@@ -11,9 +11,9 @@
 
 | 페이즈 | 완료 조건 | 자기리뷰 | 문서 | 상태 |
 |--------|----------|---------|------|------|
-| **Phase 1** (타입+메타) | tsc 통과, planMeta 7개 커리큘럼 모두 추가 | `/self-review` | `docs/daily/04-22/training-plan-phase1.md` | ✅ |
-| **Phase 2** (스텝 재작성) | null altB 50% 이상 감소 (74 → 37 이하) | `/self-review` | `docs/daily/04-22/training-plan-phase2.md` | ✅ |
-| **Phase 3** (UI 뱃지) | VariantSelector에 철학 뱃지 렌더링 | `/self-review` | `docs/daily/04-22/training-plan-phase3.md` | ✅ |
+| **Phase 1** (타입+메타) | tsc 통과, planMeta 7개 커리큘럼 모두 추가 | `/self-review` | `docs/weekly/2026-W17.md` | ✅ |
+| **Phase 2** (스텝 재작성) | null altB 50% 이상 감소 (74 → 37 이하) | `/self-review` | `docs/weekly/2026-W17.md` | ✅ |
+| **Phase 3** (UI 뱃지) | VariantSelector에 철학 뱃지 렌더링 | `/self-review` | `docs/weekly/2026-W17.md` | ✅ |
 | **Phase 4** (자동화) | `training-data-maintenance.prompt.md` 생성, cron 등록 | `/self-review` | `docs/status/TRAINING-DATA-LOG.md` 초기화 | ✅ |
 
 ## 페이즈별 결과 기록

@@ -1,0 +1,21 @@
+- generic [ref=e1]:
+  - generic [ref=e6]:
+    - group [ref=e7]:
+      - img "Toss Business" [ref=e8]
+      - textbox "이메일 또는 ID" [active] [ref=e16]
+      - generic [ref=e21]:
+        - textbox "비밀번호" [ref=e24]
+        - button [ref=e27] [cursor=pointer]:
+          - img [ref=e29]
+      - generic [ref=e39] [cursor=pointer]:
+        - checkbox "이메일 기억하기" [ref=e40]
+        - generic:
+          - generic: 이메일 기억하기
+          - generic [ref=e41]: 이메일 기억하기
+    - button "로그인" [disabled] [ref=e43]:
+      - generic [ref=e44]: 로그인
+    - generic [ref=e48]:
+      - button "회원가입" [ref=e49] [cursor=pointer]
+      - generic [ref=e50]: ·
+      - button "내 계정 찾기" [ref=e51] [cursor=pointer]
+  - list

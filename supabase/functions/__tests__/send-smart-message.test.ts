@@ -1,15 +1,51 @@
 import { createSendSmartMessageHandler } from '../send-smart-message/index.ts';
+import { InMemoryIdempotencyStore } from '../_shared/idempotency.ts';
+import { buildEdgeContext } from '../_shared/httpAdapter.ts';
+
+function toBase64Url(value: string): string {
+  return Buffer.from(value, 'utf8')
+    .toString('base64')
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=+$/g, '');
+}
+
+function createJwt(payload: Record<string, unknown>): string {
+  const header = toBase64Url(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
+  const body = toBase64Url(JSON.stringify(payload));
+  return `${header}.${body}.signature`;
+}
+
+const TEMPLATE_CODES = {
+  LOG_REMINDER: 'taillog-app-TAILLOG_BEHAVIOR_REMIND',
+  STREAK_ALERT: 'taillog-app-TAILLOG_STREAK_ALERT',
+  PROMO: 'taillog-app-TAILLOG_PROMO',
+} as const;
 
 describe('send-smart-message handler', () => {
+  function createMtlsMock() {
+    return {
+      exchangeAuthorizationCode: jest.fn(),
+      fetchLoginProfile: jest.fn(),
+      verifyIapOrder: jest.fn(),
+      getPointsGrantKey: jest.fn(),
+      executePointsGrant: jest.fn(),
+      getPointsGrantResult: jest.fn(),
+      sendSmartMessage: jest.fn(async () => ({
+        messageId: 'message-1',
+        sentAt: '2026-02-26T03:00:00.000Z',
+      })),
+    };
+  }
+
   test('rejects non-admin roles', async () => {
     const handler = createSendSmartMessageHandler();
 
     const result = await handler(
       {
-        userId: 'user-1',
+        userId: '11111111-1111-4111-8111-111111111111',
         notificationType: 'log_reminder',
-        templateCode: 'tpl-1',
-        variables: { dogName: 'Choco' },
+        templateCode: TEMPLATE_CODES.LOG_REMINDER,
         idempotencyKey: 'idem-msg-1',
       },
       { clientKey: 'client-a', role: 'user' }
@@ -19,15 +55,349 @@ describe('send-smart-message handler', () => {
     expect(result.status).toBe(403);
   });
 
+  test('rejects general users before resolving recipients or sending', async () => {
+    const mTLSClient = createMtlsMock();
+    const resolveTossUserKey = jest.fn(async () => 'toss-11111111-1111-4111-8111-111111111111');
+    const handler = createSendSmartMessageHandler({
+      mTLSClient,
+      resolveTossUserKey,
+    });
+
+    const result = await handler(
+      {
+        userId: '11111111-1111-4111-8111-111111111111',
+        notificationType: 'log_reminder',
+        templateCode: TEMPLATE_CODES.LOG_REMINDER,
+        idempotencyKey: 'idem-msg-user',
+      },
+      { clientKey: 'client-a', role: 'user' }
+    );
+
+    expect(result.ok).toBe(false);
+    expect(result.status).toBe(403);
+    expect(resolveTossUserKey).not.toHaveBeenCalled();
+    expect(mTLSClient.sendSmartMessage).not.toHaveBeenCalled();
+  });
+
+  test('ignores x-user-role spoofing before resolving recipients or sending', async () => {
+    const mTLSClient = createMtlsMock();
+    const resolveTossUserKey = jest.fn(async () => 'toss-11111111-1111-4111-8111-111111111111');
+    const handler = createSendSmartMessageHandler({
+      mTLSClient,
+      resolveTossUserKey,
+    });
+    const token = createJwt({ role: 'authenticated', sub: '11111111-1111-4111-8111-111111111111' });
+    const request = new Request('https://example.com/functions/v1/send-smart-message', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'x-user-role': 'trainer',
+      },
+    });
+    const context = buildEdgeContext(request);
+
+    const result = await handler(
+      {
+        userId: '11111111-1111-4111-8111-111111111111',
+        notificationType: 'log_reminder',
+        templateCode: TEMPLATE_CODES.LOG_REMINDER,
+        idempotencyKey: 'idem-msg-spoof',
+      },
+      context
+    );
+
+    expect(context.role).toBeUndefined();
+    expect(context.userId).toBe('11111111-1111-4111-8111-111111111111');
+    expect(result.ok).toBe(false);
+    expect(result.status).toBe(403);
+    expect(resolveTossUserKey).not.toHaveBeenCalled();
+    expect(mTLSClient.sendSmartMessage).not.toHaveBeenCalled();
+  });
+
+  test('does not grant send permission from user_metadata role claims', async () => {
+    const mTLSClient = createMtlsMock();
+    const resolveTossUserKey = jest.fn(async () => 'toss-11111111-1111-4111-8111-111111111111');
+    const handler = createSendSmartMessageHandler({
+      mTLSClient,
+      resolveTossUserKey,
+    });
+    const token = createJwt({
+      role: 'authenticated',
+      sub: '11111111-1111-4111-8111-111111111111',
+      user_metadata: { role: 'trainer' },
+    });
+    const request = new Request('https://example.com/functions/v1/send-smart-message', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const context = buildEdgeContext(request);
+
+    const result = await handler(
+      {
+        userId: '11111111-1111-4111-8111-111111111111',
+        notificationType: 'log_reminder',
+        templateCode: TEMPLATE_CODES.LOG_REMINDER,
+        idempotencyKey: 'idem-msg-user-metadata-role',
+      },
+      context
+    );
+
+    expect(context.role).toBeUndefined();
+    expect(result.ok).toBe(false);
+    expect(result.status).toBe(403);
+    expect(resolveTossUserKey).not.toHaveBeenCalled();
+    expect(mTLSClient.sendSmartMessage).not.toHaveBeenCalled();
+  });
+
+  test('rejects staff role when body userId targets a different user', async () => {
+    const mTLSClient = createMtlsMock();
+    const resolveTossUserKey = jest.fn(async () => 'toss-user-victim');
+    const handler = createSendSmartMessageHandler({
+      mTLSClient,
+      resolveTossUserKey,
+    });
+
+    const result = await handler(
+      {
+        userId: '99999999-9999-4999-8999-999999999999',
+        notificationType: 'log_reminder',
+        templateCode: TEMPLATE_CODES.LOG_REMINDER,
+        idempotencyKey: 'idem-msg-target-mismatch',
+      },
+      { clientKey: 'client-a', role: 'trainer', userId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa' }
+    );
+
+    expect(result.ok).toBe(false);
+    expect(result.status).toBe(403);
+    expect(resolveTossUserKey).not.toHaveBeenCalled();
+    expect(mTLSClient.sendSmartMessage).not.toHaveBeenCalled();
+  });
+
+  test('rejects malformed userId before resolving recipients or sending', async () => {
+    const mTLSClient = createMtlsMock();
+    const resolveTossUserKey = jest.fn(async () => 'toss-user-malformed');
+    const resolveNotificationPref = jest.fn();
+    const handler = createSendSmartMessageHandler({
+      mTLSClient,
+      resolveTossUserKey,
+      resolveNotificationPref,
+    });
+
+    const result = await handler(
+      {
+        userId: 'not-a-user-id',
+        notificationType: 'log_reminder',
+        templateCode: TEMPLATE_CODES.LOG_REMINDER,
+        idempotencyKey: 'idem-msg-malformed-user-id',
+      },
+      { clientKey: 'client-a', role: 'service_role', userId: 'service-worker' }
+    );
+
+    expect(result.ok).toBe(false);
+    expect(result.status).toBe(400);
+    expect(result.error?.code).toBe('VALIDATION_ERROR');
+    expect(resolveNotificationPref).not.toHaveBeenCalled();
+    expect(resolveTossUserKey).not.toHaveBeenCalled();
+    expect(mTLSClient.sendSmartMessage).not.toHaveBeenCalled();
+  });
+
+  test('rejects dynamic template variables before resolving recipients or sending', async () => {
+    const mTLSClient = createMtlsMock();
+    const resolveTossUserKey = jest.fn(async () => 'toss-11111111-1111-4111-8111-111111111111');
+    const resolveNotificationPref = jest.fn();
+    const handler = createSendSmartMessageHandler({
+      mTLSClient,
+      resolveTossUserKey,
+      resolveNotificationPref,
+    });
+
+    const result = await handler(
+      {
+        userId: '11111111-1111-4111-8111-111111111111',
+        notificationType: 'log_reminder',
+        templateCode: TEMPLATE_CODES.LOG_REMINDER,
+        variables: { dogName: 'Choco' },
+        idempotencyKey: 'idem-msg-dynamic-vars',
+      },
+      { clientKey: 'client-a', role: 'trainer', userId: '11111111-1111-4111-8111-111111111111' }
+    );
+
+    expect(result.ok).toBe(false);
+    expect(result.status).toBe(400);
+    expect(result.error?.code).toBe('VALIDATION_ERROR');
+    expect(resolveNotificationPref).not.toHaveBeenCalled();
+    expect(resolveTossUserKey).not.toHaveBeenCalled();
+    expect(mTLSClient.sendSmartMessage).not.toHaveBeenCalled();
+  });
+
+  test('rejects unapproved template codes before preference lookup or sending', async () => {
+    const mTLSClient = createMtlsMock();
+    const resolveTossUserKey = jest.fn(async () => 'toss-11111111-1111-4111-8111-111111111111');
+    const resolveNotificationPref = jest.fn();
+    const handler = createSendSmartMessageHandler({
+      mTLSClient,
+      resolveTossUserKey,
+      resolveNotificationPref,
+    });
+
+    const result = await handler(
+      {
+        userId: '11111111-1111-4111-8111-111111111111',
+        notificationType: 'log_reminder',
+        templateCode: 'attacker-controlled-template',
+        idempotencyKey: 'idem-msg-template-spoof',
+      },
+      { clientKey: 'client-a', role: 'trainer', userId: '11111111-1111-4111-8111-111111111111' }
+    );
+
+    expect(result.ok).toBe(false);
+    expect(result.status).toBe(400);
+    expect(result.error?.code).toBe('VALIDATION_ERROR');
+    expect(resolveNotificationPref).not.toHaveBeenCalled();
+    expect(resolveTossUserKey).not.toHaveBeenCalled();
+    expect(mTLSClient.sendSmartMessage).not.toHaveBeenCalled();
+  });
+
+  test('replays successful idempotency response without sending twice', async () => {
+    const fixedNow = new Date('2026-02-26T03:00:00.000Z'); // KST 12:00
+    const mTLSClient = createMtlsMock();
+    const handler = createSendSmartMessageHandler({
+      mTLSClient,
+      getNow: () => fixedNow,
+      history: [],
+      idempotency: new InMemoryIdempotencyStore(),
+      resolveTossUserKey: async () => 'toss-22222222-2222-4222-8222-222222222222',
+      resolveNotificationPref: async () => ({
+        channels: { smart_message: true, push: true },
+        types: {
+          log_reminder: true,
+          streak_alert: true,
+          coaching_ready: true,
+          training_reminder: true,
+          surge_alert: true,
+          promo: true,
+        },
+        marketing_agreed: true,
+        quiet_hours: { enabled: false, start_hour: 22, end_hour: 8 },
+      }),
+    });
+    const request = {
+      userId: '22222222-2222-4222-8222-222222222222',
+      notificationType: 'log_reminder' as const,
+      templateCode: TEMPLATE_CODES.LOG_REMINDER,
+      idempotencyKey: 'idem-msg-replay',
+    };
+
+    const first = await handler(request, { clientKey: 'client-b', role: 'trainer', userId: '22222222-2222-4222-8222-222222222222' });
+    const replay = await handler(request, { clientKey: 'client-b', role: 'trainer', userId: '22222222-2222-4222-8222-222222222222' });
+
+    expect(first.ok).toBe(true);
+    expect(replay.ok).toBe(true);
+    expect(replay.data).toEqual(first.data);
+    expect(mTLSClient.sendSmartMessage).toHaveBeenCalledTimes(1);
+  });
+
+  test('rejects same idempotency key when the message target changes', async () => {
+    const fixedNow = new Date('2026-02-26T03:00:00.000Z'); // KST 12:00
+    const mTLSClient = createMtlsMock();
+    const handler = createSendSmartMessageHandler({
+      mTLSClient,
+      getNow: () => fixedNow,
+      history: [],
+      idempotency: new InMemoryIdempotencyStore(),
+      resolveTossUserKey: async (userId) => `toss-${userId}`,
+      resolveNotificationPref: async () => ({
+        channels: { smart_message: true, push: true },
+        types: {
+          log_reminder: true,
+          streak_alert: true,
+          coaching_ready: true,
+          training_reminder: true,
+          surge_alert: true,
+          promo: true,
+        },
+        marketing_agreed: true,
+        quiet_hours: { enabled: false, start_hour: 22, end_hour: 8 },
+      }),
+    });
+    const request = {
+      userId: '11111111-1111-4111-8111-111111111111',
+      notificationType: 'log_reminder' as const,
+      templateCode: TEMPLATE_CODES.LOG_REMINDER,
+      idempotencyKey: 'idem-msg-replay',
+    };
+
+    const first = await handler(request, { clientKey: 'client-a', role: 'trainer', userId: '11111111-1111-4111-8111-111111111111' });
+    const second = await handler(
+      {
+        ...request,
+        userId: '22222222-2222-4222-8222-222222222222',
+      },
+      { clientKey: 'client-a', role: 'trainer', userId: '22222222-2222-4222-8222-222222222222' }
+    );
+
+    expect(first.ok).toBe(true);
+    expect(second.ok).toBe(false);
+    expect(second.status).toBe(409);
+    expect(second.error?.code).toBe('IDEMPOTENCY_KEY_CONFLICT');
+    expect(mTLSClient.sendSmartMessage).toHaveBeenCalledTimes(1);
+  });
+
+  test('rejects same idempotency key when the approved message template changes', async () => {
+    const fixedNow = new Date('2026-02-26T03:00:00.000Z'); // KST 12:00
+    const mTLSClient = createMtlsMock();
+    const handler = createSendSmartMessageHandler({
+      mTLSClient,
+      getNow: () => fixedNow,
+      history: [],
+      idempotency: new InMemoryIdempotencyStore(),
+      resolveTossUserKey: async (userId) => `toss-${userId}`,
+      resolveNotificationPref: async () => ({
+        channels: { smart_message: true, push: true },
+        types: {
+          log_reminder: true,
+          streak_alert: true,
+          coaching_ready: true,
+          training_reminder: true,
+          surge_alert: true,
+          promo: true,
+        },
+        marketing_agreed: true,
+        quiet_hours: { enabled: false, start_hour: 22, end_hour: 8 },
+      }),
+    });
+    const request = {
+      userId: '11111111-1111-4111-8111-111111111111',
+      notificationType: 'log_reminder' as const,
+      templateCode: TEMPLATE_CODES.LOG_REMINDER,
+      idempotencyKey: 'idem-msg-template-replay',
+    };
+
+    const first = await handler(request, { clientKey: 'client-a', role: 'trainer', userId: '11111111-1111-4111-8111-111111111111' });
+    const second = await handler(
+      {
+        ...request,
+        notificationType: 'streak_alert' as const,
+        templateCode: TEMPLATE_CODES.STREAK_ALERT,
+      },
+      { clientKey: 'client-a', role: 'trainer', userId: '11111111-1111-4111-8111-111111111111' }
+    );
+
+    expect(first.ok).toBe(true);
+    expect(second.ok).toBe(false);
+    expect(second.status).toBe(409);
+    expect(second.error?.code).toBe('IDEMPOTENCY_KEY_CONFLICT');
+    expect(mTLSClient.sendSmartMessage).toHaveBeenCalledTimes(1);
+  });
+
   test('applies cooldown after first successful send', async () => {
     const fixedNow = new Date('2026-02-26T03:00:00.000Z'); // KST 12:00
     const handler = createSendSmartMessageHandler({ getNow: () => fixedNow, history: [] });
 
     const requestA = {
-      userId: 'user-1',
+      userId: '11111111-1111-4111-8111-111111111111',
       notificationType: 'log_reminder' as const,
-      templateCode: 'tpl-1',
-      variables: { dogName: 'Choco' },
+      templateCode: TEMPLATE_CODES.LOG_REMINDER,
       idempotencyKey: 'idem-msg-2',
     };
 
@@ -36,8 +406,8 @@ describe('send-smart-message handler', () => {
       idempotencyKey: 'idem-msg-3',
     };
 
-    const first = await handler(requestA, { clientKey: 'client-a', role: 'trainer' });
-    const second = await handler(requestB, { clientKey: 'client-a', role: 'trainer' });
+    const first = await handler(requestA, { clientKey: 'client-a', role: 'trainer', userId: '11111111-1111-4111-8111-111111111111' });
+    const second = await handler(requestB, { clientKey: 'client-a', role: 'trainer', userId: '11111111-1111-4111-8111-111111111111' });
 
     expect(first.ok).toBe(true);
     expect(second.ok).toBe(false);
@@ -58,15 +428,14 @@ describe('send-smart-message handler', () => {
     });
 
     const request = {
-      userId: 'user-2',
+      userId: '22222222-2222-4222-8222-222222222222',
       notificationType: 'streak_alert' as const,
-      templateCode: 'tpl-2',
-      variables: { streak: '3' },
+      templateCode: TEMPLATE_CODES.STREAK_ALERT,
       idempotencyKey: 'idem-msg-4',
     };
 
-    const first = await handler(request, { clientKey: 'client-b', role: 'trainer' });
-    const replay = await handler(request, { clientKey: 'client-b', role: 'trainer' });
+    const first = await handler(request, { clientKey: 'client-b', role: 'trainer', userId: '22222222-2222-4222-8222-222222222222' });
+    const replay = await handler(request, { clientKey: 'client-b', role: 'trainer', userId: '22222222-2222-4222-8222-222222222222' });
 
     expect(first.ok).toBe(true);
     expect(first.data?.noti_history.error_code).toBe('NOTI_HISTORY_WRITE_FAILED');
@@ -93,12 +462,12 @@ describe('send-smart-message handler', () => {
 
     const result = await handler(
       {
-        userId: 'user-3',
+        userId: '33333333-3333-4333-8333-333333333333',
         notificationType: 'log_reminder',
-        templateCode: 'tpl-3',
+        templateCode: TEMPLATE_CODES.LOG_REMINDER,
         idempotencyKey: 'idem-msg-5',
       },
-      { clientKey: 'client-c', role: 'trainer' }
+      { clientKey: 'client-c', role: 'trainer', userId: '33333333-3333-4333-8333-333333333333' }
     );
 
     expect(result.ok).toBe(false);
@@ -125,12 +494,12 @@ describe('send-smart-message handler', () => {
 
     const result = await handler(
       {
-        userId: 'user-4',
+        userId: '44444444-4444-4444-8444-444444444444',
         notificationType: 'log_reminder',
-        templateCode: 'tpl-4',
+        templateCode: TEMPLATE_CODES.LOG_REMINDER,
         idempotencyKey: 'idem-msg-6',
       },
-      { clientKey: 'client-d', role: 'trainer' }
+      { clientKey: 'client-d', role: 'trainer', userId: '44444444-4444-4444-8444-444444444444' }
     );
 
     expect(result.ok).toBe(false);
@@ -181,12 +550,12 @@ describe('send-smart-message handler', () => {
     try {
       const result = await handler(
         {
-          userId: 'user-6',
+          userId: '66666666-6666-4666-8666-666666666666',
           notificationType: 'log_reminder',
-          templateCode: 'tpl-6',
+          templateCode: TEMPLATE_CODES.LOG_REMINDER,
           idempotencyKey: 'idem-msg-8',
         },
-        { clientKey: 'client-f', role: 'trainer' }
+        { clientKey: 'client-f', role: 'trainer', userId: '66666666-6666-4666-8666-666666666666' }
       );
 
       expect(result.ok).toBe(false);
@@ -239,12 +608,12 @@ describe('send-smart-message handler', () => {
 
     const result = await handler(
       {
-        userId: 'user-7',
+        userId: '77777777-7777-4777-8777-777777777777',
         notificationType: 'promo',
-        templateCode: 'tpl-promo',
+        templateCode: TEMPLATE_CODES.PROMO,
         idempotencyKey: 'idem-msg-9',
       },
-      { clientKey: 'client-g', role: 'trainer' }
+      { clientKey: 'client-g', role: 'trainer', userId: '77777777-7777-4777-8777-777777777777' }
     );
 
     expect(result.ok).toBe(false);
@@ -258,7 +627,7 @@ describe('send-smart-message handler', () => {
     const handler = createSendSmartMessageHandler({
       getNow: () => fixedNow,
       history: [],
-      resolveTossUserKey: async () => 'toss-user-8',
+      resolveTossUserKey: async () => 'toss-88888888-8888-4888-8888-888888888888',
       resolveNotificationPref: async () => ({
         channels: { smart_message: true, push: true },
         types: {
@@ -276,12 +645,12 @@ describe('send-smart-message handler', () => {
 
     const result = await handler(
       {
-        userId: 'user-8',
+        userId: '88888888-8888-4888-8888-888888888888',
         notificationType: 'promo',
-        templateCode: 'tpl-promo',
+        templateCode: TEMPLATE_CODES.PROMO,
         idempotencyKey: 'idem-msg-10',
       },
-      { clientKey: 'client-h', role: 'trainer' }
+      { clientKey: 'client-h', role: 'trainer', userId: '88888888-8888-4888-8888-888888888888' }
     );
 
     expect(result.ok).toBe(true);
@@ -311,12 +680,12 @@ describe('send-smart-message handler', () => {
 
     const result = await handler(
       {
-        userId: 'user-5',
+        userId: '55555555-5555-4555-8555-555555555555',
         notificationType: 'log_reminder',
-        templateCode: 'tpl-5',
+        templateCode: TEMPLATE_CODES.LOG_REMINDER,
         idempotencyKey: 'idem-msg-7',
       },
-      { clientKey: 'client-e', role: 'trainer' }
+      { clientKey: 'client-e', role: 'trainer', userId: '55555555-5555-4555-8555-555555555555' }
     );
 
     expect(result.ok).toBe(false);

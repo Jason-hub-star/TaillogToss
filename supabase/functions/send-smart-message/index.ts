@@ -77,6 +77,7 @@ interface SendSmartMessageDeps {
 }
 
 const historyStore: CooldownRecord[] = [];
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 const DEFAULT_NOTIFICATION_PREF: NotificationPreference = {
   channels: { smart_message: true, push: true },
@@ -92,9 +93,18 @@ const DEFAULT_NOTIFICATION_PREF: NotificationPreference = {
   quiet_hours: { enabled: true, start_hour: 22, end_hour: 8 },
 };
 
-function defaultDeps(): SendSmartMessageDeps {
+const APPROVED_TEMPLATE_CODES: Record<NotificationType, string> = {
+  log_reminder: 'taillog-app-TAILLOG_BEHAVIOR_REMIND',
+  streak_alert: 'taillog-app-TAILLOG_STREAK_ALERT',
+  coaching_ready: 'taillog-app-TAILLOG_COACHING_READY',
+  training_reminder: 'taillog-app-TAILLOG_TRAINING_REMIND',
+  surge_alert: 'taillog-app-TAILLOG_SURGE_ALERT',
+  promo: 'taillog-app-TAILLOG_PROMO',
+};
+
+function defaultDeps(overrides?: Partial<SendSmartMessageDeps>): SendSmartMessageDeps {
   return {
-    mTLSClient: createMTLSClient(resolveMtlsMode()),
+    mTLSClient: overrides?.mTLSClient ?? createMTLSClient(resolveMtlsMode()),
     idempotency: edgeIdempotencyStore,
     getNow: () => new Date(),
     history: historyStore,
@@ -234,6 +244,10 @@ function resolveIdempotentResponse(
 ): EdgeResult<SendSmartMessageResponse> | null {
   if (begin.kind === 'new') return null;
 
+  if (begin.kind === 'conflict') {
+    return fail('IDEMPOTENCY_KEY_CONFLICT', 'Idempotency key is already bound to another smart message request', 409);
+  }
+
   const record = begin.record;
   if (record.status === 'completed' && record.response) {
     return ok(record.response);
@@ -246,6 +260,33 @@ function resolveIdempotentResponse(
 
 function isAdminRole(role: EdgeContext['role']): boolean {
   return role === 'trainer' || role === 'org_owner' || role === 'org_staff' || role === 'service_role';
+}
+
+function isUuid(value: string | null | undefined): value is string {
+  return typeof value === 'string' && UUID_PATTERN.test(value);
+}
+
+function canSendToTarget(context: EdgeContext, userId: string): boolean {
+  if (context.role === 'service_role') return true;
+  return Boolean(context.userId && context.userId === userId);
+}
+
+function hasDynamicVariables(variables: SendSmartMessageRequest['variables']): boolean {
+  return Boolean(variables && Object.keys(variables).length > 0);
+}
+
+function isApprovedTemplateCode(type: NotificationType, templateCode: string): boolean {
+  return APPROVED_TEMPLATE_CODES[type] === templateCode;
+}
+
+function buildSmartMessageRequestFingerprint(request: SendSmartMessageRequest): string {
+  return JSON.stringify({
+    userId: request.userId,
+    notificationType: request.notificationType,
+    templateCode: request.templateCode,
+    variables: request.variables ?? {},
+    idempotencyKey: request.idempotencyKey,
+  });
 }
 
 function createFallbackHistory(
@@ -264,7 +305,7 @@ function createFallbackHistory(
 }
 
 export function createSendSmartMessageHandler(overrides?: Partial<SendSmartMessageDeps>) {
-  const baseDeps = defaultDeps();
+  const baseDeps = defaultDeps(overrides);
   const deps = {
     ...baseDeps,
     ...(overrides ?? {}),
@@ -287,9 +328,26 @@ export function createSendSmartMessageHandler(overrides?: Partial<SendSmartMessa
       return fail('VALIDATION_ERROR', 'userId/notificationType/templateCode/idempotencyKey are required', 400);
     }
 
+    if (!isUuid(request.userId)) {
+      return fail('VALIDATION_ERROR', 'userId must be a UUID', 400);
+    }
+
+    if (!isApprovedTemplateCode(request.notificationType, request.templateCode)) {
+      return fail('VALIDATION_ERROR', 'Smart Message templateCode must match an approved notification type', 400);
+    }
+
+    if (hasDynamicVariables(request.variables)) {
+      return fail('VALIDATION_ERROR', 'Smart Message templates must use approved static text only', 400);
+    }
+
+    if (!canSendToTarget(context, request.userId)) {
+      return fail('AUTH_FORBIDDEN', 'Caller cannot send smart messages to another user', 403);
+    }
+
     const begin = deps.idempotency.begin<SendSmartMessageResponse>(
       'send-smart-message',
-      request.idempotencyKey
+      request.idempotencyKey,
+      buildSmartMessageRequestFingerprint(request)
     );
     const replay = resolveIdempotentResponse(begin);
     if (replay) return replay;
@@ -389,4 +447,9 @@ export function createSendSmartMessageHandler(overrides?: Partial<SendSmartMessa
   };
 }
 
-export const handleSendSmartMessage = createSendSmartMessageHandler();
+let defaultHandler: ReturnType<typeof createSendSmartMessageHandler> | null = null;
+
+export const handleSendSmartMessage: ReturnType<typeof createSendSmartMessageHandler> = (request, context) => {
+  defaultHandler ??= createSendSmartMessageHandler();
+  return defaultHandler(request, context);
+};

@@ -18,6 +18,7 @@ import { useSurvey } from 'stores/SurveyContext';
 import { useAuth } from 'stores/AuthContext';
 import { usePageGuard } from 'lib/hooks/usePageGuard';
 import { generateSurveyAnalysis } from 'lib/data/analysis/engine';
+import { loadCompletedSurvey } from 'lib/utils/completedSurveyStorage';
 import { SkeletonBox } from 'components/tds-ext/SkeletonBox';
 import { ErrorState } from 'components/tds-ext';
 import { ICONS } from 'lib/data/iconSources';
@@ -30,8 +31,9 @@ export const Route = createRoute('/onboarding/survey-result', {
 
 function SurveyResultPage() {
   const navigation = useNavigation();
-  const { hasCompletedOnboarding } = useAuth();
-  const { surveyData } = useSurvey();
+  const { hasCompletedOnboarding, user } = useAuth();
+  const { surveyData, setSurveyData } = useSurvey();
+  const [hasCheckedFallback, setHasCheckedFallback] = useState(false);
   const { isReady } = usePageGuard({
     currentPath: '/onboarding/survey-result',
     skipOnboarding: true,
@@ -39,6 +41,31 @@ function SurveyResultPage() {
 
   useEffect(() => {
     if (!isReady) return;
+    if (surveyData) {
+      setHasCheckedFallback(true);
+      return;
+    }
+
+    let cancelled = false;
+    setHasCheckedFallback(false);
+    const restoreSurvey = async () => {
+      const cachedSurvey = user?.id ? await loadCompletedSurvey(user.id) : null;
+      if (cancelled) return;
+      if (cachedSurvey) {
+        setSurveyData(cachedSurvey);
+      }
+      setHasCheckedFallback(true);
+    };
+
+    void restoreSurvey();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isReady, setSurveyData, surveyData, user?.id]);
+
+  useEffect(() => {
+    if (!isReady || !hasCheckedFallback) return;
     if (!surveyData) {
       const fallbackRoute = hasCompletedOnboarding ? '/dashboard' : '/onboarding/survey';
       if (__DEV__) {
@@ -49,7 +76,7 @@ function SurveyResultPage() {
       }
       navigation.navigate(fallbackRoute);
     }
-  }, [isReady, hasCompletedOnboarding, navigation, surveyData]);
+  }, [isReady, hasCheckedFallback, hasCompletedOnboarding, navigation, surveyData]);
 
   const behaviors = useMemo<BehaviorType[]>(
     () => surveyData?.step3_behavior.primary_behaviors ?? ['other'],
@@ -72,7 +99,7 @@ function SurveyResultPage() {
     navigation.navigate('/onboarding/notification');
   };
 
-  if (!isReady || !surveyData) {
+  if (!isReady || !hasCheckedFallback || !surveyData) {
     return (
       <SafeAreaView style={styles.safe}>
         <View style={styles.header}>

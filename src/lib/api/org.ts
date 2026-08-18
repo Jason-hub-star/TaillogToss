@@ -3,7 +3,7 @@
  * Parity: B2B-001
  */
 import { supabase } from './supabase';
-import { requestBackend, withBackendFallback } from './backend';
+import { requestBackend } from './backend';
 import { uploadImageToPublicStorage } from './storageImage';
 import type { Organization, OrgMember, OrgDog, DogAssignment } from 'types/b2b';
 
@@ -25,20 +25,12 @@ export async function createOrganization(
 
 /** 조직 상세 조회 */
 export async function getOrg(orgId: string): Promise<Organization> {
-  const { data, error } = await supabase.from('organizations').select('*').eq('id', orgId).single();
-  if (error) throw error;
-  return data as Organization;
+  return requestBackend<Organization>(`/api/v1/org/${orgId}`);
 }
 
 /** 조직 멤버 목록 */
 export async function getOrgMembers(orgId: string): Promise<OrgMember[]> {
-  const { data, error } = await supabase
-    .from('org_members')
-    .select('*')
-    .eq('org_id', orgId)
-    .order('invited_at', { ascending: true });
-  if (error) throw error;
-  return data as OrgMember[];
+  return requestBackend<OrgMember[]>(`/api/v1/org/${orgId}/members`);
 }
 
 /** 조직 소속 강아지 목록 (today 상태 포함) */
@@ -97,135 +89,21 @@ function mapBackendOrgDog(row: BackendOrgDogWithStatus): OrgDogWithStatus {
   };
 }
 
-async function getOrgDogsFromSupabase(orgId: string): Promise<OrgDogWithStatus[]> {
-  const attentionKeywords = ['구토', '설사', '절뚝', '공격', '격리', '무기력', '불안', '보호자 연락', '수의사'];
-  const getAttentionReason = (intensity?: number | null, quickCategory?: string | null, memo?: string | null) => {
-    if (quickCategory === 'aggression') return '공격 행동';
-    if (typeof intensity === 'number' && intensity >= 7) return `강도 ${intensity}`;
-    const text = memo ?? '';
-    return attentionKeywords.find((keyword) => text.includes(keyword)) ?? null;
-  };
-  const today = new Date().toISOString().slice(0, 10);
-  const todayStart = `${today}T00:00:00`;
-  const todayEnd = `${today}T23:59:59`;
-
-  const { data: orgDogs, error: dogsErr } = await supabase
-    .from('org_dogs')
-    .select('*, dogs(*)')
-    .eq('org_id', orgId)
-    .eq('status', 'active')
-    .order('enrolled_at', { ascending: true });
-  if (dogsErr) throw dogsErr;
-  if (!orgDogs || orgDogs.length === 0) return [];
-
-  const dogIds = orgDogs.map((od: any) => od.dog_id as string);
-
-  const { data: logCounts, error: logErr } = await supabase
-    .from('behavior_logs')
-    .select('dog_id, occurred_at, intensity, memo, quick_category')
-    .eq('org_id', orgId)
-    .in('dog_id', dogIds)
-    .gte('occurred_at', todayStart)
-    .lte('occurred_at', todayEnd);
-  if (logErr) throw logErr;
-
-  type TodayLogInfo = {
-    count: number;
-    lastTime: string | null;
-    needsAttention: boolean;
-    attentionReason: string | null;
-  };
-  const logCountMap = new Map<string, TodayLogInfo>();
-  for (const log of logCounts ?? []) {
-    const prev = logCountMap.get(log.dog_id) ?? {
-      count: 0,
-      lastTime: null,
-      needsAttention: false,
-      attentionReason: null,
-    };
-    prev.count++;
-    if (!prev.lastTime || log.occurred_at > prev.lastTime) prev.lastTime = log.occurred_at;
-    const attentionReason = getAttentionReason(log.intensity, log.quick_category, log.memo);
-    if (attentionReason && !prev.attentionReason) {
-      prev.needsAttention = true;
-      prev.attentionReason = attentionReason;
-    }
-    logCountMap.set(log.dog_id, prev);
-  }
-
-  const { data: todayReports, error: reportErr } = await supabase
-    .from('daily_reports')
-    .select('dog_id')
-    .eq('created_by_org_id', orgId)
-    .eq('report_date', today)
-    .eq('generation_status', 'sent')
-    .in('dog_id', dogIds);
-  if (reportErr) throw reportErr;
-
-  const reportedDogIds = new Set((todayReports ?? []).map((r: any) => r.dog_id as string));
-
-  const { data: assignments, error: assignErr } = await supabase
-    .from('dog_assignments')
-    .select('dog_id, trainer_user_id')
-    .eq('org_id', orgId)
-    .eq('status', 'active')
-    .in('dog_id', dogIds);
-  if (assignErr) throw assignErr;
-
-  const trainerMap = new Map<string, string>();
-  for (const a of assignments ?? []) {
-    trainerMap.set(a.dog_id, a.trainer_user_id);
-  }
-
-  return orgDogs.map((od: any) => {
-    const logInfo = logCountMap.get(od.dog_id) ?? {
-      count: 0,
-      lastTime: null,
-      needsAttention: false,
-      attentionReason: null,
-    };
-    return {
-      ...od,
-      today_log_count: logInfo.count,
-      has_today_report: reportedDogIds.has(od.dog_id),
-      last_log_time: logInfo.lastTime,
-      trainer_name: trainerMap.get(od.dog_id) ?? null,
-      needs_attention: logInfo.needsAttention,
-      attention_reason: logInfo.attentionReason,
-    } as OrgDogWithStatus;
-  });
-}
-
 export async function getOrgDogs(orgId: string): Promise<OrgDogWithStatus[]> {
-  return withBackendFallback(
-    async () => {
-      const rows = await requestBackend<BackendOrgDogWithStatus[]>(`/api/v1/org/${orgId}/dogs`);
-      return rows.map(mapBackendOrgDog);
-    },
-    () => getOrgDogsFromSupabase(orgId),
-  );
+  const rows = await requestBackend<BackendOrgDogWithStatus[]>(`/api/v1/org/${orgId}/dogs`);
+  return rows.map(mapBackendOrgDog);
 }
 
 /** 활성 강아지 수 카운트 */
 export async function getActiveOrgDogCount(orgId: string): Promise<number> {
-  const { count, error } = await supabase
-    .from('org_dogs')
-    .select('id', { count: 'exact', head: true })
-    .eq('org_id', orgId)
-    .eq('status', 'active');
-  if (error) throw error;
-  return count ?? 0;
+  const { count } = await requestBackend<{ count: number }>(`/api/v1/org/${orgId}/dogs/count`);
+  return count;
 }
 
 /** 활성 멤버 수 카운트 */
 export async function getActiveOrgMemberCount(orgId: string): Promise<number> {
-  const { count, error } = await supabase
-    .from('org_members')
-    .select('id', { count: 'exact', head: true })
-    .eq('org_id', orgId)
-    .in('status', ['active', 'pending']);
-  if (error) throw error;
-  return count ?? 0;
+  const { count } = await requestBackend<{ count: number }>(`/api/v1/org/${orgId}/members/count`);
+  return count;
 }
 
 /** 강아지 등록 (센터에 입소) + PII 저장 */
@@ -236,49 +114,28 @@ export async function enrollDog(input: {
   parent_name?: string;
   group_tag?: string;
   parent_phone_last4?: string; // 인증용 명문 뒷 4자리
-  parent_phone_enc?: string;   // btoa 인코딩된 전화번호 (추후 AES-GCM 교체)
+  parent_phone_enc?: string;   // 서버 저장용 암호화/인코딩 전화번호
   parent_email_enc?: string;   // btoa/암호화된 이메일
 }): Promise<OrgDog> {
-  const { data, error } = await supabase
-    .from('org_dogs')
-    .insert({
-      org_id: input.org_id,
-      dog_id: input.dog_id,
-      parent_user_id: input.parent_user_id ?? null,
-      parent_name: input.parent_name ?? null,
+  return requestBackend<OrgDog, typeof input>('/api/v1/org/dogs/enroll', {
+    method: 'POST',
+    body: {
+      ...input,
+      parent_user_id: input.parent_user_id ?? undefined,
+      parent_name: input.parent_name ?? undefined,
       group_tag: input.group_tag ?? 'default',
-      parent_phone_last4: input.parent_phone_last4 ?? null,
-    })
-    .select()
-    .single();
-  if (error) throw error;
-
-  // PII 별도 테이블 저장 (암호화된 상태)
-  if (input.parent_phone_enc || input.parent_email_enc) {
-    const { error: piiError } = await supabase
-      .from('org_dogs_pii')
-      .upsert({
-        org_dog_id: data.id,
-        parent_phone_enc: input.parent_phone_enc ?? null,
-        parent_email_enc: input.parent_email_enc ?? null,
-        encryption_key_version: 1,
-      });
-    if (piiError) {
-      // PII 저장 실패해도 등록은 유지 (fail-open)
-      console.warn('PII save failed:', piiError.message);
-    }
-  }
-
-  return data as OrgDog;
+      parent_phone_last4: input.parent_phone_last4 ?? undefined,
+      parent_phone_enc: input.parent_phone_enc ?? undefined,
+      parent_email_enc: input.parent_email_enc ?? undefined,
+    },
+  });
 }
 
 /** 강아지 퇴소 */
 export async function dischargeDog(orgDogId: string): Promise<void> {
-  const { error } = await supabase
-    .from('org_dogs')
-    .update({ status: 'discharged', discharged_at: new Date().toISOString() })
-    .eq('id', orgDogId);
-  if (error) throw error;
+  await requestBackend<{ success: boolean }>(`/api/v1/org/dogs/${orgDogId}/discharge`, {
+    method: 'PATCH',
+  });
 }
 
 /** 멤버 초대 */
@@ -287,17 +144,10 @@ export async function inviteMember(input: {
   user_id: string;
   role: OrgMember['role'];
 }): Promise<OrgMember> {
-  const { data, error } = await supabase
-    .from('org_members')
-    .insert({
-      org_id: input.org_id,
-      user_id: input.user_id,
-      role: input.role,
-    })
-    .select()
-    .single();
-  if (error) throw error;
-  return data as OrgMember;
+  return requestBackend<OrgMember, typeof input>('/api/v1/org/members/invite', {
+    method: 'POST',
+    body: input,
+  });
 }
 
 /** 담당자 배정 */
@@ -307,30 +157,10 @@ export async function assignDog(input: {
   trainer_user_id: string;
   role: DogAssignment['role'];
 }): Promise<DogAssignment> {
-  let query = supabase
-    .from('dog_assignments')
-    .select('*')
-    .eq('dog_id', input.dog_id)
-    .eq('trainer_user_id', input.trainer_user_id)
-    .eq('status', 'active')
-    .limit(1);
-  query = input.org_id ? query.eq('org_id', input.org_id) : query.is('org_id', null);
-  const { data: existing, error: existingError } = await query.maybeSingle();
-  if (existingError) throw existingError;
-  if (existing) return existing as DogAssignment;
-
-  const { data, error } = await supabase
-    .from('dog_assignments')
-    .insert({
-      dog_id: input.dog_id,
-      org_id: input.org_id ?? null,
-      trainer_user_id: input.trainer_user_id,
-      role: input.role,
-    })
-    .select()
-    .single();
-  if (error) throw error;
-  return data as DogAssignment;
+  return requestBackend<DogAssignment, typeof input>('/api/v1/org/assignments', {
+    method: 'POST',
+    body: input,
+  });
 }
 
 /** 담당자 배정 해제 */
@@ -339,61 +169,31 @@ export async function unassignDog(input: {
   org_id?: string;
   trainer_user_id: string;
 }): Promise<void> {
-  let query = supabase
-    .from('dog_assignments')
-    .update({
-      status: 'ended',
-      ended_at: new Date().toISOString(),
-    })
-    .eq('dog_id', input.dog_id)
-    .eq('trainer_user_id', input.trainer_user_id)
-    .eq('status', 'active');
-  query = input.org_id ? query.eq('org_id', input.org_id) : query.is('org_id', null);
-  const { error } = await query;
-  if (error) throw error;
+  await requestBackend<{ success: boolean }, typeof input>('/api/v1/org/assignments/unassign', {
+    method: 'PATCH',
+    body: input,
+  });
 }
 
 /** 담당자 배정 목록 (조직 기준) */
 export async function getOrgAssignments(orgId: string): Promise<DogAssignment[]> {
-  const { data, error } = await supabase
-    .from('dog_assignments')
-    .select('*')
-    .eq('org_id', orgId)
-    .eq('status', 'active');
-  if (error) throw error;
-  return data as DogAssignment[];
+  return requestBackend<DogAssignment[]>(`/api/v1/org/${orgId}/assignments`);
 }
 
 /** 내 담당 강아지 목록 (훈련사 기준) */
 export async function getMyAssignments(trainerId: string): Promise<DogAssignment[]> {
-  const { data, error } = await supabase
-    .from('dog_assignments')
-    .select('*')
-    .eq('trainer_user_id', trainerId)
-    .eq('status', 'active');
-  if (error) throw error;
-  return data as DogAssignment[];
+  void trainerId;
+  return requestBackend<DogAssignment[]>('/api/v1/org/assignments/mine');
 }
 
 /** 조직 오늘의 통계 조회 */
 export async function getOrgTodayStats(orgId: string): Promise<import('types/b2b').OrgAnalyticsDaily | null> {
-  const today = new Date().toISOString().slice(0, 10);
-  const { data, error } = await supabase
-    .from('org_analytics_daily')
-    .select('*')
-    .eq('org_id', orgId)
-    .eq('analytics_date', today)
-    .limit(1)
-    .single();
-  if (error && error.code !== 'PGRST116') throw error; // PGRST116 = no rows
-  return data as import('types/b2b').OrgAnalyticsDaily | null;
+  return requestBackend<import('types/b2b').OrgAnalyticsDaily | null>(`/api/v1/org/${orgId}/stats/today`);
 }
 
 /**
  * 센터 강아지 등록 — dogs 레코드 생성 후 org_dogs에 입소 처리
- * (보호자가 앱 미가입인 경우를 위해 trainerId를 임시 owner로 사용)
- * NOTE: parent_phone_enc는 btoa 임시 저장 — 추후 Edge Function AES-GCM으로 교체 예정
- * NOTE: parent_phone_last4는 인증용 명문 저장 (PII 비해당)
+ * 서버가 현재 JWT 사용자와 조직 manager/owner 권한을 검증한 뒤 처리한다.
  */
 export async function createOrgDog(input: {
   org_id: string;
@@ -402,43 +202,27 @@ export async function createOrgDog(input: {
   dog_breed?: string;
   dog_sex: 'MALE' | 'FEMALE';
   parent_name?: string;
-  parent_phone?: string;  // 선택 — org_dogs_pii에 btoa 저장 + last4 명문 저장
+  parent_phone?: string;  // 선택 — 서버가 org_dogs_pii + last4로 분리 저장
   parent_address?: string; // 선택 — dogs.parent_address 저장
   vet_name?: string;       // 선택 — dogs.vet_name 저장
   animal_reg_no?: string;  // 선택 — dogs.animal_reg_no 저장
   group_tag?: string;
 }): Promise<OrgDog> {
-  // 1. dogs 레코드 생성 (의료/주소 필드 포함)
-  const { data: dog, error: dogError } = await supabase
-    .from('dogs')
-    .insert({
-      user_id: input.trainer_user_id,
-      name: input.dog_name.trim(),
-      breed: input.dog_breed?.trim() || null,
-      sex: input.dog_sex,
-      parent_address: input.parent_address?.trim() || null,
-      vet_name: input.vet_name?.trim() || null,
-      animal_reg_no: input.animal_reg_no?.trim() || null,
-    })
-    .select()
-    .single();
-  if (dogError) throw dogError;
-
-  // 2. 전화번호 처리 — last4 추출 + btoa 인코딩
-  const phoneDigits = input.parent_phone?.replace(/\D/g, '') || '';
-  const parentPhoneLast4 = phoneDigits.length >= 4 ? phoneDigits.slice(-4) : undefined;
-  const parentPhoneEnc = phoneDigits
-    ? btoa(unescape(encodeURIComponent(phoneDigits)))
-    : undefined;
-
-  // 3. org_dogs에 입소 처리
-  return enrollDog({
-    org_id: input.org_id,
-    dog_id: dog.id,
-    parent_name: input.parent_name?.trim() || undefined,
-    group_tag: input.group_tag?.trim() || 'default',
-    parent_phone_last4: parentPhoneLast4,
-    parent_phone_enc: parentPhoneEnc,
+  void input.trainer_user_id;
+  return requestBackend<OrgDog>('/api/v1/org/dogs/create', {
+    method: 'POST',
+    body: {
+      org_id: input.org_id,
+      dog_name: input.dog_name.trim(),
+      dog_breed: input.dog_breed?.trim() || undefined,
+      dog_sex: input.dog_sex,
+      parent_name: input.parent_name?.trim() || undefined,
+      parent_phone: input.parent_phone?.trim() || undefined,
+      parent_address: input.parent_address?.trim() || undefined,
+      vet_name: input.vet_name?.trim() || undefined,
+      animal_reg_no: input.animal_reg_no?.trim() || undefined,
+      group_tag: input.group_tag?.trim() || 'default',
+    },
   });
 }
 
@@ -449,26 +233,8 @@ export async function createOrgDog(input: {
 export async function getMyOrg(
   userId: string,
 ): Promise<{ org: Organization; membership: OrgMember } | null> {
-  const { data, error } = await supabase
-    .from('org_members')
-    .select('*, organizations!inner(*)')
-    .eq('user_id', userId)
-    .eq('status', 'active')
-    .limit(1)
-    .maybeSingle();
-  if (error) throw error;
-  if (!data) return null;
-
-  const membership: OrgMember = {
-    id: data.id,
-    org_id: data.org_id,
-    user_id: data.user_id,
-    role: data.role,
-    status: data.status,
-    invited_at: data.invited_at,
-    accepted_at: data.accepted_at,
-  };
-  return { org: (data as any).organizations as Organization, membership };
+  void userId;
+  return requestBackend<{ org: Organization; membership: OrgMember } | null>('/api/v1/org/mine');
 }
 
 /** 센터 로고 업로드 */
@@ -481,21 +247,8 @@ export async function updateOrg(
   orgId: string,
   updates: Partial<Pick<Organization, 'name' | 'phone' | 'address' | 'logo_url' | 'settings'>>
 ): Promise<Organization> {
-  return withBackendFallback(
-    () =>
-      requestBackend<Organization, typeof updates>(`/api/v1/org/${orgId}`, {
-        method: 'PATCH',
-        body: updates,
-      }),
-    async () => {
-      const { data, error } = await supabase
-        .from('organizations')
-        .update({ ...updates, updated_at: new Date().toISOString() })
-        .eq('id', orgId)
-        .select()
-        .single();
-      if (error) throw error;
-      return data as Organization;
-    },
-  );
+  return requestBackend<Organization, typeof updates>(`/api/v1/org/${orgId}`, {
+    method: 'PATCH',
+    body: updates,
+  });
 }

@@ -91,7 +91,8 @@ export const queryKeys = {
     detail: (reportId: string) => [...queryKeys.reports.all, 'detail', reportId] as const,
     interactions: (reportId: string) =>
       [...queryKeys.reports.detail(reportId), 'interactions'] as const,
-    byShareToken: (token: string) => [...queryKeys.reports.all, 'share', token] as const,
+    byShareToken: (token: string, last4?: string) =>
+      [...queryKeys.reports.all, 'share', token, last4 ?? ''] as const,
   },
   orgSubscription: {
     all: ['orgSubscription'] as const,

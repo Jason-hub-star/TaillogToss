@@ -1,6 +1,6 @@
 Diagram-ID: arch-01
 Owner: platform
-Last-Verified: 2026-03-01
+Last-Verified: 2026-06-02
 Parity-IDs: APP-001, AUTH-001, IAP-001, B2B-001
 Source-of-Truth:
 - CLAUDE.md

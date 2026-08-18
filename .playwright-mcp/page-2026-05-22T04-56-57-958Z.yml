@@ -1,0 +1,49 @@
+- generic [active] [ref=e1]:
+  - navigation [ref=e2]:
+    - generic [ref=e4]:
+      - link "홈" [ref=e5] [cursor=pointer]:
+        - /url: https://business.toss.im/dashboard/home
+        - generic [ref=e6]:
+          - img [ref=e9]
+          - generic [ref=e11]: 홈
+      - link "쇼핑" [ref=e12] [cursor=pointer]:
+        - /url: https://business-accounts.toss.im/oauth2/authorize?client_id=q4zev78dp6aov6u6fsi5g6swvbp2nxs8&redirect_uri=https%3A%2F%2Fshopping-merchant-api.toss.im%2Fapi-public%2Fv3%2Fshopping-merchant%2Ftoss-business%2Foauth%2Fcallback&response_type=code&grant_type=authorization_code
+        - generic [ref=e13]:
+          - img [ref=e16]
+          - generic [ref=e18]: 쇼핑
+      - link "애즈" [ref=e19] [cursor=pointer]:
+        - /url: https://business-accounts.toss.im/oauth2/authorize?client_id=9n2hwq5tue3ykhclcacuulhnxidjkamd&redirect_uri=https%3A%2F%2Fads-platform.toss.im%2Fbusiness-account%2Flogin&response_type=code&grant_type=authorization_code
+        - generic [ref=e20]:
+          - img [ref=e23]
+          - generic [ref=e25]: 애즈
+      - link "페이" [ref=e26] [cursor=pointer]:
+        - /url: https://business-accounts.toss.im/oauth2/authorize?client_id=jokgdvkpozp8xgwe3cb667q64z1s7q25&redirect_uri=https%3A%2F%2Ftosspay.toss.im%2Fpartners%2Fapi%2Fauth%2Ftoss-business%2Foauth%2Fcallback&response_type=code&grant_type=authorization_code
+        - generic [ref=e27]:
+          - img [ref=e30]
+          - generic [ref=e32]: 페이
+      - link "앱인토스" [ref=e33] [cursor=pointer]:
+        - /url: https://business-accounts.toss.im/oauth2/authorize?client_id=4uktpjgqd0cp9txybqzuxc2y6w0cuupb&redirect_uri=https%3A%2F%2Fapps-in-toss.toss.im%2Fsign-up&response_type=code&grant_type=authorization_code
+        - generic [ref=e34]:
+          - img [ref=e37]
+          - generic [ref=e39]: 앱인토스
+      - link "패스" [ref=e40] [cursor=pointer]:
+        - /url: https://business-accounts.toss.im/oauth2/authorize?client_id=qni5yab93f7fu7fym98sdqea7v6d719g&redirect_uri=https%3A%2F%2Ffacepass-partners.toss.im%2Flogin%2Fcallback&response_type=code&grant_type=authorization_code
+        - generic [ref=e41]:
+          - img [ref=e44]
+          - generic [ref=e46]: 패스
+      - link "페이먼츠" [ref=e47] [cursor=pointer]:
+        - /url: https://business-accounts.toss.im/oauth2/authorize?client_id=raabiamnczbsio3apf2b95tshnx7vpn8&redirect_uri=https%3A%2F%2Fapp.tosspayments.com%2Fauth%2Fcallback%2Ftoss-business&response_type=code&grant_type=authorization_code
+        - generic [ref=e48]:
+          - img [ref=e51]
+          - generic [ref=e53]: 페이먼츠
+    - generic [ref=e54]:
+      - button "알림" [ref=e55]:
+        - button "알림" [ref=e56] [cursor=pointer]:
+          - img [ref=e58]
+      - button "프로필아이콘" [ref=e62]:
+        - generic [ref=e63] [cursor=pointer]: U
+  - generic [ref=e66]:
+    - img [ref=e67]
+    - generic [ref=e68]: 페이지를 찾을 수 없어요
+    - generic [ref=e69]: 주소를 다시 한 번 확인해주세요.
+  - list

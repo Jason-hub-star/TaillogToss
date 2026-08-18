@@ -7,6 +7,7 @@ import { useState, useCallback, useRef, useEffect } from 'react';
 import type { InterstitialPlacement, InterstitialAdState } from 'types/ads';
 import { INTERSTITIAL_PLACEMENT_CONFIG, DEFAULT_AD_FALLBACK } from 'types/ads';
 import { getAdGroupId, getAdsSdk } from 'lib/ads/config';
+import { setFullscreenAdActive } from 'lib/ads/adCoordination';
 import { tracker } from 'lib/analytics/tracker';
 import { buildAdDiagnostics } from 'lib/ads/diagnostics';
 
@@ -51,6 +52,7 @@ export function useInterstitialAd(
     return () => {
       mountedRef.current = false;
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
+      setFullscreenAdActive(false);
       getAdsSdk().destroy();
     };
   }, []);
@@ -68,6 +70,8 @@ export function useInterstitialAd(
     }
 
     setAdState('loading');
+    // AIT 2026-07-10: 로드 시작 시 배너를 억제해 Android 동시로드 이벤트 실패를 피한다.
+    setFullscreenAdActive(true);
     tracker.adRequested(placement, buildAdDiagnostics(placement, 'fullscreen_load_requested'));
 
     const sdk = getAdsSdk();
@@ -75,6 +79,7 @@ export function useInterstitialAd(
 
     timeoutRef.current = setTimeout(() => {
       if (!mountedRef.current) return;
+      setFullscreenAdActive(false);
       setAdState('no_fill');
       tracker.adNoFill(placement, 'timeout', buildAdDiagnostics(placement, 'fullscreen_load_timeout'));
       onDismissed?.();
@@ -93,6 +98,7 @@ export function useInterstitialAd(
           if (!mountedRef.current || handled) return;
           handled = true;
           if (timeoutRef.current) clearTimeout(timeoutRef.current);
+          setFullscreenAdActive(false);
           increment(placement);
           setAdState('dismissed');
           tracker.adDismissed(placement, buildAdDiagnostics(placement, 'fullscreen_dismissed'));
@@ -100,12 +106,17 @@ export function useInterstitialAd(
         };
 
         sdk.showFullScreenAd({
+          onImpression: () => {
+            if (!mountedRef.current || handled) return;
+            tracker.adImpression(placement, buildAdDiagnostics(placement, 'fullscreen_impression'));
+          },
           onRewarded: handleDismiss,
           onClosed: handleDismiss,
           onError: (error) => {
             if (!mountedRef.current || handled) return;
             handled = true;
             if (timeoutRef.current) clearTimeout(timeoutRef.current);
+            setFullscreenAdActive(false);
             setAdState('error');
             tracker.adError(placement, buildAdDiagnostics(placement, 'fullscreen_show_error', error));
             onError?.();
@@ -115,6 +126,7 @@ export function useInterstitialAd(
       onError: (error) => {
         if (!mountedRef.current) return;
         if (timeoutRef.current) clearTimeout(timeoutRef.current);
+        setFullscreenAdActive(false);
         setAdState('error');
         tracker.adError(placement, buildAdDiagnostics(placement, 'fullscreen_load_error', error));
         onError?.();

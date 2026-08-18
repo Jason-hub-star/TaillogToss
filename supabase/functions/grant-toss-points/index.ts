@@ -41,24 +41,35 @@ interface GrantPointsDeps {
 }
 
 const globalUsedGrantKeys = new Set<string>();
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const POINT_EVENT_IDEMPOTENCY_PATTERN = /^point-event-[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const ALLOWED_REASON_CODES = new Set([
+  'referral_reward',
+  'first_coaching_bonus',
+  'signup_bonus',
+]);
 
-function defaultDeps(): GrantPointsDeps {
+function defaultDeps(overrides?: Partial<GrantPointsDeps>): GrantPointsDeps {
   return {
-    mTLSClient: createMTLSClient(resolveMtlsMode()),
+    mTLSClient: overrides?.mTLSClient ?? createMTLSClient(resolveMtlsMode()),
     idempotency: edgeIdempotencyStore,
     breaker: pointsCircuitBreaker,
     usedGrantKeys: globalUsedGrantKeys,
   };
 }
 
-function isAdminRole(role: EdgeContext['role']): boolean {
-  return role === 'trainer' || role === 'org_owner' || role === 'org_staff' || role === 'service_role';
+function isServiceRole(role: EdgeContext['role']): boolean {
+  return role === 'service_role';
 }
 
 function resolveIdempotentResponse(
   begin: BeginIdempotencyResult<GrantTossPointsResponse>
 ): EdgeResult<GrantTossPointsResponse> | null {
   if (begin.kind === 'new') return null;
+
+  if (begin.kind === 'conflict') {
+    return fail('IDEMPOTENCY_KEY_CONFLICT', 'Idempotency key is already bound to another point grant request', 409);
+  }
 
   const record = begin.record;
   if (record.status === 'completed' && record.response) {
@@ -77,24 +88,49 @@ function mapTossCode(code: string | undefined): string {
   return '4112';
 }
 
+function isValidGrantRequest(request: GrantTossPointsRequest): boolean {
+  return (
+    UUID_PATTERN.test(request.userId) &&
+    POINT_EVENT_IDEMPOTENCY_PATTERN.test(request.idempotencyKey) &&
+    ALLOWED_REASON_CODES.has(request.reasonCode) &&
+    Number.isInteger(request.points) &&
+    request.points > 0 &&
+    request.points <= 5000
+  );
+}
+
+function buildGrantRequestFingerprint(request: GrantTossPointsRequest): string {
+  return JSON.stringify({
+    userId: request.userId,
+    points: request.points,
+    reasonCode: request.reasonCode,
+    idempotencyKey: request.idempotencyKey,
+  });
+}
+
 export function createGrantTossPointsHandler(overrides?: Partial<GrantPointsDeps>) {
-  const deps = { ...defaultDeps(), ...(overrides ?? {}) };
+  const deps = { ...defaultDeps(overrides), ...(overrides ?? {}) };
 
   return async (
     request: GrantTossPointsRequest,
     context: EdgeContext
   ): Promise<EdgeResult<GrantTossPointsResponse>> => {
-    if (!isAdminRole(context.role)) {
-      return fail('AUTH_FORBIDDEN', 'Only staff roles can grant toss points', 403);
+    if (!isServiceRole(context.role)) {
+      return fail('AUTH_FORBIDDEN', 'Only service_role can grant toss points', 403);
     }
 
-    if (!request.userId || !request.reasonCode || !request.idempotencyKey || request.points <= 0) {
-      return fail('VALIDATION_ERROR', 'userId/points/reasonCode/idempotencyKey are required', 400);
+    if (!isValidGrantRequest(request)) {
+      return fail(
+        'VALIDATION_ERROR',
+        'userId must be UUID; reasonCode/idempotencyKey must come from approved point_events; points must be > 0 and <= 5000 (toss 4114 한도)',
+        400
+      );
     }
 
     const begin = deps.idempotency.begin<GrantTossPointsResponse>(
       'grant-toss-points',
-      request.idempotencyKey
+      request.idempotencyKey,
+      buildGrantRequestFingerprint(request)
     );
     const replay = resolveIdempotentResponse(begin);
     if (replay) return replay;
@@ -159,4 +195,9 @@ export function createGrantTossPointsHandler(overrides?: Partial<GrantPointsDeps
   };
 }
 
-export const handleGrantTossPoints = createGrantTossPointsHandler();
+let defaultHandler: ReturnType<typeof createGrantTossPointsHandler> | null = null;
+
+export const handleGrantTossPoints: ReturnType<typeof createGrantTossPointsHandler> = (request, context) => {
+  defaultHandler ??= createGrantTossPointsHandler();
+  return defaultHandler(request, context);
+};

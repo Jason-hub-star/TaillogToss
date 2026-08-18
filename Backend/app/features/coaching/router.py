@@ -222,7 +222,7 @@ async def toggle_action_item(
     db: AsyncSession = Depends(get_db),
 ):
     """액션 아이템 완료 토글"""
-    return await service.toggle_action_item(db, coaching_id, action_item_id, data.is_completed)
+    return await service.toggle_action_item(db, coaching_id, action_item_id, data.is_completed, user_id)
 
 
 @router.get("/cost/status", response_model=schemas.CostStatusResponse)

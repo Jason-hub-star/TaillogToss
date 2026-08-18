@@ -40,6 +40,37 @@ describe('httpAdapter.buildEdgeContext', () => {
     expect(context.role).toBe('trainer');
   });
 
+  test('does not let role headers override lower-privilege JWT claims', () => {
+    const token = createJwt({
+      role: 'authenticated',
+      sub: 'user-1',
+      app_metadata: { user_role: 'user' },
+    });
+    const request = new Request('https://example.com/functions/v1/grant-toss-points', {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'x-user-role': 'service_role',
+      },
+    });
+
+    const context = buildEdgeContext(request);
+    expect(context.role).toBe('user');
+    expect(context.userId).toBe('user-1');
+  });
+
+  test('does not trust user_metadata role claims for Edge authorization', () => {
+    const token = createJwt({
+      role: 'authenticated',
+      user_metadata: { role: 'trainer', user_role: 'org_owner' },
+    });
+    const request = new Request('https://example.com/functions/v1/grant-toss-points', {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    const context = buildEdgeContext(request);
+    expect(context.role).toBeUndefined();
+  });
+
   test('accepts service_role from JWT claims', () => {
     const token = createJwt({ role: 'service_role' });
     const request = new Request('https://example.com/functions/v1/grant-toss-points', {

@@ -17,10 +17,6 @@ type JwtClaims = Record<string, unknown> & {
     role?: string;
     user_role?: string;
   };
-  user_metadata?: {
-    role?: string;
-    user_role?: string;
-  };
 };
 
 function parseRole(value: string | null): UserRole | undefined {
@@ -72,8 +68,6 @@ function resolveRoleFromJwt(claims: JwtClaims | null): UserRole | undefined {
     claims.user_role,
     claims.app_metadata?.user_role,
     claims.app_metadata?.role,
-    claims.user_metadata?.user_role,
-    claims.user_metadata?.role,
     claims.role,
   ];
 

@@ -14,12 +14,15 @@ from app.shared.models import DogSex
 class DogBasic(BaseModel):
     """FE dog.ts Dog 미러"""
     id: UUID
+    user_id: UUID
     name: str
     breed: Optional[str] = None
     birth_date: Optional[date] = None
     sex: Optional[DogSex] = None
     weight_kg: Optional[float] = None
     profile_image_url: Optional[str] = None
+    created_at: Any
+    updated_at: Any
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -52,18 +55,23 @@ class DogProfileUpdate(BaseModel):
     activity_meta: Optional[Dict[str, Any]] = None
     rewards_meta: Optional[Dict[str, Any]] = None
     chronic_issues: Optional[Dict[str, Any]] = None
-    triggers: Optional[Dict[str, Any]] = None
-    past_attempts: Optional[Dict[str, Any]] = None
+    triggers: Optional[Any] = None
+    past_attempts: Optional[Any] = None
     temperament: Optional[Dict[str, Any]] = None
 
 
 class DogListItem(BaseModel):
     """강아지 목록 아이템 (멀티독용)"""
     id: UUID
+    user_id: UUID
     name: str
     breed: Optional[str] = None
+    birth_date: Optional[date] = None
+    sex: Optional[DogSex] = None
+    weight_kg: Optional[float] = None
     profile_image_url: Optional[str] = None
     created_at: Any
+    updated_at: Any
 
     model_config = ConfigDict(from_attributes=True)
 

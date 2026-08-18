@@ -35,6 +35,9 @@ export interface UserSettings {
   ai_persona: AiPersona;
   marketing_agreed: boolean;
   marketing_agreed_at?: string | null;
+  /** 마케팅 데이터 익명 활용 동의 (Phase 1B, L11). 동의자 데이터만 익명화 뷰에 노출. */
+  marketing_data_consent?: boolean;
+  marketing_data_consent_at?: string | null;
   language: 'ko'; // v1: 한국어 전용
 }
 

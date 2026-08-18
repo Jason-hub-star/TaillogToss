@@ -1,19 +1,19 @@
 # TaillogToss 누락 플랜 + 미구현 목록
 
-> 작성일: 2026-02-28 | 최종 업데이트: 2026-05-11 | 기준: 수익화 재설계 반영 + 실기기 QA + 사진 권한 모드 분리
+> 작성일: 2026-02-28 | 최종 업데이트: 2026-05-27 | 기준: latest parity matrix + 05-26 Ads/Login QA + 05-27 coaching result ownership QA
 
 ## 0. 수익화 배치 확정 대기 (Deferred — 모든 기능 완료 후 결정)
 
 > **결정 원칙**: 광고 위치 및 Pro 전용 기능 목록은 나머지 기능 개발이 모두 완료된 후 최종 확정한다.
 > 확정 전까지 현재 구조(아래)를 유지. 변경은 1-3줄 수준.
 
-### 현재 수익화 구조 (2026-04-23 기준)
+### 현재 수익화 구조 (2026-05-27 기준)
 
 | 항목 | 현재 상태 | 결정 필요 여부 |
 |------|----------|--------------|
-| 코칭 6블록 | 전부 공개 (Pro 잠금 없음) | 유지 or 일부 재잠금 — **미확정** |
-| 광고 위치 | R3 — `CoachingDetailContent` 상단 (`!isPro`) | 최종 위치 — **미확정** |
-| Pro 혜택 | 광고 제거 + `/coaching/insights` + 일일 10회 | 추가 혜택 목록 — **미확정** |
+| 코칭 6블록 | FREE/PRO 모두 생성된 결과는 전부 공개 | 유지 — 2026-05-27 제품 결정 |
+| 광고 위치 | R1 survey-result, R2 analysis CTA, R3 coaching support CTA, B1 dashboard banner | 콘솔 impression 갱신 확인 후 최종 운영 판단 |
+| Pro 혜택 | 광고 제거 + 상담지 기반 정밀도 + 일일 10회 + 더 깊은 행동계획 | 추가 혜택 목록 — Phase 2+ |
 | 코칭 히스토리 제한 | 무제한 (무료/Pro 동일) | 무료 3개 제한 검토 — **미확정** |
 | 분석 기간 제한 | 없음 | 무료 7일 / Pro 30일 검토 — **미확정** |
 
@@ -22,7 +22,8 @@
 아래가 완료되어야 광고 배치 확정 가능:
 1. ✅ `useRewardedAd.ts` — mock Promise → 이벤트 콜백 전환 (`AD-001`)
 2. ✅ 콘솔 AdGroup ID 발급 및 live ID 7종 코드 fallback 반영
-3. `AIT-ADS-SDK-REFERENCE.md §7` 체크리스트 이행: 새 `.ait` 업로드 후 실노출 최종 확인
+3. ✅ 2026-05-26 actual Toss에서 R1/R2 rewarded AdActivity 진입 및 R2 reward flow 확인
+4. 잔여: Apps in Toss console impression 갱신 확인
 
 레퍼런스: `docs/ref/AIT-ADS-SDK-REFERENCE.md` (광고), `docs/ref/AIT-IAP-MESSAGE-POINTS-REFERENCE.md §5` (IAP)
 
@@ -102,14 +103,15 @@
 
 | Parity ID | 잔여 TODO |
 |-----------|----------|
-| AUTH-001 | 실패 케이스 400 증적 추가 (실기기) |
+| AUTH-001 | fresh login happy path는 2026-05-26 PASS. 잔여는 콘솔 callback/negative path 운영 증적 정리 |
 | APP-001 | 실기기 라우팅 완전 검증 |
 | UI-001 | ~~토큰화/Lottie/상태UI/UX라이팅~~ → 완료. 실기기 비주얼 QA (23화면) |
 | LOG-001 | FastAPI 로그 API 실기기 E2E 증적 |
-| IAP-001 | 3시나리오 패널/실패/복구 증적 확보. false-success/loading 잔여 버그 수정 완료. 새 AIT 업로드 후 성공 테스트 실패 피드백 + 버튼 복귀 확인. Edge/proxy 404 원인 정리 잔여 |
+| IAP-001 | 결제 성공/grant/completeProductGrant 증적 확보. 잔여는 product/SDK/Edge 변경 시 회귀 재검증 |
 | MSG-001 | `TAILLOG_BEHAVIOR_REMIND` HTTP 200 + noti_history success=true 확보. 추가 캠페인 등록 잔여 |
-| AD-001 | 실 Ad Group ID 교체 + 상수 fallback 완료. 새 AIT 업로드 후 mock fallback 제거 + B1 real SDK `ad_error` 확인. render success/no-fill 사유 세부값 확보 잔여 |
-| B2B-001 | 40마리 FlatList 성능, 공유 링크 실기기, B2C 회귀 테스트, verify_parent_phone_last4 RPC |
+| AD-001 | 실 Ad Group ID 교체 + R1/R2 actual Toss AdActivity PASS. 잔여는 Apps in Toss console impression 갱신 확인 |
+| B2B-001 | 40마리 렌더/성능, 공유 링크, B2C 회귀, verify_parent_phone_last4 구현/DEV_LOCAL 검증 완료. 잔여는 `/ops/*`/`parent` route board 최종 QA |
+| GROWTH-001 | contactsViral 공유자 PRO_DAY_PASS 지급 확인. 잔여는 day-pass-only gate/만료 복귀 QA와 지인 recipient claim flow 여부 결정 |
 
 ---
 
@@ -120,10 +122,10 @@
 
 | 항목 | 위치 | 현재 | 전환 필요 |
 |------|------|------|----------|
-| Ads SDK | `src/lib/ads/config.ts` | ✅ real FullScreen SDK wrapper + live Ad Group ID 7종 상수 fallback 적용. 새 AIT `019e00c2...` test ad id 0개, B1 real SDK `ad_error` 확인 | render success 또는 no-fill 사유 세부값 확보 |
-| IAP | `src/lib/api/iap.ts` | ✅ 실 SDK `createOneTimePurchaseOrder`/`getPendingOrders`/`completeProductGrant` 연결. 서버 grant 실패 시 `GRANT_FAILED` 처리 | 새 AIT 업로드 후 성공 UI 최종 재검증 |
-| generate-report | `supabase/functions/generate-report/` | 배포 완료(v3), mock/real 스위치(`REPORT_AI_MODE`) + staff role guard. FE는 FastAPI pending row 생성 후 Edge invoke까지 연결됨(2026-05-20) | OpenAI 실키 검증 + remote Edge role parser 배포 여부 확인 |
-| verify-iap-order | `supabase/functions/verify-iap-order/` | ✅ real mTLS(v17) | Sandbox order 성공 경로 최종 재검증 |
+| Ads SDK | `src/lib/ads/config.ts` | ✅ real FullScreen SDK wrapper + live Ad Group ID 7종 상수 fallback 적용. R1/R2 actual Toss AdActivity 및 R2 reward flow PASS(2026-05-26) | Apps in Toss console impression 갱신 확인 |
+| IAP | `src/lib/api/iap.ts` | ✅ 실 SDK `createOneTimePurchaseOrder`/`getPendingOrders`/`completeProductGrant` 연결. 서버 grant 실패 시 `GRANT_FAILED` 처리. 최신 paid success 증적 확보 | product/SDK/Edge 변경 시 회귀 재검증 |
+| generate-report | `supabase/functions/generate-report/` | 배포 완료(v3+), mock/real 스위치(`REPORT_AI_MODE`) + staff role guard. FE는 FastAPI pending row 생성 후 Edge invoke까지 연결됨 | `REPORT_AI_MODE=real` 운영 전환 및 OpenAI 실키 검증 |
+| verify-iap-order | `supabase/functions/verify-iap-order/` | ✅ real mTLS(v17) + completeProductGrant path 증적 | 변경 시 회귀 재검증 |
 | send-smart-message | `supabase/functions/send-smart-message/` | ✅ real mTLS + `toss_user_key` 해석 후 실발송 200 확인 | 추가 캠페인 등록/회귀 발송 |
 | grant-toss-points | `supabase/functions/grant-toss-points/` | ✅ real mTLS(v14) | 포인트 happy-path 회귀 증적 추가 |
 | IAP 복원 | `src/lib/api/iap.ts`, `src/lib/hooks/useSubscription.ts` | ✅ SDK `getPendingOrders()` 우선 + DB fallback | 서버 검증 성공 order로 복원 완료 증적 추가 |
@@ -143,7 +145,7 @@
 | Shared report dynamic route | `src/pages/report/[shareToken].tsx` | ✅ React Navigation raw params로 bracket/colon strict mismatch 회피. 잘못된 토큰은 정상 empty/error state 표시 | 실제 share token happy-path 검증 필요 |
 | Onboarding direct-entry fallback | `src/pages/onboarding/stage2-form.tsx`, `src/pages/onboarding/stage3-form.tsx` | ✅ `activeDog` fallback + dog id 부재 submit guard 추가. 단독 딥링크 `undefined` 문구 제거 | 신규 유저 dog 없음 상태 UX 확인 필요 |
 | Settings AI persona | `src/pages/settings/index.tsx`, `Backend/app/features/coaching/*` | ✅ DB 저장 확인 후 backend coaching prompt/ask-coach 컨텍스트에 `ai_persona` 반영 | 실제 OpenAI 응답 톤 차이 샘플 증적 추가 권장 |
-| IAP/Ads/Smart Message 실기기 QA | `src/lib/api/iap.ts`, `src/lib/ads/config.ts`, `supabase/functions/send-smart-message/index.ts` | ✅ IAP 3시나리오 패널 진입, 실패/복구 UI 증적, false-success/loading 수정 및 새 AIT 버튼 복귀 확인. ✅ Smart Message 200 + noti_history success. ✅ Ads live ID 상수 fallback + 새 AIT test id 0개 + B1 real SDK `ad_error` | Ads render success/no-fill 사유 세부값 + IAP Edge/proxy 404 원인 정리 |
+| IAP/Ads/Smart Message 실기기 QA | `src/lib/api/iap.ts`, `src/lib/ads/config.ts`, `supabase/functions/send-smart-message/index.ts` | ✅ IAP success/grant, 실패/복구 UI, false-success/loading 수정. ✅ Smart Message 200 + noti_history success. ✅ Ads live ID 상수 fallback + R1/R2 actual Toss AdActivity PASS | Apps in Toss console impression 갱신 + 추가 캠페인 등록 |
 
 ---
 
@@ -157,9 +159,9 @@
 | verify-iap-order | v17 ✅ real mTLS | true | ✅ `completeProductGrant` 경로 포함 테스트 통과 / IAP 성공 실기기 최종 증적 잔여 |
 | send-smart-message | v14 ✅ real mTLS | true | ✅ current user HTTP 200 + `noti_history.success=true` 확인 / 추가 캠페인 등록 잔여 |
 | grant-toss-points | v14 ✅ real mTLS | true | ✅ 위조 role 우회 차단 + real mTLS 전환 / 포인트 happy-path 회귀 증적 잔여 |
-| generate-report | v8 ✅ mock/real switch | true | ✅ Edge test 통과 / `REPORT_AI_MODE=real` + B2B 공유 CTA device proof 잔여 |
+| generate-report | v8+ ✅ mock/real switch | true | ✅ Edge test + B2B 공유 CTA device proof / `REPORT_AI_MODE=real` 운영 전환 잔여 |
 
-기준: 2026-05-21 KST (PROJECT-STATUS + Supabase schema index 정합성 패스)
+기준: 2026-05-27 KST (PROJECT-STATUS + parity matrix + latest daily evidence 정합성 패스)
 
 ---
 
@@ -171,8 +173,8 @@
 | BE 단위 테스트 | 완료 | pytest 57 tests (2026-05-12) |
 | Edge 단위 테스트 | 완료 | Jest 45 tests, 13 suites (2026-05-12) |
 | BE↔DB 통합 테스트 | 미구현 | FastAPI + 실 Supabase 연결 테스트 (DB 마이그레이션 완료, 연결만 미검증) |
-| E2E 테스트 | 부분 | 로그인 + Edge invoke smoke 검증, IAP/광고 happy-path 미검증 |
-| 성능 테스트 | 미구현 | 40마리 FlatList, API p95 < 300ms |
+| E2E 테스트 | 부분 | 로그인, AI coaching, IAP, R1/R2 Ads, B2B share는 조각 증적 확보. 잔여는 한 번의 통합 route sweep |
+| 성능 테스트 | 부분 | 40마리 `/ops/today` 실기기 성능 스모크 확보. API p95 < 300ms 별도 계측 필요 |
 | 보안 테스트 | 부분 | mTLS real mode, PII 암호화 단위 + Edge role-header 우회 차단 검증 완료(send-smart/grant/iap/report) |
 
 ---
@@ -183,15 +185,15 @@
 
 1. ~~Backend AI 코칭 엔진 (BE-P5)~~ → ✅ 완료
 2. ~~FastAPI 프로젝트 초기화 (BE-P1~P4)~~ → ✅ 완료
-3. **Edge Function Real mTLS (INFRA-3)** — 로그인 외 Toss API 호출 전부 (인증서 발급 필요)
+3. ~~Edge Function Real mTLS (INFRA-3)~~ — ✅ 인증서/Secrets/real mode 배포 완료
 4. ~~FE→BE API 연결 잔여 도메인~~ — ✅ dashboard/training 포함 완료 (backend-first + fallback)
-5. **AUTH 브릿지 실기기 재검증** — login-with-toss v13 ACTIVE, Sandbox 증적 보강 필요
+5. **AUTH 운영 증적 정리** — fresh login PASS. 콘솔 callback/negative path 최종 정리 필요
 
 ### 🟠 HIGH (주요 기능 미완성)
 
-6. IAP E2E 테스트 (Sandbox 결제 플로우)
-7. B2B RPC 함수 (verify_parent_phone_last4)
-8. Ads 실 Ad Group ID 교체
+6. 통합 real-device route sweep
+7. Apps in Toss console impression 갱신 확인
+8. B2B route board 최종 QA
 
 ### 🟡 MEDIUM (론칭 영향 없음)
 

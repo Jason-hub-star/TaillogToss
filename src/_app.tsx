@@ -20,7 +20,6 @@ import { useAppStateRefetch } from 'lib/hooks/useAppStateRefetch';
 import { ErrorBoundary } from 'components/tds-ext/ErrorBoundary';
 import { getMyOrg } from 'lib/api/org';
 import { isB2BRole, useOrg } from 'stores/OrgContext';
-import { DevMenu } from 'components/shared/DevMenu';
 import { isDevToolsEnabled } from 'lib/devTools';
 import { POST_PAINT_BOOTSTRAP_DELAY_MS } from 'lib/api/queryConfig';
 import {
@@ -29,7 +28,13 @@ import {
   markStartupPerformanceOnce,
 } from 'lib/performance/startupPerformance';
 
-console.log('[AIT-BUILD] taillog-startup-perf-20260511-1545');
+if (__DEV__) {
+  console.log('[AIT-BUILD] taillog-startup-perf-20260511-1545');
+}
+
+const DevMenuComponent = __DEV__
+  ? (require('components/shared/DevMenu') as typeof import('components/shared/DevMenu')).DevMenu
+  : null;
 
 /**
  * OrgBootstrap — B2B 역할 유저가 앱 시작 시 자신의 org를 DB에서 로드
@@ -166,7 +171,7 @@ function AppContainer(props: PropsWithChildren<InitialProps>) {
               <SurveyProvider>
                 {children}
                 {postPaintBootstrapReady && <DeferredBootstrap />}
-                {isDevToolsEnabled() && <DevMenu />}
+                {DevMenuComponent && isDevToolsEnabled() && <DevMenuComponent />}
               </SurveyProvider>
             </OrgProvider>
           </ActiveDogProvider>

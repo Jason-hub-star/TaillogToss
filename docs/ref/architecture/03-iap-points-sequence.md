@@ -1,6 +1,6 @@
 Diagram-ID: arch-03
 Owner: monetization
-Last-Verified: 2026-03-01
+Last-Verified: 2026-06-02
 Parity-IDs: IAP-001
 Source-of-Truth:
 - src/lib/api/iap.ts

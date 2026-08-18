@@ -43,6 +43,25 @@ class DailyReportResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+class PublicDailyReportResponse(BaseModel):
+    """비인증 보호자 공유 링크용 최소 리포트 응답."""
+    id: UUID
+    dog_id: UUID
+    report_date: str
+    template_type: str
+    behavior_summary: Optional[str] = None
+    condition_notes: Optional[str] = None
+    ai_coaching_oneliner: Optional[str] = None
+    seven_day_comparison: Optional[Dict[str, Any]] = None
+    highlight_photo_urls: List[str] = []
+    generation_status: str
+    sent_at: Optional[datetime] = None
+    expires_at: Optional[datetime] = None
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
 class ParentInteractionResponse(BaseModel):
     """FE b2b.ts ParentInteraction 미러"""
     id: UUID
@@ -79,6 +98,7 @@ class UpdateReportRequest(BaseModel):
     behavior_summary: Optional[str] = None
     condition_notes: Optional[str] = None
     ai_coaching_oneliner: Optional[str] = None
+    toss_share_url: Optional[str] = None
 
 
 class CreateInteractionRequest(BaseModel):
@@ -86,6 +106,8 @@ class CreateInteractionRequest(BaseModel):
     report_id: str
     parent_user_id: Optional[str] = None
     parent_identifier: Optional[str] = None
+    share_token: Optional[str] = None
+    last4: Optional[str] = Field(None, pattern=r"^\d{4}$")
     interaction_type: str  # like | question | comment | goal_request
     content: Optional[str] = None
 

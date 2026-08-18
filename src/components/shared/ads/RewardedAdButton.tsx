@@ -1,7 +1,7 @@
 /**
  * RewardedAdButton — 토스 Ads SDK 2.0 보상형 광고 버튼
  * R1(survey-result), R2(dashboard), R3(coaching-result) 터치포인트
- * useRewardedAd 훅으로 라이프사이클 관리, 실패 시 무광고 폴백
+ * useRewardedAd 훅으로 라이프사이클 관리
  * Parity: AD-001
  */
 import React from 'react';
@@ -25,11 +25,12 @@ export function RewardedAdButton({
 }: RewardedAdButtonProps) {
   const { adState, showAd } = useRewardedAd(placement, onRewarded, onError);
 
-  if (adState === 'rewarded' || adState === 'no_fill') {
+  if (adState === 'rewarded') {
     return null;
   }
 
   const isLoading = adState === 'loading' || adState === 'showing';
+  const ctaLabel = adState === 'error' || adState === 'no_fill' ? '광고 다시 시도' : label;
 
   return (
     <TouchableOpacity
@@ -43,7 +44,7 @@ export function RewardedAdButton({
       ) : (
         <View style={styles.inner}>
           <Text style={styles.icon}>{'\uD83C\uDFAC'}</Text>
-          <Text style={styles.label}>{label}</Text>
+          <Text style={styles.label}>{ctaLabel}</Text>
         </View>
       )}
     </TouchableOpacity>

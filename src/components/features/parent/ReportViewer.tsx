@@ -4,11 +4,11 @@
  */
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
-import type { DailyReport } from 'types/b2b';
+import type { PublicDailyReport } from 'types/b2b';
 import { colors, typography } from 'styles/tokens';
 
 interface ReportViewerProps {
-  report: DailyReport;
+  report: PublicDailyReport;
   dogName?: string;
 }
 

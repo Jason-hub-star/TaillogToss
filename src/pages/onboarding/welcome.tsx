@@ -36,7 +36,6 @@ interface EdgeFailureMeta {
   message?: string;
   upstreamStatus?: number;
   upstreamCode?: string;
-  upstreamMessage?: string;
 }
 
 const APP_LOGIN_TIMEOUT_MS = 20_000;
@@ -44,9 +43,17 @@ const AUTH_BRIDGE_TIMEOUT_MS = 25_000;
 const SESSION_BRIDGE_TIMEOUT_MS = 15_000;
 const ONBOARDING_SYNC_TIMEOUT_MS = 10_000;
 
+function devLog(...args: Parameters<typeof console.log>): void {
+  if (__DEV__) console.log(...args);
+}
+
+function devError(...args: Parameters<typeof console.error>): void {
+  if (__DEV__) console.error(...args);
+}
+
 async function appLoginWithTimeout(flow: 'B2B' | 'B2C') {
   let timeoutId: ReturnType<typeof setTimeout> | undefined;
-  console.log('[AUTH-001] appLogin start', { flow });
+  devLog('[AUTH-001] appLogin start', { flow });
 
   try {
     const result = await Promise.race([
@@ -57,7 +64,7 @@ async function appLoginWithTimeout(flow: 'B2B' | 'B2C') {
         }, APP_LOGIN_TIMEOUT_MS);
       }),
     ]);
-    console.log('[AUTH-001] appLogin referrer', { flow, referrer: result.referrer });
+    devLog('[AUTH-001] appLogin referrer', { flow, referrer: result.referrer });
     return result;
   } finally {
     if (timeoutId) clearTimeout(timeoutId);
@@ -70,7 +77,7 @@ async function loginWithTossWithTimeout(
   flow: 'B2B' | 'B2C',
 ) {
   let timeoutId: ReturnType<typeof setTimeout> | undefined;
-  console.log('[AUTH-001] login-with-toss start', { flow, referrer });
+  devLog('[AUTH-001] login-with-toss start', { flow, referrer });
 
   try {
     const result = await Promise.race([
@@ -81,7 +88,7 @@ async function loginWithTossWithTimeout(
         }, AUTH_BRIDGE_TIMEOUT_MS);
       }),
     ]);
-    console.log('[AUTH-001] login-with-toss success', { flow, userId: result.user?.id });
+    devLog('[AUTH-001] login-with-toss success', { flow, userId: result.user?.id });
     return result;
   } finally {
     if (timeoutId) clearTimeout(timeoutId);
@@ -90,7 +97,7 @@ async function loginWithTossWithTimeout(
 
 async function setSessionWithTimeout(loginResult: Awaited<ReturnType<typeof authApi.loginWithToss>>, flow: 'B2B' | 'B2C') {
   let timeoutId: ReturnType<typeof setTimeout> | undefined;
-  console.log('[AUTH-001] session bridge start', { flow, userId: loginResult.user?.id });
+  devLog('[AUTH-001] session bridge start', { flow, userId: loginResult.user?.id });
 
   try {
     const result = await Promise.race([
@@ -101,7 +108,7 @@ async function setSessionWithTimeout(loginResult: Awaited<ReturnType<typeof auth
         }, SESSION_BRIDGE_TIMEOUT_MS);
       }),
     ]);
-    console.log('[AUTH-001] session bridge done', { flow, sessionEstablished: result });
+    devLog('[AUTH-001] session bridge done', { flow, sessionEstablished: result });
     return result;
   } finally {
     if (timeoutId) clearTimeout(timeoutId);
@@ -113,7 +120,7 @@ async function syncOnboardingWithTimeout(
   userId: string,
 ) {
   let timeoutId: ReturnType<typeof setTimeout> | undefined;
-  console.log('[AUTH-001] onboarding sync start', { userId });
+  devLog('[AUTH-001] onboarding sync start', { userId });
 
   try {
     const result = await Promise.race([
@@ -124,7 +131,7 @@ async function syncOnboardingWithTimeout(
         }, ONBOARDING_SYNC_TIMEOUT_MS);
       }),
     ]);
-    console.log('[AUTH-001] onboarding sync success', { userId, hasCompletedOnboarding: result });
+    devLog('[AUTH-001] onboarding sync success', { userId, hasCompletedOnboarding: result });
     return result;
   } finally {
     if (timeoutId) clearTimeout(timeoutId);
@@ -160,7 +167,6 @@ function WelcomePage() {
         message: payload.error?.message,
         upstreamStatus: typeof details.upstreamStatus === 'number' ? details.upstreamStatus : undefined,
         upstreamCode: typeof details.upstreamCode === 'string' ? details.upstreamCode : undefined,
-        upstreamMessage: typeof details.upstreamMessage === 'string' ? details.upstreamMessage : undefined,
       };
     } catch {
       return null;
@@ -176,7 +182,6 @@ function WelcomePage() {
       const parts = ['토스 인증 서버 응답 실패'];
       if (edgeMeta.upstreamStatus !== undefined) parts.push(`status=${edgeMeta.upstreamStatus}`);
       if (edgeMeta.upstreamCode) parts.push(`code=${edgeMeta.upstreamCode}`);
-      if (edgeMeta.upstreamMessage) return `${parts.join(' ')}: ${edgeMeta.upstreamMessage}`;
       return `${parts.join(' ')}.`;
     }
     if (normalized.includes('cancel')) return '로그인을 취소했어요. 다시 시도해주세요.';
@@ -226,7 +231,7 @@ function WelcomePage() {
       navigation.navigate('/ops/today' as never);
     } catch (cause) {
       const edgeMeta = await readEdgeFailureMeta(cause);
-      console.error('[B2B-LOGIN] handleB2BLogin failed', {
+      devError('[B2B-LOGIN] handleB2BLogin failed', {
         message: cause instanceof Error ? cause.message : String(cause ?? ''),
         edgeMeta,
       });
@@ -256,7 +261,7 @@ function WelcomePage() {
       try {
         hasCompletedOnboarding = await syncOnboardingWithTimeout(syncOnboardingStatus, loginResult.user.id);
       } catch (syncCause) {
-        console.error('[AUTH-001] onboarding sync failed', syncCause);
+        devError('[AUTH-001] onboarding sync failed', syncCause);
         const pending = consumePostLoginRedirect();
         navigation.navigate(pending ?? '/dashboard');
         return;
@@ -269,7 +274,7 @@ function WelcomePage() {
       navigation.navigate('/onboarding/survey');
     } catch (cause) {
       const edgeMeta = await readEdgeFailureMeta(cause);
-      console.error('[AUTH-001] welcome login failed', cause, edgeMeta);
+      devError('[AUTH-001] welcome login failed', cause, edgeMeta);
       setError(await getLoginErrorMessage(cause));
     } finally {
       setIsLoading(false);

@@ -35,7 +35,7 @@ export interface BannerPlacementConfig {
 }
 
 export const BANNER_PLACEMENT_CONFIG: Record<BannerPlacement, BannerPlacementConfig> = {
-  B1: { screen: 'dashboard',       variant: 'expanded', dailyLimit: 2, description: '대시보드 로그 목록 상단' },
+  B1: { screen: 'dashboard',       variant: 'expanded', dailyLimit: Number.POSITIVE_INFINITY, description: '대시보드 로그 목록 상단' },
   B2: { screen: 'quick-log',       variant: 'card',     dailyLimit: 2, description: '빠른 기록 완료 후 피드' },
   B3: { screen: 'training-detail', variant: 'expanded', dailyLimit: 2, description: '훈련 미션 체크리스트 상단' },
 };
@@ -68,7 +68,7 @@ export interface AdFallbackPolicy {
 }
 
 export const DEFAULT_AD_FALLBACK: AdFallbackPolicy = {
-  unlock_on_no_fill: true,
+  unlock_on_no_fill: false,
   timeout_ms: 5000,
   daily_limit: 10,
 };

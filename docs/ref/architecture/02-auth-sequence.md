@@ -1,6 +1,6 @@
 Diagram-ID: arch-02
 Owner: auth
-Last-Verified: 2026-03-01
+Last-Verified: 2026-05-23 (stale — src/pages/login.tsx missing)
 Parity-IDs: AUTH-001, REG-001
 Source-of-Truth:
 - src/pages/login.tsx

@@ -1,13 +1,15 @@
 {
   "project": "TaillogToss",
   "description": "DogCoach Next.js PWA → Toss mini-app (React Native) migration",
-  "last_update": "2026-05-19 17:35",
+  "last_update": "2026-06-10 02:48",
   "session_context": {
-    "current_date": "2026-05-19",
-    "completion": "89%",
+    "current_date": "2026-06-10",
+    "completion": "91%",
     "active_blockers": [
       "인증서 만료일 캘린더 등록",
-      "실기기 E2E 통합 검증 (Wave 1~9 로컬 완료, 실기기 검증 필요)",
+      "실기기 E2E 통합 검증",
+      "managed route 20개 + intentionally unmanaged route 5개 sweep 결과를 한 번에 묶어 기록",
+      "QR 테스트 최소 1회 (심사 요청 버튼 활성화 조건)",
       "퍼블리싱 심사 준비",
       "QR 테스트 최소 1회 완료 (심사 요청 버튼 활성화 조건)"
     ],
@@ -53,8 +55,13 @@
       "/onboarding/welcome",
       "/dashboard",
       "/dashboard/quick-log",
+      "/dashboard/analysis",
       "/training/academy",
       "/training/detail",
+      "/settings",
+      "/settings/subscription",
+      "/ops/today",
+      "/ops/settings",
       "/parent/reports"
     ],
     "done_pages": [
@@ -64,19 +71,14 @@
       "/onboarding/survey",
       "/onboarding/survey-result",
       "/onboarding/notification",
-      "/dashboard/analysis",
       "/coaching/result",
       "/dog/profile",
       "/dog/add",
       "/dog/switcher",
-      "/settings",
-      "/settings/subscription",
       "/legal/terms",
       "/legal/privacy",
       "/ops/setup",
-      "/ops/dog-add",
-      "/ops/today",
-      "/ops/settings"
+      "/ops/dog-add"
     ]
   },
   "architecture": {
@@ -89,8 +91,8 @@
     "design_tokens": "src/styles/tokens.ts"
   },
   "status_summary": {
-    "Done": 19,
-    "QA": 6
+    "Done": 14,
+    "QA": 11
   },
   "pages": [
     {
@@ -235,7 +237,8 @@
         "UIUX-001",
         "AD-001",
         "B2B-001",
-        "UIUX-006"
+        "UIUX-006",
+        "AI-001"
       ],
       "parity_labels": [
         {
@@ -253,6 +256,10 @@
         {
           "id": "UIUX-006",
           "label": "강아지프로필"
+        },
+        {
+          "id": "AI-001",
+          "label": "AI코칭"
         }
       ]
     },
@@ -264,7 +271,8 @@
       "priority": "P1",
       "parity_ids": [
         "LOG-001",
-        "AD-001"
+        "AD-001",
+        "UIUX-001"
       ],
       "parity_labels": [
         {
@@ -274,6 +282,10 @@
         {
           "id": "AD-001",
           "label": "광고"
+        },
+        {
+          "id": "UIUX-001",
+          "label": "대시보드UX"
         }
       ]
     },
@@ -281,11 +293,12 @@
       "route": "/dashboard/analysis",
       "label": "Analysis",
       "group": "Main",
-      "status": "Done",
+      "status": "QA",
       "priority": "P0",
       "parity_ids": [
         "UIUX-001",
-        "UIUX-005"
+        "UIUX-005",
+        "AD-001"
       ],
       "parity_labels": [
         {
@@ -295,6 +308,10 @@
         {
           "id": "UIUX-005",
           "label": "결과상세"
+        },
+        {
+          "id": "AD-001",
+          "label": "광고"
         }
       ]
     },
@@ -453,15 +470,20 @@
       "route": "/settings",
       "label": "Settings",
       "group": "Settings",
-      "status": "Done",
+      "status": "QA",
       "priority": "P1",
       "parity_ids": [
-        "APP-001"
+        "APP-001",
+        "MSG-001"
       ],
       "parity_labels": [
         {
           "id": "APP-001",
           "label": "앱셸"
+        },
+        {
+          "id": "MSG-001",
+          "label": "알림"
         }
       ]
     },
@@ -469,15 +491,20 @@
       "route": "/settings/subscription",
       "label": "Subscription",
       "group": "Settings",
-      "status": "Done",
+      "status": "QA",
       "priority": "P1",
       "parity_ids": [
-        "IAP-001"
+        "IAP-001",
+        "GROWTH-001"
       ],
       "parity_labels": [
         {
           "id": "IAP-001",
           "label": "인앱결제"
+        },
+        {
+          "id": "GROWTH-001",
+          "label": "GROWTH-001"
         }
       ]
     },
@@ -549,7 +576,7 @@
       "route": "/ops/today",
       "label": "Ops Today",
       "group": "B2B",
-      "status": "Done",
+      "status": "QA",
       "priority": "P2",
       "parity_ids": [
         "B2B-001",
@@ -570,7 +597,7 @@
       "route": "/ops/settings",
       "label": "Ops Settings",
       "group": "B2B",
-      "status": "Done",
+      "status": "QA",
       "priority": "P2",
       "parity_ids": [
         "B2B-001",
@@ -613,12 +640,10 @@
       "status": "In Progress",
       "risk": "High",
       "checklist_summary": {
-        "done": 15,
+        "done": 16,
         "total": 16,
-        "pct": 94,
-        "remaining": [
-          "fresh authCode로 happy-path 200 실기기 최종 증적"
-        ]
+        "pct": 100,
+        "remaining": []
       }
     },
     {
@@ -629,11 +654,10 @@
       "status": "In Progress",
       "risk": "Medium",
       "checklist_summary": {
-        "done": 21,
-        "total": 23,
-        "pct": 91,
+        "done": 23,
+        "total": 24,
+        "pct": 96,
         "remaining": [
-          "실제 사진 선택은 새 AIT 업로드 후 production Toss 앱에서 최종 검증",
           "실기기 라우팅 전체 sweep"
         ]
       }
@@ -646,9 +670,9 @@
       "status": "In Progress",
       "risk": "High",
       "checklist_summary": {
-        "done": 11,
-        "total": 12,
-        "pct": 92,
+        "done": 13,
+        "total": 14,
+        "pct": 93,
         "remaining": [
           "실기기 비주얼 QA"
         ]
@@ -662,9 +686,9 @@
       "status": "In Progress",
       "risk": "Medium",
       "checklist_summary": {
-        "done": 7,
-        "total": 8,
-        "pct": 88,
+        "done": 9,
+        "total": 10,
+        "pct": 90,
         "remaining": [
           "FastAPI 로그 API 실기기(앱) E2E 검증"
         ]
@@ -675,15 +699,13 @@
       "label": "AI코칭",
       "description": "코칭 6블록 + 피드백 + BE",
       "domain": "AI Coaching",
-      "status": "In Progress",
+      "status": "Done",
       "risk": "High",
       "checklist_summary": {
-        "done": 13,
-        "total": 14,
-        "pct": 93,
-        "remaining": [
-          "FastAPI 코칭 API 실기기(앱) E2E 검증"
-        ]
+        "done": 19,
+        "total": 19,
+        "pct": 100,
+        "remaining": []
       }
     },
     {
@@ -694,10 +716,27 @@
       "status": "Done",
       "risk": "High",
       "checklist_summary": {
-        "done": 35,
-        "total": 35,
+        "done": 36,
+        "total": 36,
         "pct": 100,
         "remaining": []
+      }
+    },
+    {
+      "id": "GROWTH-001",
+      "label": "GROWTH-001",
+      "description": "",
+      "domain": "Viral Reward",
+      "status": "QA",
+      "risk": "Medium",
+      "checklist_summary": {
+        "done": 10,
+        "total": 12,
+        "pct": 83,
+        "remaining": [
+          "day-pass-only 계정에서 PRO gate/만료 복귀 최종 QA",
+          "지인 recipient PRO 1일권 지급을 하려면 referral_invites + claim endpoint 추가 구현 필요"
+        ]
       }
     },
     {
@@ -708,9 +747,9 @@
       "status": "QA",
       "risk": "High",
       "checklist_summary": {
-        "done": 17,
-        "total": 19,
-        "pct": 89,
+        "done": 19,
+        "total": 21,
+        "pct": 90,
         "remaining": [
           "coaching_ready/training_reminder/streak_alert/surge_alert 캠페인 콘솔 등록",
           "promo 광고성 캠페인 등록 (앱 제출 후)"
@@ -725,11 +764,11 @@
       "status": "QA",
       "risk": "Medium",
       "checklist_summary": {
-        "done": 16,
-        "total": 17,
-        "pct": 94,
+        "done": 19,
+        "total": 20,
+        "pct": 95,
         "remaining": [
-          "Toss 지원 환경에서 render success 또는 no-fill 최종 판정"
+          "Apps in Toss console impression 갱신 확인"
         ]
       }
     },
@@ -741,15 +780,10 @@
       "status": "In Progress",
       "risk": "High",
       "checklist_summary": {
-        "done": 13,
-        "total": 17,
-        "pct": 76,
-        "remaining": [
-          "B2C 회귀 테스트",
-          "40마리 FlatList 성능 실측",
-          "공유 링크 실기기 검증",
-          "verify_parent_phone_last4 RPC 서버 구현"
-        ]
+        "done": 24,
+        "total": 24,
+        "pct": 100,
+        "remaining": []
       }
     },
     {
@@ -797,6 +831,7 @@
       ],
       "AI-001": [
         "/onboarding/stage3-form",
+        "/dashboard",
         "/coaching/result"
       ],
       "PRO-INTAKE-001": [
@@ -826,11 +861,13 @@
       ],
       "UIUX-001": [
         "/dashboard",
+        "/dashboard/quick-log",
         "/dashboard/analysis"
       ],
       "AD-001": [
         "/dashboard",
         "/dashboard/quick-log",
+        "/dashboard/analysis",
         "/training/academy",
         "/training/detail"
       ],
@@ -866,7 +903,13 @@
       "UI-TRAINING-DETAIL-001": [
         "/training/detail"
       ],
+      "MSG-001": [
+        "/settings"
+      ],
       "IAP-001": [
+        "/settings/subscription"
+      ],
+      "GROWTH-001": [
         "/settings/subscription"
       ],
       "B2B-002": [
@@ -963,6 +1006,11 @@
           "id": "UIUX-006",
           "label": "강아지프로필",
           "description": "dog profile 실데이터 + dog switcher UX"
+        },
+        {
+          "id": "AI-001",
+          "label": "AI코칭",
+          "description": "코칭 6블록 + 피드백 + BE"
         }
       ],
       "/dashboard/quick-log": [
@@ -975,6 +1023,11 @@
           "id": "AD-001",
           "label": "광고",
           "description": "Ads SDK 2.0 + R/B/I 슬롯"
+        },
+        {
+          "id": "UIUX-001",
+          "label": "대시보드UX",
+          "description": "대시보드 empty-state + skeleton 안정화"
         }
       ],
       "/dashboard/analysis": [
@@ -987,6 +1040,11 @@
           "id": "UIUX-005",
           "label": "결과상세",
           "description": "coaching result + training detail 완성도"
+        },
+        {
+          "id": "AD-001",
+          "label": "광고",
+          "description": "Ads SDK 2.0 + R/B/I 슬롯"
         }
       ],
       "/coaching/result": [
@@ -1091,6 +1149,11 @@
           "id": "APP-001",
           "label": "앱셸",
           "description": "23개 라우트 + 레이아웃 + 딥링크"
+        },
+        {
+          "id": "MSG-001",
+          "label": "알림",
+          "description": "Smart Message + 쿨다운 + noti_history"
         }
       ],
       "/settings/subscription": [
@@ -1098,6 +1161,11 @@
           "id": "IAP-001",
           "label": "인앱결제",
           "description": "구독 + verify-iap + grant"
+        },
+        {
+          "id": "GROWTH-001",
+          "label": "GROWTH-001",
+          "description": ""
         }
       ],
       "/legal/terms": [
@@ -1164,81 +1232,129 @@
   "automations": {
     "taillog-morning-orchestrator": {
       "schedule": "매일 02:00",
-      "status": "READY",
-      "status_label": "✅ 정상운영",
-      "last_run": "문서 정렬 완료"
-    },
-    "taillog-ai-data-orchestrator": {
-      "schedule": "매일 09:00",
-      "status": "READY",
-      "status_label": "✅ 정상운영",
-      "last_run": "수동 실발송 PASS"
+      "status": "RUNNING",
+      "status_label": "🔄 실행중",
+      "last_run": "06-10 11:43"
     },
     "taillog-nightly-orchestrator": {
       "schedule": "매일 22:00",
-      "status": "READY",
-      "status_label": "✅ 정상운영",
-      "last_run": "문서 정렬 완료"
+      "status": "STALE",
+      "status_label": "⚠️ 점검필요",
+      "last_run": "06-04 20:53"
+    },
+    "taillog-ai-data-orchestrator": {
+      "schedule": "매일 09:00",
+      "status": "STALE",
+      "status_label": "⚠️ 점검필요",
+      "last_run": "06-05 10:12"
     },
     "taillog-weekly-orchestrator": {
       "schedule": "매주 금 10:00",
-      "status": "READY",
-      "status_label": "✅ 정상운영",
-      "last_run": "문서 정렬 완료"
-    },
-    "skills-web-enrichment-7day": {
-      "schedule": "수동 실행 전용",
-      "status": "MANUAL_ONLY",
-      "status_label": "🖱 수동전용",
-      "last_run": "03-02 08:21"
+      "status": "✅ HEALTHY",
+      "status_label": "✅ HEALTHY",
+      "last_run": "06-05 10:12"
     },
     "daily-coaching-synthetic-gen": {
-      "schedule": "AI data TASK 1",
-      "status": "SUBTASK",
-      "status_label": "📎 서브태스크",
-      "last_run": "05-13 수동 성공"
+      "schedule": "ai-data TASK1",
+      "status": "STALE",
+      "status_label": "⚠️ 점검필요",
+      "last_run": "06-05 10:12"
     },
     "coaching-review-telegram-daily": {
-      "schedule": "AI data TASK 2",
-      "status": "SUBTASK",
-      "status_label": "📎 서브태스크",
-      "last_run": "05-13 반려 시나리오 PASS"
-    },
-    "code-doc-align": {
-      "schedule": "morning TASK 2",
-      "status": "SUBTASK",
-      "status_label": "📎 서브태스크",
-      "last_run": "03-02 03:06"
-    },
-    "architecture-diagrams-sync": {
-      "schedule": "morning TASK 3",
-      "status": "SUBTASK",
-      "status_label": "📎 서브태스크",
-      "last_run": "03-02 19:22"
-    },
-    "automation-health-monitor": {
-      "schedule": "morning TASK 4",
-      "status": "SUBTASK",
-      "status_label": "📎 서브태스크",
-      "last_run": "05-13 문서 정렬"
-    },
-    "docs-nightly-organizer": {
-      "schedule": "nightly TASK 1",
-      "status": "SUBTASK",
-      "status_label": "📎 서브태스크",
-      "last_run": "03-01 22:02"
-    },
-    "training-data-maintenance": {
-      "schedule": "weekly TASK 1",
-      "status": "SUBTASK",
-      "status_label": "📎 서브태스크",
-      "last_run": "문서 정렬 완료"
+      "schedule": "ai-data TASK2",
+      "status": "STALE",
+      "status_label": "⚠️ 점검필요",
+      "last_run": "06-05 09:47"
     },
     "weekly-coaching-finetune-review": {
-      "schedule": "weekly TASK 2",
-      "status": "SUBTASK",
-      "status_label": "📎 서브태스크",
-      "last_run": "문서 정렬 완료"
+      "schedule": "매주 금 10:00",
+      "status": "✅ HEALTHY",
+      "status_label": "✅ HEALTHY",
+      "last_run": "06-05 10:12"
+    },
+    "code-doc-align": {
+      "schedule": "morning TASK2",
+      "status": "✅ HEALTHY",
+      "status_label": "✅ HEALTHY",
+      "last_run": "06-10 11:43"
+    },
+    "architecture-diagrams-sync": {
+      "schedule": "morning TASK3",
+      "status": "✅ HEALTHY",
+      "status_label": "✅ HEALTHY",
+      "last_run": "06-10 11:43"
+    },
+    "automation-health-monitor": {
+      "schedule": "morning TASK4",
+      "status": "✅ HEALTHY",
+      "status_label": "✅ HEALTHY",
+      "last_run": "2026-06-10 11:45"
+    },
+    "docs-nightly-organizer": {
+      "schedule": "nightly TASK1",
+      "status": "STALE",
+      "status_label": "⚠️ 점검필요",
+      "last_run": "06-04 20:53"
+    },
+    "training-data-maintenance": {
+      "schedule": "weekly TASK1",
+      "status": "✅ HEALTHY",
+      "status_label": "✅ HEALTHY",
+      "last_run": "06-05 10:12"
+    },
+    "skills-web-enrichment-7day": {
+      "schedule": "수동 전용",
+      "status": "STALE",
+      "status_label": "⚠️ 점검필요",
+      "last_run": "03-21 11:57"
+    },
+    "marketing-blog-publish-nightly": {
+      "schedule": "매일 22:00",
+      "status": "STALE",
+      "status_label": "⚠️ 점검필요",
+      "last_run": "05-22 21:08"
+    },
+    "marketing-case-study-weekly": {
+      "schedule": "매주 목 14:00",
+      "status": "STALE",
+      "status_label": "⚠️ 점검필요",
+      "last_run": "05-22 21:08"
+    },
+    "marketing-instagram-publish": {
+      "schedule": "매주 수 20:00",
+      "status": "STALE",
+      "status_label": "⚠️ 점검필요",
+      "last_run": "05-22 21:08"
+    },
+    "marketing-threads-publish": {
+      "schedule": "매주 화/금 19:00",
+      "status": "STALE",
+      "status_label": "⚠️ 점검필요",
+      "last_run": "05-22 21:08"
+    },
+    "marketing-threads-token-refresh": {
+      "schedule": "매주 월 09:00",
+      "status": "STALE",
+      "status_label": "⚠️ 점검필요",
+      "last_run": "05-22 21:08"
+    },
+    "marketing-weekly-report": {
+      "schedule": "매주 일 21:00",
+      "status": "STALE",
+      "status_label": "⚠️ 점검필요",
+      "last_run": "05-22 21:08"
+    },
+    "point-events-drainer": {
+      "schedule": "매 10분",
+      "status": "STALE",
+      "status_label": "⚠️ 점검필요",
+      "last_run": "05-22 21:08"
+    },
+    "referral-settlement-weekly": {
+      "schedule": "매주 월 02:00",
+      "status": "STALE",
+      "status_label": "⚠️ 점검필요",
+      "last_run": "05-22 21:08"
     }
   },
   "source_of_truth": {

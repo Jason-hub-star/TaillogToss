@@ -1,8 +1,10 @@
 # Prelaunch Blocker Scan
 
-> Last Updated: 2026-05-12 KST  
+> Last Updated: 2026-05-22 KST
 > Scope: AUTH-001, APP-001, IAP-001, MSG-001, AD-001, B2B-001, REG-001  
 > Source: `PROJECT-STATUS.md`, `11-FEATURE-PARITY-MATRIX.md`, `MISSING-AND-UNIMPLEMENTED.md`, `PROGRESS-CHECKLIST.md`, `AIT-DEPLOY-CHECKLIST.md`, code scan
+
+> Snapshot note: this is a 2026-05-22 release-gate snapshot. For current session intake, prefer `PROJECT-STATUS.md`, `11-FEATURE-PARITY-MATRIX.md`, `PAGE-UPGRADE-BOARD.md`, and `PROGRESS-CHECKLIST.md` because 2026-05-26/05-27 Ads/Login/Coaching evidence supersedes some PARTIAL rows below.
 
 ## Gate Summary
 
@@ -16,7 +18,7 @@
 | Smart Message | log_reminder | PASS | Approved template + current-user HTTP 200 evidence exists |
 | Auth | Toss Login bridge | PARTIAL | Existing Sandbox evidence exists; fresh authCode happy-path final evidence remains |
 | B2B | B2C release impact | PARTIAL | B2C can proceed; B2B 40-dog perf/share-link/RPC endpoint remain follow-up |
-| Console/publishing | QR/review button/business/customer support | BLOCKED | Manual console checks remain before submission |
+| Console/publishing | QR/review button/business/customer support | PASS/PARTIAL | 사용자 보고 기준 출시하기 완료, 실제 토스 검색 노출 확인, 챌린지 출품용 공개 공유 URL `https://minion.toss.im/L1o5uCsg` 확보 완료 |
 
 ## Remaining Release Blockers
 
@@ -24,9 +26,9 @@
    - Need: purchase success -> server grant -> `subscriptions.is_active=true` -> `completeProductGrant()` completed.
    - Existing: failure/recovery UI and SDK code path are implemented and tested.
 
-2. QR test / review button activation
-   - Need: Apps in Toss console QR test at least once and review request button enabled.
-   - Existing: AIT private standalone launch passed in production Toss.
+2. Challenge submission form
+   - Need: paste the captured public mini-app URL into the challenge form.
+   - Existing: user-reported `출시하기` complete, Toss search visibility, and public URL `https://minion.toss.im/L1o5uCsg`.
 
 3. Console operations checks
    - Need: business category/service category match, customer support channel readiness, mTLS callback test button final 200, certificate expiry calendar.

@@ -1,6 +1,6 @@
 /**
- * LockedBlock — PRO 잠금 블록 ④⑤⑥ (next_7_days, risk_signals, consultation_questions)
- * Skeleton 블러 + RewardedAdButton으로 해제
+ * LockedBlock — legacy 잠금 프리뷰 + 6블록 상세 렌더러
+ * 현재 /coaching/result는 생성된 결과를 FREE/PRO 모두 전체 공개한다.
  * 인터랙티브 카드: 수평 타임라인, 게이지 바, 프로필 카드
  * Parity: AI-001
  */

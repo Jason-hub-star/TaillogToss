@@ -1,0 +1,6 @@
+[     771ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ https://business-accounts.toss.im/user/me:0
+[     802ms] [VERBOSE] [DOM] Input elements should have autocomplete attributes (suggested: "username"): (More info: https://goo.gl/9p2vKq) %o @ https://business.toss.im/account/sign-in:0
+[    1338ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ https://business-accounts.toss.im/user/me:0
+[ 2707764ms] [WARNING] Unsatisfied version 3.12.6 from @tosscore-internal/business.toss.im-dashboard of shared singleton module @tds/desktop (required ^1) @ https://business.toss.im/dashboard/static/main.467b244f.js:232
+[ 2707764ms] [WARNING] Unsatisfied version 3.12.6 from @tosscore-internal/business.toss.im-dashboard of shared singleton module @tds/desktop (required ^1) @ https://business.toss.im/dashboard/static/main.467b244f.js:232
+[ 2708193ms] [WARNING] [ Federation Runtime ] Version 3.12.6 from @tosscore-internal/business.toss.im-dashboard of shared singleton module @tds/desktop does not satisfy the requirement of business_one_navigation which needs ^1) @ https://business.toss.im/dashboard/static/43.48b2b268.js:103

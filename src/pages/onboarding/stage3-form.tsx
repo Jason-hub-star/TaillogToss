@@ -18,6 +18,7 @@ import { FormLayout } from 'components/shared/layouts/FormLayout';
 import { useSubmitStage3 } from 'lib/hooks/useSurvey';
 import { useDogEnv } from 'lib/hooks/useDogs';
 import { useDraftSave } from 'lib/hooks/useDraftSave';
+import { usePageGuard } from 'lib/hooks/usePageGuard';
 import { ICONS } from 'lib/data/iconSources';
 import { useActiveDog } from 'stores/ActiveDogContext';
 import { colors, spacing, typography } from 'styles/tokens';
@@ -116,6 +117,10 @@ const hasEpisodeContent = (episode: EpisodeDraft) =>
 
 function Stage3FormPage() {
   const navigation = useNavigation();
+  const { isReady } = usePageGuard({
+    currentPath: '/onboarding/stage3-form',
+    skipOnboarding: true,
+  });
   const params = Route.useParams() as RouteParams;
   const { activeDog } = useActiveDog();
   const targetDogId = params.dogId ?? activeDog?.id;
@@ -444,6 +449,8 @@ function Stage3FormPage() {
     submitStage3,
     clearDraft,
   ]);
+
+  if (!isReady) return null;
 
   return (
     <FormLayout

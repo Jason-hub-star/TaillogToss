@@ -136,4 +136,40 @@ describe('evaluatePageGuard', () => {
 
     expect(result).toEqual({ status: 'redirect', redirectTo: '/settings/subscription' });
   });
+
+  test('b2bOnly feature redirects authenticated users until a verified B2B role is available', () => {
+    const result = evaluatePageGuard({
+      currentPath: '/ops/today',
+      skipAuth: false,
+      skipOnboarding: false,
+      requireFeature: 'b2bOnly',
+      isAuthenticated: true,
+      hasCompletedOnboarding: false,
+      isPro: false,
+      dogCount: 0,
+      isSubscriptionLoading: false,
+      isDogsLoading: true,
+      userRole: undefined,
+    });
+
+    expect(result).toEqual({ status: 'redirect', redirectTo: '/dashboard' });
+  });
+
+  test('b2bOnly feature still runs auth guard before role checks', () => {
+    const result = evaluatePageGuard({
+      currentPath: '/ops/today',
+      skipAuth: false,
+      skipOnboarding: false,
+      requireFeature: 'b2bOnly',
+      isAuthenticated: false,
+      hasCompletedOnboarding: false,
+      isPro: false,
+      dogCount: 0,
+      isSubscriptionLoading: false,
+      isDogsLoading: false,
+      userRole: 'trainer',
+    });
+
+    expect(result).toEqual({ status: 'redirect', redirectTo: '/onboarding/welcome' });
+  });
 });

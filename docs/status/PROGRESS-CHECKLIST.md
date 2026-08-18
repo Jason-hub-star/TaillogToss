@@ -1,7 +1,7 @@
 # TaillogToss 진행도 체크리스트
 
-> 생성: 2026-04-02 | 갱신: 2026-05-21 | 기준: SSOT 4종 + 코드 스캔 + 토스 SDK 공식 문서 대조
-> 종합 완성도: **89%** (route board 상태 재정렬 + B2B 로고 DEV_LOCAL/Storage 증적 반영)
+> 생성: 2026-04-02 | 갱신: 2026-05-27 | 기준: SSOT 4종 + 05-26/05-27 실기기/AIT 증적 + 문서 정합성 점검
+> 종합 완성도: **91%** (AI/IAP/Ads/B2B 최신 증적 반영, 잔여는 통합 E2E/콘솔 운영/자동화 stale)
 
 ---
 
@@ -21,7 +21,7 @@
   - [x] Supabase secrets에 Base64 인코딩 등록 (`TOSS_CLIENT_CERT_BASE64`, `TOSS_CLIENT_KEY_BASE64`)
   - [x] Edge Function 4종 `resolveMtlsMode()` 자동 감지 + 재배포 (login-with-toss v18, verify-iap-order v17, send-smart-message v14, grant-toss-points v14)
   - [ ] 인증서 만료일 캘린더 등록
-- [x] ~~🔴 **Backend 5개 모델-DB 정합성 수정**~~ — ✅ 2026-05-19 완료 (commit 2dc579b, Railway 배포)
+- [x] ~~🔴 **Backend 5개 모델-DB 정합성 수정**~~ — ✅ 2026-05-19 완료 (commit 2dc579b, 이후 production backend 운영 경로는 DigitalOcean)
   - [x] BUG-01: `BehaviorLog.daily_activity` String(50) → JSONB
   - [x] BUG-02: `StepFeedbackUpdate.reaction` str → `StepReaction(str, Enum)` (Pydantic 검증)
   - [x] BUG-03: Dog/AICoaching 관계 `passive_deletes=True` 추가
@@ -29,10 +29,11 @@
   - [x] BUG-05: `DailyReport.behavior_summary` Text→JSONB, `highlight_photo_urls` JSONB→ARRAY(String)
   - [x] pytest 74→75 passed (JSONB 회귀 테스트 추가)
 - [x] ✅ **로컬 E2E 개발모드 완전 검증** — Wave 1~9 전체 기록 완료 (2026-05-19)
-- [ ] 🔴 **실기기 E2E 통합 검증** — 23화면 + 핵심 플로우 실기기 테스트 (**검증예정** 2026-05-19, ADB R3CXB0QH0LY 연결됨)
-  - [ ] dev 모드 20개 화면 adb screencap 루프 (AIT 불필요 화면)
-  - [ ] AIT 전용 3개 — 실Toss로그인(`/onboarding/welcome`), 광고render(`/dashboard`·`/training/academy`·`/training/detail`), IAP(`/settings/subscription`)
-  - [ ] PRELAUNCH-QA 8개 핫픽스 실기기 재확인 (LOCAL PASS → 기기 미검증)
+- [ ] 🔴 **실기기 E2E 통합 검증** — 핵심 플로우별 증적은 늘었지만 23화면 단일 sweep은 아직 미완료
+  - [ ] managed route 20개 + intentionally unmanaged route 5개 sweep 결과를 한 번에 묶어 기록
+  - [x] AIT fresh Toss Login 재검증: `/onboarding/welcome` → login-with-toss success → `/onboarding/survey` (2026-05-26)
+  - [x] Ads R1/R2 실제 Toss AdActivity 진입 + R2 reward 후 `/coaching/result` 진입 PASS (2026-05-26)
+  - [x] `/coaching/result` latest AIT에서 FREE 6블록 전체 열람 PASS (2026-05-27)
   - [ ] QR 테스트 최소 1회 (심사 요청 버튼 활성화 조건)
 - [x] ~~🔴 **번들 크기 100MB 미만 확인**~~ — ✅ 4.9MB (100MB 한도 대비 5%)
 - [x] ~~🟠 **Ads SDK 콜백 패턴 리팩토링**~~ — ✅ `loadFullScreenAd`/`showFullScreenAd` 이벤트 콜백 경로 확인 (2026-05-12)
@@ -72,12 +73,16 @@
 
 ## C. Feature Parity 완성도 (11-FEATURE-PARITY-MATRIX 기준)
 
-### C1. Done (2/11 = 18%)
+### C1. Done / Closed
 
-- [x] **AD-001** 광고 — real SDK wrapper + live ID fallback + R/B/I 슬롯 통합 + test 통과
 - [x] **REG-001** 등록 — legal + toss-disconnect + 약관 + 사업자등록/배포
+- [x] **AI-001** AI 코칭 — async generation, production AIT recovery, FREE full-result ownership까지 최신 증적 확보
+- [x] **IAP-001** 결제 — SDK order/grant/completeProductGrant 경로 및 latest paid success 증적 확보
+- [x] **PRO-INTAKE-001** Pro 상담지 — Stage 3 상담지 + AI 프롬프트 반영 완료
+- [x] **UI-TRAINING-DETAIL-001** 훈련 상세 UX — attempt/reaction/history 경로 완료
+- [x] **AI-COACHING-ANALYTICS-001** 코칭 행동 분석 — backend/frontend 통합 완료
 
-### C2. In Progress (9/11 = 82%) — 잔여 TODO
+### C2. QA / In Progress — 잔여 TODO
 
 - [ ] **AUTH-001** 인증
   - [x] login.tsx appLogin 연동
@@ -86,7 +91,8 @@
   - [x] login-with-toss v13 배포 + Sandbox 200/400 증적
   - [x] rateLimiter/piiGuard/pepperRotation
   - [x] auth.test.ts 7케이스
-  - [ ] fresh authCode로 happy-path 200 재증적 (실기기)
+  - [x] fresh AIT login happy-path 재증적 (2026-05-26)
+  - [ ] 콘솔 콜백/negative path 최종 운영 증적 정리
 
 - [ ] **APP-001** 앱 셸
   - [x] 23라우트 + _app.tsx 프로바이더
@@ -109,30 +115,17 @@
   - [x] log API backend-first + supabase fallback
   - [ ] FastAPI 로그 API 실기기 E2E 검증
 
-- [x] **AI-001** AI 코칭
-  - [x] 코칭 6블록 (Free 3 + PRO 3)
-  - [x] 피드백 별점 useSubmitFeedback
-  - [x] Backend BE-P5 완료 (AI 6블록 생성 + 예산 게이팅 + 룰 폴백)
-  - [x] Backend 12모듈 60+ endpoints
-  - [x] coaching API backend-first + supabase fallback
-  - [x] coaching/result P0 업그레이드
-  - [x] FastAPI 코칭 API DEV_LOCAL 실 연동 검증
-  - [x] Production AIT 코칭 회귀 검증
-
-- [ ] **IAP-001** 결제
-  - [x] 구독 화면 Card Stack + useIsPro + usePurchaseIAP
-  - [x] verify-iap-order v12 + DB 영속(5건)
-  - [x] iap.test 8케이스 + usePendingOrderRecovery
-  - [x] subscription API backend-first 전환
-  - [ ] 결제 E2E (앱 UI 3시나리오 증적)
-  - [x] mock orderId 제거 → 실 SDK 교체
-
 - [ ] **MSG-001** 알림
   - [x] send-smart-message Edge v9 + 쿨다운 정책
   - [x] noti_history 실DB 연동 + fail-open 멱등
   - [x] 우회 차단 + 429 QUIET_HOURS 확인
-  - [ ] Smart Message 신청/승인 완료
-  - [ ] Sandbox 실발송 검증
+  - [x] `TAILLOG_BEHAVIOR_REMIND` 승인 + current user HTTP 200 + `noti_history.success=true`
+  - [ ] coaching_ready/training_reminder/streak_alert/surge_alert/promo 추가 캠페인 등록
+
+- [ ] **AD-001** 광고
+  - [x] real SDK wrapper + live Ad Group ID 7종 fallback
+  - [x] R1/R2 actual Toss AdActivity 진입 및 R2 reward flow PASS (2026-05-26)
+  - [ ] Apps in Toss console impression 갱신 확인
 
 - [ ] **B2B-001** B2B 운영
   - [x] P1~P7 전체 코드 (타입/가드/API/훅/UI/설정)
@@ -140,16 +133,22 @@
   - [x] BE-P7 완료 (org 14 + report 9 endpoints)
   - [x] B2B IAP 공식 패턴 + roleGuard test 8케이스
   - [x] `/ops/settings` center logo upload/display/save DEV_LOCAL PASS + remote `org-logos` bucket/RLS applied
-  - [ ] 40마리 FlatList 성능 실측
-  - [ ] 공유 링크 실기기 검증
-  - [ ] B2C 회귀 테스트
-  - [ ] verify_parent_phone_last4 RPC 서버 구현
+  - [x] 40마리 `/ops/today` DEV_LOCAL + Metro-off actual Toss 렌더/성능 증적
+  - [x] 공유 링크 actual Toss 공유시트 + DB 저장 증적
+  - [x] B2B/B2C 전환 회귀 2회 반복 PASS
+  - [x] `verify_parent_phone_last4` FastAPI endpoint + `/parent/reports?token` DEV_LOCAL 진입 PASS
+  - [ ] B2B route board는 `/ops/today`, `/ops/settings`, `/parent/reports` 최종 manual QA가 남아 `QA` 유지
+
+- [ ] **GROWTH-001** Viral Reward
+  - [x] contactsViral native UI 진입 + 공유자 PRO_DAY_PASS 지급 확인
+  - [ ] day-pass-only 계정 gate/만료 복귀 QA
+  - [ ] 지인 recipient 지급은 referral claim endpoint가 필요하면 별도 구현
 
 ---
 
 ## D. 토스 SDK 연동 (공식 문서 vs 구현)
 
-### D1. 구현 완료 (55%)
+### D1. 구현 완료
 
 - [x] Toss Login OAuth → login-with-toss v13
 - [x] IAP `createOneTimePurchaseOrder` / `getPendingOrders` → iap.ts 래퍼
@@ -161,9 +160,9 @@
 
 ### D2. Mock/부분 구현 (20%)
 
-- [ ] 광고 Ads SDK 2.0 → `createMockAdsSdk()` 사용 중
-  - [ ] 실 Ad Group ID 교체 **⏸ 보류** — 계좌사본 미비, 사업자 광고 심사 불가. ENV 구조(AIT_AD_R1/R2/R3 + babel inline) 준비 완료
-  - [ ] Rewarded/Interstitial/Banner 실 검증
+- [x] 광고 Ads SDK 2.0 → 실 SDK wrapper + live Ad Group ID fallback 적용
+  - [x] R1/R2 rewarded actual Toss AdActivity 진입 확인
+  - [ ] Apps in Toss console impression 갱신 확인
 - [x] ~~send-smart-message → mock mTLS~~ → ✅ real mTLS (v14)
 - [x] ~~grant-toss-points → mock mTLS~~ → ✅ real mTLS (v14)
 - [x] ~~verify-iap-order → mock mTLS~~ → ✅ real mTLS (v17)
@@ -217,15 +216,17 @@
 
 ---
 
-## F. 테스트 커버리지 (60%)
+## F. 테스트 커버리지 (65%)
 
 - [x] FE 단위 테스트: 101 tests, 16 suites (2026-05-12)
 - [x] BE 단위 테스트: pytest 57 tests (2026-05-12)
 - [x] Edge 단위 테스트: 45 tests, 13 suites (2026-05-12)
 - [ ] BE↔DB 통합 테스트
 - [ ] E2E 테스트 (로그인→기록→코칭→결제 풀플로우)
-- [ ] 성능 테스트 (40마리 FlatList, API p95 < 300ms)
-- [ ] 보안 테스트 (mTLS real mode 검증)
+- [x] B2B 40마리 `/ops/today` device 성능 스모크
+- [ ] API p95 < 300ms 별도 계측
+- [x] 주요 Edge role-header 우회 차단 + mTLS real mode 문서/배포 증적
+- [ ] secrets drift/만료 캘린더 운영 점검
 
 ---
 
@@ -270,10 +271,10 @@
 
 | 지표 | 수치 | 판정 |
 |------|------|------|
-| TypeScript 에러 | 0 | ✅ |
+| TypeScript 에러 | 0 | ✅ 2026-05-27 `/coaching/result` 세션 기준 |
 | TODO 잔존 | 2건 | ✅ 런타임 출시 차단 아님 |
 | FIXME/HACK | 0건 | ✅ |
-| Mock 코드 (테스트 외) | 3곳 | ⚠️ Dev/local 또는 B2B report 실모드 전환 대상 |
+| Mock 코드 (테스트 외) | 2곳+ | ⚠️ Dev/local 또는 report/marketing 실모드 전환 대상 |
 | 페이지 파일 | 24개 | ✅ |
 | 컴포넌트 파일 | 84개 | ✅ |
 | API 모듈 | 16개 | ✅ |

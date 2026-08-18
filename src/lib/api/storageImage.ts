@@ -4,12 +4,56 @@
  */
 import { supabase } from './supabase';
 
+type PublicImageBucket = 'dog-profiles' | 'org-logos';
+
+const ALLOWED_PUBLIC_IMAGE_BUCKETS = new Set<PublicImageBucket>(['dog-profiles', 'org-logos']);
+const ALLOWED_IMAGE_CONTENT_TYPES: Record<string, string> = {
+  jpg: 'image/jpeg',
+  png: 'image/png',
+  webp: 'image/webp',
+  heic: 'image/heic',
+  heif: 'image/heif',
+};
+
+function normalizeImageExtension(rawExtension: string): string {
+  const extension = rawExtension.toLowerCase();
+  if (extension === 'jpeg') return 'jpg';
+  return extension;
+}
+
+function assertAllowedBucket(bucket: string): asserts bucket is PublicImageBucket {
+  if (!ALLOWED_PUBLIC_IMAGE_BUCKETS.has(bucket as PublicImageBucket)) {
+    throw new Error('IMAGE_UPLOAD_BUCKET_NOT_ALLOWED');
+  }
+}
+
+function assertAllowedStoragePath(filePathWithoutExtension: string): void {
+  const segments = filePathWithoutExtension.split('/');
+  const hasUnsafeSegment = segments.some(
+    (segment) => segment.length === 0 || segment === '.' || segment === '..',
+  );
+  if (
+    filePathWithoutExtension.startsWith('/')
+    || filePathWithoutExtension.includes('\\')
+    || hasUnsafeSegment
+    || !/^[A-Za-z0-9/_-]+$/.test(filePathWithoutExtension)
+  ) {
+    throw new Error('IMAGE_UPLOAD_PATH_NOT_ALLOWED');
+  }
+}
+
+function assertAllowedImageType(extension: string, contentType: string): void {
+  if (ALLOWED_IMAGE_CONTENT_TYPES[extension] !== contentType) {
+    throw new Error('IMAGE_UPLOAD_UNSUPPORTED_TYPE');
+  }
+}
+
 function getImageUploadMeta(fileUri: string): { extension: string; contentType: string } {
   const dataUriMatch = /^data:(image\/([a-zA-Z0-9.+-]+));base64,/.exec(fileUri);
   if (dataUriMatch) {
     const contentType = dataUriMatch[1] ?? 'image/png';
-    const rawExtension = (dataUriMatch[2] ?? 'png').toLowerCase();
-    const extension = rawExtension === 'jpeg' ? 'jpg' : rawExtension.replace('+xml', '');
+    const extension = normalizeImageExtension((dataUriMatch[2] ?? 'png').replace('+xml', ''));
+    assertAllowedImageType(extension, contentType);
     return { extension, contentType };
   }
 
@@ -17,8 +61,9 @@ function getImageUploadMeta(fileUri: string): { extension: string; contentType: 
   const cleanUri = uriWithoutQuery.split('#')[0] ?? uriWithoutQuery;
   const lastSegment = cleanUri.split('/').pop() ?? '';
   const extension = lastSegment.includes('.') ? lastSegment.split('.').pop()?.toLowerCase() || 'jpg' : 'jpg';
-  const normalizedExtension = extension === 'jpeg' ? 'jpg' : extension;
-  const contentType = normalizedExtension === 'jpg' ? 'image/jpeg' : `image/${normalizedExtension}`;
+  const normalizedExtension = normalizeImageExtension(extension);
+  const contentType = ALLOWED_IMAGE_CONTENT_TYPES[normalizedExtension] ?? `image/${normalizedExtension}`;
+  assertAllowedImageType(normalizedExtension, contentType);
 
   return { extension: normalizedExtension, contentType };
 }
@@ -68,10 +113,12 @@ async function readImageBody(fileUri: string): Promise<Blob | ArrayBuffer> {
 }
 
 export async function uploadImageToPublicStorage(
-  bucket: string,
+  bucket: PublicImageBucket,
   filePathWithoutExtension: string,
   fileUri: string,
 ): Promise<string> {
+  assertAllowedBucket(bucket);
+  assertAllowedStoragePath(filePathWithoutExtension);
   const { extension, contentType } = getImageUploadMeta(fileUri);
   const imageBody = await readImageBody(fileUri);
   const filePath = `${filePathWithoutExtension}.${extension}`;

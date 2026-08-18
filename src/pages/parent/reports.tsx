@@ -176,7 +176,11 @@ function SharedReportEntry({ shareToken }: { shareToken: string }) {
   const [phoneLast4, setPhoneLast4] = useState('');
   const [isVerified, setIsVerified] = useState(false);
   const [verifyError, setVerifyError] = useState('');
-  const { data: report, isLoading, error, refetch } = useReportByShareToken(isVerified ? shareToken : undefined);
+  const verifiedLast4 = isVerified ? phoneLast4.replace(/[^0-9]/g, '').slice(0, 4) : undefined;
+  const { data: report, isLoading, error, refetch } = useReportByShareToken(
+    isVerified ? shareToken : undefined,
+    verifiedLast4,
+  );
   const verifyPhone = useVerifyParentPhoneLast4();
   const createInteraction = useCreateInteraction();
 
@@ -205,6 +209,8 @@ function SharedReportEntry({ shareToken }: { shareToken: string }) {
     createInteraction.mutate({
       report_id: report.id,
       parent_identifier: `phone_${phoneLast4}`,
+      share_token: shareToken,
+      last4: phoneLast4.replace(/[^0-9]/g, '').slice(0, 4),
       interaction_type: 'like',
       content: emoji,
     });
@@ -216,6 +222,8 @@ function SharedReportEntry({ shareToken }: { shareToken: string }) {
     createInteraction.mutate({
       report_id: report.id,
       parent_identifier: `phone_${phoneLast4}`,
+      share_token: shareToken,
+      last4: phoneLast4.replace(/[^0-9]/g, '').slice(0, 4),
       interaction_type: 'question',
       content: question,
     });

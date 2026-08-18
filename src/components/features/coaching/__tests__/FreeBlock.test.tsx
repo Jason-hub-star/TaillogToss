@@ -19,16 +19,19 @@ describe('DogVoiceBlockView', () => {
 
   it('renders dog voice title and typed message', () => {
     const message = '나도 천천히 배워볼게요.';
-    const { getByText } = render(
+    const { getByText, queryByText } = render(
       <DogVoiceBlockView
         dogName="메이"
         data={{ message, emotion: 'hopeful' }}
       />,
     );
 
+    expect(getByText('메이의 마음')).toBeTruthy();
+    expect(queryByText(message)).toBeNull();
+
+    fireEvent.press(getByText('열기'));
     advanceTyping(message);
 
-    expect(getByText('메이의 마음')).toBeTruthy();
     expect(getByText(message)).toBeTruthy();
   });
 
@@ -41,6 +44,7 @@ describe('DogVoiceBlockView', () => {
       />,
     );
 
+    fireEvent.press(getByText('열기'));
     advanceTyping(fallbackMessage);
 
     expect(getByText('메이의 마음')).toBeTruthy();
@@ -50,9 +54,11 @@ describe('DogVoiceBlockView', () => {
 
 describe('ActionPlanBlockView', () => {
   it('shows Pro deep action details with easy labels', () => {
+    const handleNavigateToTraining = jest.fn();
     const { getByText, queryByText } = render(
       <ActionPlanBlockView
         isPro
+        onNavigateToTraining={handleNavigateToTraining}
         data={{
           title: '행동 개선 계획',
           items: [
@@ -63,7 +69,7 @@ describe('ActionPlanBlockView', () => {
               is_completed: false,
               technique: '짧은 이탈 연습',
               psychological_principle: '안전하다는 예측을 다시 배워요.',
-              tools: ['간식', '영상 기록'],
+              tools: ['high-value treats', 'video log'],
               environment_setup: '조용한 현관',
               steps: ['문 손잡이를 1초 만져요.', '조용하면 바로 간식을 줘요.'],
               success_criteria: '3회 연속 짖지 않아요.',
@@ -88,5 +94,10 @@ describe('ActionPlanBlockView', () => {
     expect(getByText('준비물')).toBeTruthy();
     expect(getByText('멈출 신호')).toBeTruthy();
     expect(getByText('짖거나 문을 긁으면 멈춰요.')).toBeTruthy();
+    expect(getByText('좋아하는 간식, 영상 기록')).toBeTruthy();
+    expect(getByText('분리불안 완화 훈련')).toBeTruthy();
+
+    fireEvent.press(getByText('관련 훈련 바로 시작하기'));
+    expect(handleNavigateToTraining).toHaveBeenCalledWith('separation_anxiety');
   });
 });

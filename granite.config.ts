@@ -32,6 +32,29 @@ function getEnv(key: string): string {
   return process.env[key] ?? '';
 }
 
+function getPublicReleaseBackendUrl(): string {
+  const value = getEnv('EXPO_PUBLIC_BACKEND_URL').trim();
+  if (!value) return '';
+  try {
+    const parsed = new URL(value);
+    const host = parsed.hostname;
+    const isLocal =
+      host === 'localhost' ||
+      host === '127.0.0.1' ||
+      host === '0.0.0.0' ||
+      host === '10.0.2.2' ||
+      host.startsWith('192.168.');
+    return parsed.protocol === 'https:' && !isLocal ? value : '';
+  } catch {
+    return '';
+  }
+}
+
+function getDevMenuFlag(): string {
+  if (process.env.NODE_ENV === 'production') return '';
+  return getEnv('EXPO_PUBLIC_SHOW_DEV_MENU') === 'true' ? 'true' : '';
+}
+
 const defineEnv: Record<string, string> = {
   'process.env.EXPO_PUBLIC_SUPABASE_URL': JSON.stringify(getEnv('EXPO_PUBLIC_SUPABASE_URL')),
   'process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY': JSON.stringify(getEnv('EXPO_PUBLIC_SUPABASE_ANON_KEY')),
@@ -44,8 +67,8 @@ const defineEnv: Record<string, string> = {
   'process.env.AIT_AD_B2': JSON.stringify(getEnv('AIT_AD_B2')),
   'process.env.AIT_AD_B3': JSON.stringify(getEnv('AIT_AD_B3')),
   'process.env.AIT_AD_I1': JSON.stringify(getEnv('AIT_AD_I1')),
-  'process.env.EXPO_PUBLIC_BACKEND_URL': JSON.stringify(getEnv('EXPO_PUBLIC_BACKEND_URL')),
-  'process.env.EXPO_PUBLIC_SHOW_DEV_MENU': JSON.stringify(getEnv('EXPO_PUBLIC_SHOW_DEV_MENU')),
+  'process.env.EXPO_PUBLIC_BACKEND_URL': JSON.stringify(getPublicReleaseBackendUrl()),
+  'process.env.EXPO_PUBLIC_SHOW_DEV_MENU': JSON.stringify(getDevMenuFlag()),
   'process.env.EXPO_PUBLIC_CONTACTS_VIRAL_PRO_DAY_PASS_MODULE_ID': JSON.stringify(
     getEnv('EXPO_PUBLIC_CONTACTS_VIRAL_PRO_DAY_PASS_MODULE_ID'),
   ),

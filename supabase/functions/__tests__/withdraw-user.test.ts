@@ -12,13 +12,9 @@ function makeJwt(sub: string): string {
  * fetchFn mock이 첫 번째 호출에서 user 정보를 반환하도록 설정한다.
  */
 function makeDeps(userId: string, overrides?: Partial<WithdrawDeps>): WithdrawDeps {
-  const mockFetch = jest.fn()
-    // 첫 호출: verifyJwtOwner — GET /auth/v1/user → { id: userId }
-    .mockResolvedValueOnce(new Response(JSON.stringify({ id: userId }), { status: 200 }))
-    // 이후 호출: DELETE public.users
-    .mockResolvedValueOnce(new Response(null, { status: 200 }))
-    // 이후 호출: DELETE auth.users
-    .mockResolvedValueOnce(new Response(null, { status: 200 }));
+  const mockFetch = jest.fn().mockResolvedValue(new Response(null, { status: 200 }));
+  // 첫 호출: verifyJwtOwner — GET /auth/v1/user → { id: userId }
+  mockFetch.mockResolvedValueOnce(new Response(JSON.stringify({ id: userId }), { status: 200 }));
 
   return {
     getEnv: (key) => ({ SUPABASE_URL: 'https://test.supabase.co', SUPABASE_SERVICE_ROLE_KEY: 'srk_test' }[key]),
@@ -96,9 +92,12 @@ describe('handleWithdraw', () => {
   });
 
   it('DB 삭제 실패 → DB_DELETE_FAILED 500', async () => {
-    const mockFetch = jest.fn()
-      .mockResolvedValueOnce(new Response(JSON.stringify({ id: 'u1' }), { status: 200 })) // verifyJwtOwner
-      .mockResolvedValueOnce(new Response('error', { status: 500 }));                      // DELETE public.users
+    const mockFetch = jest.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes('/auth/v1/user')) return new Response(JSON.stringify({ id: 'u1' }), { status: 200 });
+      if (url.includes('/rest/v1/users?id=eq.u1')) return new Response('error', { status: 500 });
+      return new Response(null, { status: 200 });
+    });
     const deps: WithdrawDeps = {
       getEnv: (key) => ({ SUPABASE_URL: 'https://test.supabase.co', SUPABASE_SERVICE_ROLE_KEY: 'srk' }[key]),
       fetchFn: mockFetch,
@@ -109,10 +108,12 @@ describe('handleWithdraw', () => {
   });
 
   it('auth 삭제 실패 → AUTH_DELETE_FAILED 500', async () => {
-    const mockFetch = jest.fn()
-      .mockResolvedValueOnce(new Response(JSON.stringify({ id: 'u1' }), { status: 200 })) // verifyJwtOwner
-      .mockResolvedValueOnce(new Response(null, { status: 200 }))                          // DELETE public.users OK
-      .mockResolvedValueOnce(new Response('auth error', { status: 422 }));                 // DELETE auth.users FAIL
+    const mockFetch = jest.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes('/auth/v1/user')) return new Response(JSON.stringify({ id: 'u1' }), { status: 200 });
+      if (url.includes('/auth/v1/admin/users/u1')) return new Response('auth error', { status: 422 });
+      return new Response(null, { status: 200 });
+    });
     const deps: WithdrawDeps = {
       getEnv: (key) => ({ SUPABASE_URL: 'https://test.supabase.co', SUPABASE_SERVICE_ROLE_KEY: 'srk' }[key]),
       fetchFn: mockFetch,
@@ -128,15 +129,24 @@ describe('handleWithdraw', () => {
     expect(result.ok).toBe(true);
     expect(result.data?.withdrawn).toBe(true);
     expect(result.status).toBe(200);
-    // fetch 3번: verifyJwtOwner + DELETE public + DELETE auth
-    expect((deps.fetchFn as jest.Mock)).toHaveBeenCalledTimes(3);
+    expect((deps.fetchFn as jest.Mock)).toHaveBeenCalledWith(
+      expect.stringContaining('/rest/v1/users?id=eq.u1'),
+      expect.objectContaining({ method: 'DELETE' }),
+    );
+    expect((deps.fetchFn as jest.Mock)).toHaveBeenCalledWith(
+      expect.stringContaining('/auth/v1/admin/users/u1'),
+      expect.objectContaining({ method: 'DELETE' }),
+    );
   });
 
   it('404도 성공으로 처리 (이미 삭제된 경우)', async () => {
-    const mockFetch = jest.fn()
-      .mockResolvedValueOnce(new Response(JSON.stringify({ id: 'u1' }), { status: 200 }))
-      .mockResolvedValueOnce(new Response(null, { status: 404 }))
-      .mockResolvedValueOnce(new Response(null, { status: 404 }));
+    const mockFetch = jest.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes('/auth/v1/user')) return new Response(JSON.stringify({ id: 'u1' }), { status: 200 });
+      if (url.includes('/rest/v1/users?id=eq.u1')) return new Response(null, { status: 404 });
+      if (url.includes('/auth/v1/admin/users/u1')) return new Response(null, { status: 404 });
+      return new Response(null, { status: 200 });
+    });
     const deps: WithdrawDeps = {
       getEnv: (key) => ({ SUPABASE_URL: 'https://test.supabase.co', SUPABASE_SERVICE_ROLE_KEY: 'srk' }[key]),
       fetchFn: mockFetch,
@@ -152,11 +162,57 @@ describe('handleWithdraw', () => {
     const calls = (deps.fetchFn as jest.Mock).mock.calls;
     // 1st: verifyJwtOwner
     expect(calls[0][0]).toContain('/auth/v1/user');
-    // 2nd: DELETE public.users
-    expect(calls[1][0]).toContain('/rest/v1/users?id=eq.test-uuid');
-    expect(calls[1][1].method).toBe('DELETE');
-    // 3rd: DELETE auth.users
-    expect(calls[2][0]).toContain('/auth/v1/admin/users/test-uuid');
-    expect(calls[2][1].method).toBe('DELETE');
+    expect(calls.some(([url]) => String(url).includes('/rest/v1/users?id=eq.test-uuid'))).toBe(true);
+    expect(calls.some(([url]) => String(url).includes('/auth/v1/admin/users/test-uuid'))).toBe(true);
+  });
+
+  it('참조 데이터 정리 실패 → REFERENCE_CLEANUP_FAILED 500', async () => {
+    const mockFetch = jest.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes('/auth/v1/user')) return new Response(JSON.stringify({ id: 'u1' }), { status: 200 });
+      if (url.includes('/rest/v1/behavior_logs?recorded_by=eq.u1')) {
+        return new Response('fk cleanup error', { status: 500 });
+      }
+      return new Response(null, { status: 200 });
+    });
+    const deps: WithdrawDeps = {
+      getEnv: (key) => ({ SUPABASE_URL: 'https://test.supabase.co', SUPABASE_SERVICE_ROLE_KEY: 'srk' }[key]),
+      fetchFn: mockFetch,
+    };
+    const result = await handleWithdraw(makeJwt('u1'), { userId: 'u1' }, deps);
+    expect(result.ok).toBe(false);
+    expect(result.error?.code).toBe('REFERENCE_CLEANUP_FAILED');
+  });
+
+  it('B2B org_dogs 삭제를 막는 pii_access_log.org_dog_id 참조를 먼저 해제', async () => {
+    const mockFetch = jest.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes('/auth/v1/user')) return new Response(JSON.stringify({ id: 'u1' }), { status: 200 });
+      if (url.includes('/rest/v1/dogs?user_id=eq.u1')) {
+        return new Response(JSON.stringify([{ id: 'dog-1' }]), { status: 200 });
+      }
+      if (url.includes('/rest/v1/org_dogs?parent_user_id=eq.u1')) {
+        return new Response(JSON.stringify([{ id: 'org-dog-parent' }]), { status: 200 });
+      }
+      if (url.includes('/rest/v1/org_dogs?dog_id=in.(dog-1)')) {
+        return new Response(JSON.stringify([{ id: 'org-dog-owned' }]), { status: 200 });
+      }
+      return new Response(null, { status: 200 });
+    });
+    const deps: WithdrawDeps = {
+      getEnv: (key) => ({ SUPABASE_URL: 'https://test.supabase.co', SUPABASE_SERVICE_ROLE_KEY: 'srk' }[key]),
+      fetchFn: mockFetch,
+    };
+
+    const result = await handleWithdraw(makeJwt('u1'), { userId: 'u1' }, deps);
+
+    expect(result.ok).toBe(true);
+    expect(mockFetch).toHaveBeenCalledWith(
+      expect.stringContaining('/rest/v1/pii_access_log?org_dog_id=in.(org-dog-parent,org-dog-owned)'),
+      expect.objectContaining({
+        method: 'PATCH',
+        body: JSON.stringify({ org_dog_id: null }),
+      }),
+    );
   });
 });

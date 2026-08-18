@@ -1,0 +1,9 @@
+[     942ms] [WARNING] Unsatisfied version 3.12.6 from @tosscore-internal/business.toss.im-dashboard of shared singleton module @tds/desktop (required ^1) @ https://business.toss.im/dashboard/static/main.467b244f.js:232
+[     943ms] [WARNING] Unsatisfied version 3.12.6 from @tosscore-internal/business.toss.im-dashboard of shared singleton module @tds/desktop (required ^1) @ https://business.toss.im/dashboard/static/main.467b244f.js:232
+[    1374ms] [WARNING] [ Federation Runtime ] Version 3.12.6 from @tosscore-internal/business.toss.im-dashboard of shared singleton module @tds/desktop does not satisfy the requirement of business_one_navigation which needs ^1) @ https://business.toss.im/dashboard/static/43.48b2b268.js:103
+[   10164ms] [ERROR] `DialogContent` requires a `DialogTitle` for the component to be accessible for screen reader users.
+
+If you want to hide the `DialogTitle`, you can wrap it with our VisuallyHidden component.
+
+For more information, see https://radix-ui.com/primitives/docs/components/dialog @ https://apps-in-toss.toss.im/static/bootstrap.DEsRQzKK.js:41
+[   10164ms] [WARNING] Warning: Missing `Description` or `aria-describedby={undefined}` for {DialogContent}. @ https://apps-in-toss.toss.im/static/bootstrap.DEsRQzKK.js:41

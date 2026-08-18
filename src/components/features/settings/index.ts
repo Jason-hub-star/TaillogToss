@@ -11,3 +11,4 @@ export { NotificationSettingsSection } from './NotificationSettingsSection';
 export { AiCoachingSettingsSection } from './AiCoachingSettingsSection';
 export { AccountSettingsSection } from './AccountSettingsSection';
 export { ServiceSettingsSection } from './ServiceSettingsSection';
+export { MarketingDataConsentSection } from './MarketingDataConsentSection';

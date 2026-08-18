@@ -11,6 +11,7 @@ from fastapi.responses import JSONResponse
 
 from app.core.config import settings
 from app.core.exceptions import DomainException, domain_exception_handler
+from app.core.log_redaction import redact_body_for_log, redact_text
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("taillogtoss")
@@ -31,7 +32,7 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
     logger.warning(
         "422 Validation Error on %s %s\n  body: %s\n  errors: %s",
         request.method, request.url.path,
-        body.decode("utf-8", errors="replace")[:500],
+        redact_body_for_log(body),
         exc.errors(),
     )
     return JSONResponse(
@@ -49,7 +50,7 @@ async def log_requests(request: Request, call_next):
         logger.info("← %s %s", response.status_code, request.url.path)
         return response
     except Exception as e:
-        logger.error("✗ %s %s: %s", request.method, request.url.path, e)
+        logger.error("✗ %s %s: %s", request.method, request.url.path, redact_text(str(e)))
         raise
 
 

@@ -20,6 +20,8 @@ from app.features.subscription.entitlements import (
 )
 
 router = APIRouter()
+CONTACTS_VIRAL_REWARD_AMOUNT = 1
+CONTACTS_VIRAL_REWARD_UNIT = "PRO 1일권"
 
 
 class ContactsViralRewardRequest(BaseModel):
@@ -46,17 +48,19 @@ async def grant_contacts_viral_reward(
 ) -> ContactsViralRewardResponse:
     """Grant inviter-only PRO 1-day pass after a contactsViral sendViral event."""
     configured_module_id = settings.CONTACTS_VIRAL_PRO_DAY_PASS_MODULE_ID.strip()
-    if not configured_module_id and settings.is_production:
+    if not configured_module_id:
         raise HTTPException(status_code=503, detail="contactsViral reward moduleId is not configured")
     if configured_module_id and body.module_id != configured_module_id:
         raise HTTPException(status_code=403, detail="Invalid contactsViral moduleId")
+    if body.reward_amount != CONTACTS_VIRAL_REWARD_AMOUNT or body.reward_unit != CONTACTS_VIRAL_REWARD_UNIT:
+        raise HTTPException(status_code=403, detail="Invalid contactsViral reward metadata")
 
     entitlement, granted = await grant_contacts_viral_pro_day_pass(
         db=db,
         user_id=UUID(user_id),
         module_id=body.module_id,
-        reward_amount=body.reward_amount,
-        reward_unit=body.reward_unit,
+        reward_amount=CONTACTS_VIRAL_REWARD_AMOUNT,
+        reward_unit=CONTACTS_VIRAL_REWARD_UNIT,
         duration_days=settings.CONTACTS_VIRAL_PRO_DAY_PASS_DAYS,
     )
     await db.commit()

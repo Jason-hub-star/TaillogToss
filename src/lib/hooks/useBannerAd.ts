@@ -8,6 +8,7 @@ import type { BannerPlacement } from 'types/ads';
 import { BANNER_PLACEMENT_CONFIG } from 'types/ads';
 import { tracker } from 'lib/analytics/tracker';
 import { buildAdDiagnostics } from 'lib/ads/diagnostics';
+import { useFullscreenAdActive } from 'lib/ads/adCoordination';
 
 const dailyCounts: Record<string, { date: string; count: number }> = {};
 
@@ -41,7 +42,9 @@ export function useBannerAd(placement: BannerPlacement): UseBannerAdReturn {
   const limit = BANNER_PLACEMENT_CONFIG[placement].dailyLimit;
   const [impressions, setImpressions] = useState(getCount(placement));
 
-  const canShow = impressions < limit;
+  // AIT 2026-07-10: 전면/보상형 로드·표시 중에는 배너 렌더를 억제해 Android 동시로드 이벤트 실패를 피한다.
+  const fullscreenActive = useFullscreenAdActive();
+  const canShow = impressions < limit && !fullscreenActive;
 
   useEffect(() => {
     if (!canShow) return;

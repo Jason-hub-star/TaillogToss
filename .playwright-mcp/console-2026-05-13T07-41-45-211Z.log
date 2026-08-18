@@ -1,0 +1,13 @@
+[     501ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ https://business-accounts.toss.im/user/me:0
+[     501ms] [ERROR] Failed to install plugin gs Error: Unauthorized
+    at hc (https://business.toss.im/one-navigation/v1/bundle.js:12299:17084) @ https://apps-in-toss.toss.im/static/bootstrap.C-68ybfH.js:41
+[     514ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ https://business-accounts.toss.im/user/me:0
+[     622ms] [ERROR] Failed to load resource: the server responded with a status of 401 () @ https://apps-in-toss.toss.im/console/api-public/v3/appsintossconsole/members/me/user-info:0
+[     646ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ https://business-accounts.toss.im/user/me:0
+[  330551ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ https://business-accounts.toss.im/user/me:0
+[  675595ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ https://business-accounts.toss.im/user/me:0
+[ 1200640ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ https://business-accounts.toss.im/user/me:0
+[ 2970740ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ https://business-accounts.toss.im/user/me:0
+[ 4620796ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ https://business-accounts.toss.im/user/me:0
+[ 5465872ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ https://business-accounts.toss.im/user/me:0
+[ 6195918ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ https://business-accounts.toss.im/user/me:0

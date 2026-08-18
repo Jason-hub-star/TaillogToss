@@ -38,3 +38,22 @@ Parity: IAP-001, GROWTH-001
 - [x] 실제 토스앱에서 contactsViral native 화면 진입 및 `user_entitlements` row 생성 확인
 - [ ] `/coaching/result`, `/training/detail`, `/dog/switcher` PRO 동작은 이미 유료 PRO 계정이라 day pass 단독 계정으로 추가 확인 필요
 - [ ] 테스트용 짧은 만료값 또는 DB clock 조작으로 FREE 자동 복귀 확인
+
+## Friend Recipient Reward Flow
+
+현재 배포된 `테일로그 PRO 1일권` contactsViral 연동은 공식 문서 기준 흐름 그대로, `sendViral` 이벤트를 받은 공유자 계정에 `PRO_DAY_PASS`를 지급한다. 즉, 현재 구현만으로는 공유를 받은 지인 계정에 자동 지급되지 않는다.
+
+지인에게 같은 `PRO 1일권`을 주려면 contactsViral 공유 완료 이벤트와 별도로 앱 서버의 초대 claim 흐름을 추가해야 한다. 콘솔 리워드 ID `a1c00816-d46a-4754-b3af-27ea7d028dc1`는 리워드 단위/수량을 식별하지만, 지인 계정의 `user_id`는 공유 이벤트만으로 전달되지 않기 때문이다.
+
+1. 공유자 앱에서 `contactsViral({ options: { moduleId } })`을 실행한다.
+2. 공유 시작 또는 `sendViral` 수신 시 서버가 `referral_invites` 같은 초대 토큰을 생성한다. 최소 필드는 `token`, `inviter_user_id`, `source_module_id`, `reward_type=PRO_DAY_PASS`, `expires_at`, `claimed_by_user_id`, `claimed_at`, `metadata`다.
+3. 공유 메시지 또는 랜딩 링크에 `invite_token`을 포함한다. Toss contactsViral 기본 푸시 문구가 토큰 삽입을 지원하지 않는 경우, 공개 미니앱 공유 URL 또는 별도 딥링크 claim URL을 병행해야 한다.
+4. 지인이 링크로 앱에 진입하고 Toss Login/Supabase 세션을 만든다.
+5. 프론트가 `POST /api/v1/referral/reward/contacts-viral/claim`에 `invite_token`을 보낸다.
+6. 서버는 토큰 만료, 미사용 여부, 자기 자신 초대 방지, 같은 지인/모듈 중복 claim, KST 1일 제한을 검증한다.
+7. 검증 통과 시 `user_entitlements`에 지인 `user_id`로 `type=PRO_DAY_PASS`, `source=contacts_viral_friend_claim`, `source_module_id=a1c00816-d46a-4754-b3af-27ea7d028dc1`, `expires_at=now()+1 day`, `metadata.inviter_user_id/token`을 저장한다.
+8. 지인 앱에서 subscription query를 invalidate/refetch하고 `effective_is_pro=true`로 광고 미노출, PRO 코칭/훈련/멀티독 gate를 즉시 연다.
+9. 만료 시 기존 `effective_is_pro` 합산 판정이 자동으로 FREE 복귀시킨다.
+10. QA는 공유자 1대와 지인 1대 또는 다른 Toss 계정 2개로 진행한다. 성공 기준은 지인 계정의 `user_entitlements` row 생성, `/dashboard` 광고 미노출, PRO gate 통과, duplicate claim 차단, 만료 후 FREE 복귀다.
+
+운영 선택지는 두 가지다. A안은 현재처럼 공유자만 보상하고 공식 contactsViral 검증 범위에 머무른다. B안은 공유자 보상은 유지하면서 위 claim 흐름을 추가해 지인도 `PRO 1일권`을 받게 한다.

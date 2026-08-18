@@ -2,8 +2,7 @@
  * verify-iap-order main — 내부 JWT 검증(auth/v1/user) 기반 IAP 검증 엔트리.
  * Parity: IAP-001
  *
- * mTLS 모드: TOSS_CLIENT_CERT_BASE64 + TOSS_CLIENT_KEY_BASE64 환경변수 존재 시 real,
- * 없으면 mock (로컬 개발 안전). TOSS_MTLS_MODE=real|mock 으로 명시 가능.
+ * mTLS 모드: 운영/업로드본은 real로 fail-closed, DEV_LOCAL/test에서만 mock 허용.
  */
 
 type UserRole =
@@ -39,6 +38,8 @@ interface VerifyIapOrderResponse {
   grant_status: 'pending' | 'granted' | 'grant_failed' | 'refund_requested' | 'refunded';
   amount: number;
   toss_order_id: string;
+  org_id?: string | null;
+  trainer_user_id?: string | null;
   error_code: string | null;
   retry_count: number;
   created_at: string;
@@ -75,11 +76,13 @@ interface TossOrderUpsertInput {
   grant_status: VerifyIapOrderResponse['grant_status'];
   amount: number;
   toss_order_id: string;
+  org_id?: string | null;
+  trainer_user_id?: string | null;
   error_code: string | null;
   retry_count: number;
 }
 
-interface TossOrderPersistedRow {
+export interface TossOrderPersistedRow {
   id: string;
   user_id: string;
   product_id: string;
@@ -88,6 +91,8 @@ interface TossOrderPersistedRow {
   grant_status: VerifyIapOrderResponse['grant_status'];
   amount: number;
   toss_order_id: string;
+  org_id?: string | null;
+  trainer_user_id?: string | null;
   error_code: string | null;
   retry_count: number;
   created_at: string;
@@ -97,12 +102,20 @@ interface TossOrderPersistedRow {
 import { createMTLSClient } from '../_shared/mTLSClient.ts';
 import { resolveMtlsMode } from '../_shared/mtlsMode.ts';
 import { iapCircuitBreaker, retryOnServerError } from '../_shared/circuitBreaker.ts';
+import { isTrustedServiceRoleToken } from './auth.ts';
+
+const edgeRuntime = (globalThis as {
+  Deno?: {
+    env: { get: (key: string) => string | undefined };
+    serve?: (handler: (request: Request) => Promise<Response> | Response) => void;
+  };
+}).Deno;
 
 const APP_ROLES = new Set<UserRole>(['user', 'trainer', 'org_owner', 'org_staff', 'service_role']);
 const ALLOWED_ROLES = new Set<UserRole>([...APP_ROLES, 'authenticated']);
-const SUPABASE_URL = Deno.env.get('SUPABASE_URL')?.replace(/\/$/, '');
-const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY');
-const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+const SUPABASE_URL = edgeRuntime?.env.get('SUPABASE_URL')?.replace(/\/$/, '');
+const SUPABASE_ANON_KEY = edgeRuntime?.env.get('SUPABASE_ANON_KEY');
+const SUPABASE_SERVICE_ROLE_KEY = edgeRuntime?.env.get('SUPABASE_SERVICE_ROLE_KEY');
 
 // productId → 지급 유형 매핑 (IAP 상품 카탈로그와 동기화)
 const PRODUCT_GRANTS: Record<string, { planType?: string; aiTokens?: number; durationDays?: number }> = {
@@ -110,6 +123,21 @@ const PRODUCT_GRANTS: Record<string, { planType?: string; aiTokens?: number; dur
   'ait.0000020829.b0b00d71.17c5290dc1.7444362301': { aiTokens: 10 },
   'ait.0000020829.32dc32cf.49e67a4cfa.7443541064': { aiTokens: 30 },
 };
+
+const B2B_PRODUCT_GRANTS: Record<string, { maxDogs: number; maxStaff: number; priceKrw: number }> = {
+  center_basic: { maxDogs: 30, maxStaff: 5, priceKrw: 29000 },
+  center_pro: { maxDogs: 60, maxStaff: 10, priceKrw: 59000 },
+  center_enterprise: { maxDogs: 100, maxStaff: 20, priceKrw: 99000 },
+  trainer_10: { maxDogs: 10, maxStaff: 1, priceKrw: 9900 },
+  trainer_30: { maxDogs: 30, maxStaff: 1, priceKrw: 19900 },
+  trainer_50: { maxDogs: 50, maxStaff: 1, priceKrw: 39900 },
+};
+
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+function isUuid(value: string | null | undefined): value is string {
+  return typeof value === 'string' && UUID_PATTERN.test(value);
+}
 
 function newCorrelationId(prefix = 'err'): string {
   const stamp = Date.now().toString(36);
@@ -259,39 +287,43 @@ async function verifyJwtViaAuth(
 }
 
 async function upsertTossOrder(
-  accessToken: string,
   input: TossOrderUpsertInput,
-): Promise<{ ok: true; row: TossOrderPersistedRow } | { ok: false; error: EdgeResult<never> }> {
-  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+): Promise<{ ok: true; row: TossOrderPersistedRow } | { ok: false; conflict?: boolean; error: EdgeResult<never> }> {
+  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
     return {
       ok: false,
-      error: fail('SUPABASE_CONFIG_MISSING', 'SUPABASE_URL/SUPABASE_ANON_KEY is required', 500),
+      error: fail('SUPABASE_CONFIG_MISSING', 'SUPABASE_URL/SUPABASE_SERVICE_ROLE_KEY is required', 500),
     };
   }
 
   const endpoint =
     `${SUPABASE_URL}/rest/v1/toss_orders` +
-    '?on_conflict=idempotency_key' +
-    '&select=id,user_id,product_id,idempotency_key,toss_status,grant_status,amount,toss_order_id,error_code,retry_count,created_at,updated_at';
+    '?select=id,user_id,product_id,idempotency_key,toss_status,grant_status,amount,toss_order_id,org_id,trainer_user_id,error_code,retry_count,created_at,updated_at';
 
   const response = await fetch(endpoint, {
     method: 'POST',
     headers: {
-      apikey: SUPABASE_ANON_KEY,
-      Authorization: `Bearer ${accessToken}`,
+      apikey: SUPABASE_SERVICE_ROLE_KEY,
+      Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
       'Content-Type': 'application/json',
-      Prefer: 'resolution=merge-duplicates,return=representation',
+      Prefer: 'return=representation',
     },
     body: JSON.stringify([input]),
   });
 
   if (!response.ok) {
-    const payload = await response.text().catch(() => '');
+    if (response.status === 409) {
+      return {
+        ok: false,
+        conflict: true,
+        error: fail('IAP_IDEMPOTENCY_CONFLICT', 'IAP idempotency key is already bound to another order', 409),
+      };
+    }
+
     return {
       ok: false,
       error: fail('IAP_PERSIST_FAILED', 'Failed to persist toss_orders record', 502, {
         status: response.status,
-        payload: payload.slice(0, 600),
       }),
     };
   }
@@ -308,14 +340,237 @@ async function upsertTossOrder(
   return { ok: true, row };
 }
 
+// SEC-1: 선점 insert 이후 활성화 결과로 grant_status/error_code 를 확정한다.
+async function updateTossOrderGrantState(
+  rowId: string,
+  grantStatus: VerifyIapOrderResponse['grant_status'],
+  errorCode: string | null,
+): Promise<{ ok: true; row: TossOrderPersistedRow } | { ok: false; error: EdgeResult<never> }> {
+  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+    return {
+      ok: false,
+      error: fail('SUPABASE_CONFIG_MISSING', 'SUPABASE_URL/SUPABASE_SERVICE_ROLE_KEY is required', 500),
+    };
+  }
+
+  const endpoint =
+    `${SUPABASE_URL}/rest/v1/toss_orders?id=eq.${encodeURIComponent(rowId)}` +
+    '&select=id,user_id,product_id,idempotency_key,toss_status,grant_status,amount,toss_order_id,org_id,trainer_user_id,error_code,retry_count,created_at,updated_at';
+
+  const response = await fetch(endpoint, {
+    method: 'PATCH',
+    headers: {
+      apikey: SUPABASE_SERVICE_ROLE_KEY,
+      Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+      'Content-Type': 'application/json',
+      Prefer: 'return=representation',
+    },
+    body: JSON.stringify({
+      grant_status: grantStatus,
+      error_code: errorCode,
+      updated_at: new Date().toISOString(),
+    }),
+  });
+
+  if (!response.ok) {
+    return {
+      ok: false,
+      error: fail('IAP_PERSIST_FAILED', 'Failed to finalize toss_orders grant state', 502, {
+        status: response.status,
+      }),
+    };
+  }
+
+  const rows = await response.json().catch(() => null) as TossOrderPersistedRow[] | null;
+  const row = Array.isArray(rows) ? rows[0] : null;
+  if (!row?.id) {
+    return {
+      ok: false,
+      error: fail('IAP_PERSIST_FAILED', 'Invalid toss_orders finalize response', 502),
+    };
+  }
+
+  return { ok: true, row };
+}
+
+export function buildExistingTossOrderLookupFilter(idempotencyKey: string, orderId: string): string {
+  return [
+    `idempotency_key.eq.${encodeURIComponent(idempotencyKey)}`,
+    `toss_order_id.eq.${encodeURIComponent(orderId)}`,
+  ].join(',');
+}
+
+async function findExistingTossOrder(
+  body: Pick<VerifyIapOrderRequest, 'idempotencyKey' | 'orderId'>,
+): Promise<{ ok: true; row: TossOrderPersistedRow | null } | { ok: false; error: EdgeResult<never> }> {
+  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+    return {
+      ok: false,
+      error: fail('SUPABASE_CONFIG_MISSING', 'SUPABASE_URL/SUPABASE_SERVICE_ROLE_KEY is required', 500),
+    };
+  }
+
+  const endpoint =
+    `${SUPABASE_URL}/rest/v1/toss_orders` +
+    `?or=(${buildExistingTossOrderLookupFilter(body.idempotencyKey, body.orderId)})` +
+    '&select=id,user_id,product_id,idempotency_key,toss_status,grant_status,amount,toss_order_id,org_id,trainer_user_id,error_code,retry_count,created_at,updated_at' +
+    '&limit=1';
+
+  const response = await fetch(endpoint, {
+    headers: {
+      apikey: SUPABASE_SERVICE_ROLE_KEY,
+      Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+    },
+  });
+
+  if (!response.ok) {
+    return {
+      ok: false,
+      error: fail('IAP_IDEMPOTENCY_LOOKUP_FAILED', 'Failed to check IAP idempotency key', 502, {
+        status: response.status,
+      }),
+    };
+  }
+
+  const rows = await response.json().catch(() => null) as TossOrderPersistedRow[] | null;
+  return { ok: true, row: Array.isArray(rows) ? rows[0] ?? null : null };
+}
+
+export function isIapReplayCompatible(
+  row: TossOrderPersistedRow,
+  body: Pick<VerifyIapOrderRequest, 'orderId' | 'productId' | 'idempotencyKey' | 'orgId' | 'trainerUserId'>,
+  resolvedUserId: string,
+): boolean {
+  return (
+    row.user_id === resolvedUserId &&
+    row.product_id === body.productId &&
+    row.idempotency_key === body.idempotencyKey &&
+    row.toss_order_id === body.orderId &&
+    (row.org_id ?? null) === (body.orgId ?? null) &&
+    (row.trainer_user_id ?? null) === (body.trainerUserId ?? null)
+  );
+}
+
+function toVerifyIapOrderResponse(row: TossOrderPersistedRow): VerifyIapOrderResponse {
+  return {
+    id: row.id,
+    user_id: row.user_id,
+    product_id: row.product_id,
+    idempotency_key: row.idempotency_key,
+    toss_status: row.toss_status,
+    grant_status: row.grant_status,
+    amount: row.amount,
+    toss_order_id: row.toss_order_id,
+    org_id: row.org_id ?? null,
+    trainer_user_id: row.trainer_user_id ?? null,
+    error_code: row.error_code,
+    retry_count: row.retry_count,
+    created_at: row.created_at,
+    updated_at: row.updated_at,
+  };
+}
+
+export async function validateGrantedReplayEntitlement(row: TossOrderPersistedRow): Promise<EdgeResult<void>> {
+  if (row.grant_status !== 'granted') {
+    return ok(undefined);
+  }
+  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+    return fail('SUPABASE_CONFIG_MISSING', 'SUPABASE_URL/SUPABASE_SERVICE_ROLE_KEY is required', 500);
+  }
+
+  const svcHeaders = {
+    apikey: SUPABASE_SERVICE_ROLE_KEY,
+    Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+  };
+  const b2cGrant = PRODUCT_GRANTS[row.product_id];
+
+  if (b2cGrant?.planType) {
+    const response = await fetch(
+      `${SUPABASE_URL}/rest/v1/subscriptions?user_id=eq.${encodeURIComponent(row.user_id)}` +
+        `&plan_type=eq.${encodeURIComponent(b2cGrant.planType)}&is_active=eq.true&select=id&limit=1`,
+      { headers: svcHeaders },
+    );
+    if (!response.ok) {
+      return fail('IAP_GRANT_LEDGER_CHECK_FAILED', 'Failed to verify subscription grant ledger', 502, {
+        status: response.status,
+      });
+    }
+    const rows = await response.json().catch(() => []) as Array<{ id?: string }>;
+    return rows[0]?.id
+      ? ok(undefined)
+      : fail('IAP_GRANT_LEDGER_INCONSISTENT', 'Granted IAP order has no active subscription', 409);
+  }
+
+  if (b2cGrant?.aiTokens) {
+    const response = await fetch(
+      `${SUPABASE_URL}/rest/v1/subscriptions?user_id=eq.${encodeURIComponent(row.user_id)}` +
+        `&ai_tokens_total=gte.${b2cGrant.aiTokens}&select=id&limit=1`,
+      { headers: svcHeaders },
+    );
+    if (!response.ok) {
+      return fail('IAP_GRANT_LEDGER_CHECK_FAILED', 'Failed to verify token grant ledger', 502, {
+        status: response.status,
+      });
+    }
+    const rows = await response.json().catch(() => []) as Array<{ id?: string }>;
+    return rows[0]?.id
+      ? ok(undefined)
+      : fail('IAP_GRANT_LEDGER_INCONSISTENT', 'Granted IAP order has no token entitlement ledger', 409);
+  }
+
+  if (row.org_id || row.trainer_user_id) {
+    const response = await fetch(
+      `${SUPABASE_URL}/rest/v1/org_subscriptions?toss_order_id=eq.${encodeURIComponent(row.toss_order_id)}` +
+        '&status=in.(active,trial)&select=id&limit=1',
+      { headers: svcHeaders },
+    );
+    if (!response.ok) {
+      return fail('IAP_GRANT_LEDGER_CHECK_FAILED', 'Failed to verify org subscription grant ledger', 502, {
+        status: response.status,
+      });
+    }
+    const rows = await response.json().catch(() => []) as Array<{ id?: string }>;
+    return rows[0]?.id
+      ? ok(undefined)
+      : fail('IAP_GRANT_LEDGER_INCONSISTENT', 'Granted B2B IAP order has no active org subscription', 409);
+  }
+
+  return fail('IAP_GRANT_LEDGER_INCONSISTENT', 'Granted IAP order has no known entitlement mapping', 409);
+}
+
+export function resolveIapRequestUserId(params: {
+  isServiceRole: boolean;
+  bodyUserId?: string;
+  authUserId?: string;
+}): EdgeResult<{ userId: string }> {
+  if (params.isServiceRole) {
+    if (!params.bodyUserId) {
+      return fail('VALIDATION_ERROR', 'userId is required for service_role calls', 400);
+    }
+    if (!isUuid(params.bodyUserId)) {
+      return fail('VALIDATION_ERROR', 'userId must be a UUID', 400);
+    }
+    return ok({ userId: params.bodyUserId });
+  }
+
+  if (!params.authUserId) {
+    return fail('AUTH_UNAUTHORIZED', 'Missing authenticated user id', 401);
+  }
+  if (!isUuid(params.authUserId)) {
+    return fail('AUTH_UNAUTHORIZED', 'Invalid authenticated user id', 401);
+  }
+  return ok({ userId: params.authUserId });
+}
+
 
 /**
- * 구독/토큰 활성화 — grant 성공 후 subscriptions 테이블 업데이트.
- * 실패해도 toss_orders grant는 기록되었으므로 non-fatal.
+ * 구독/토큰 활성화 — 성공해야 toss_orders grant_status=granted로 기록한다.
  * subscriptions.user_id UNIQUE 제약 필요 (migration 20260504000001).
  */
 async function activateSubscription(userId: string, productId: string): Promise<void> {
-  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) return;
+  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+    throw new Error('SUPABASE_SERVICE_ROLE_KEY_MISSING');
+  }
 
   const grant = PRODUCT_GRANTS[productId];
   if (!grant) return;
@@ -331,7 +586,7 @@ async function activateSubscription(userId: string, productId: string): Promise<
     const nextBilling = new Date(now);
     nextBilling.setDate(nextBilling.getDate() + (grant.durationDays ?? 30));
 
-    await fetch(
+    const response = await fetch(
       `${SUPABASE_URL}/rest/v1/subscriptions?on_conflict=user_id`,
       {
         method: 'POST',
@@ -345,11 +600,17 @@ async function activateSubscription(userId: string, productId: string): Promise<
         }]),
       },
     );
+    if (!response.ok) {
+      throw new Error(`SUBSCRIPTION_PLAN_ACTIVATION_FAILED:${response.status}`);
+    }
   } else if (grant.aiTokens) {
     const getResp = await fetch(
       `${SUPABASE_URL}/rest/v1/subscriptions?user_id=eq.${userId}&select=id,ai_tokens_remaining,ai_tokens_total`,
       { headers: svcHeaders },
     );
+    if (!getResp.ok) {
+      throw new Error(`SUBSCRIPTION_TOKEN_LOOKUP_FAILED:${getResp.status}`);
+    }
     const rows = await getResp.json().catch(() => []) as Array<{
       id: string;
       ai_tokens_remaining: number | null;
@@ -357,7 +618,7 @@ async function activateSubscription(userId: string, productId: string): Promise<
     }>;
 
     if (rows.length > 0) {
-      await fetch(
+      const response = await fetch(
         `${SUPABASE_URL}/rest/v1/subscriptions?user_id=eq.${userId}`,
         {
           method: 'PATCH',
@@ -369,8 +630,11 @@ async function activateSubscription(userId: string, productId: string): Promise<
           }),
         },
       );
+      if (!response.ok) {
+        throw new Error(`SUBSCRIPTION_TOKEN_PATCH_FAILED:${response.status}`);
+      }
     } else {
-      await fetch(
+      const response = await fetch(
         `${SUPABASE_URL}/rest/v1/subscriptions?on_conflict=user_id`,
         {
           method: 'POST',
@@ -384,8 +648,184 @@ async function activateSubscription(userId: string, productId: string): Promise<
           }]),
         },
       );
+      if (!response.ok) {
+        throw new Error(`SUBSCRIPTION_TOKEN_INSERT_FAILED:${response.status}`);
+      }
     }
   }
+}
+
+function resolveB2BScope(body: VerifyIapOrderRequest): {
+  orgId: string | null;
+  trainerUserId: string | null;
+  grant: { maxDogs: number; maxStaff: number; priceKrw: number } | null;
+  error?: EdgeResult<never>;
+} {
+  const orgId = body.orgId ?? null;
+  const trainerUserId = body.trainerUserId ?? null;
+  if (!orgId && !trainerUserId) {
+    if (B2B_PRODUCT_GRANTS[body.productId]) {
+      return {
+        orgId: null,
+        trainerUserId: null,
+        grant: null,
+        error: fail('B2B_IAP_SCOPE_REQUIRED', 'B2B IAP product requires orgId or trainerUserId', 400),
+      };
+    }
+    return { orgId: null, trainerUserId: null, grant: null };
+  }
+  if (orgId && trainerUserId) {
+    return {
+      orgId,
+      trainerUserId,
+      grant: null,
+      error: fail('B2B_IAP_SCOPE_XOR', 'orgId and trainerUserId are mutually exclusive', 400),
+    };
+  }
+  if (orgId && !isUuid(orgId)) {
+    return {
+      orgId,
+      trainerUserId,
+      grant: null,
+      error: fail('B2B_IAP_ORG_ID_INVALID', 'orgId must be a UUID', 400),
+    };
+  }
+  if (trainerUserId && !isUuid(trainerUserId)) {
+    return {
+      orgId,
+      trainerUserId,
+      grant: null,
+      error: fail('B2B_IAP_TRAINER_ID_INVALID', 'trainerUserId must be a UUID', 400),
+    };
+  }
+
+  const grant = B2B_PRODUCT_GRANTS[body.productId];
+  if (!grant) {
+    return {
+      orgId,
+      trainerUserId,
+      grant: null,
+      error: fail('B2B_IAP_PRODUCT_UNKNOWN', 'Unknown B2B IAP product', 400),
+    };
+  }
+
+  const isCenterProduct = body.productId.startsWith('center_');
+  const scopeMatches = (isCenterProduct && orgId && !trainerUserId) || (!isCenterProduct && trainerUserId && !orgId);
+  if (!scopeMatches) {
+    return {
+      orgId,
+      trainerUserId,
+      grant: null,
+      error: fail('B2B_IAP_PRODUCT_SCOPE_MISMATCH', 'B2B product does not match org/trainer scope', 400),
+    };
+  }
+  return { orgId, trainerUserId, grant };
+}
+
+async function activateOrgSubscription(
+  body: VerifyIapOrderRequest,
+  tossOrderId: string,
+): Promise<void> {
+  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+    throw new Error('SUPABASE_SERVICE_ROLE_KEY_MISSING');
+  }
+
+  const scope = resolveB2BScope(body);
+  if (!scope.grant) return;
+
+  const now = new Date();
+  const expiresAt = new Date(now);
+  expiresAt.setDate(expiresAt.getDate() + 30);
+  const svcHeaders = {
+    apikey: SUPABASE_SERVICE_ROLE_KEY,
+    Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+    'Content-Type': 'application/json',
+  };
+
+  const lookupFilter = scope.orgId
+    ? `org_id=eq.${encodeURIComponent(scope.orgId)}`
+    : `trainer_user_id=eq.${encodeURIComponent(scope.trainerUserId!)}`;
+  const existingResp = await fetch(
+    `${SUPABASE_URL}/rest/v1/org_subscriptions?${lookupFilter}&status=in.(active,trial)&select=id&limit=1`,
+    { headers: svcHeaders },
+  );
+  if (!existingResp.ok) {
+    throw new Error(`ORG_SUBSCRIPTION_LOOKUP_FAILED:${existingResp.status}`);
+  }
+  const existing = await existingResp.json().catch(() => []) as Array<{ id: string }>;
+  const payload = {
+    org_id: scope.orgId,
+    trainer_user_id: scope.trainerUserId,
+    plan_type: body.productId,
+    toss_order_id: tossOrderId,
+    price_krw: scope.grant.priceKrw,
+    max_dogs: scope.grant.maxDogs,
+    max_staff: scope.grant.maxStaff,
+    billing_cycle: 'monthly',
+    started_at: now.toISOString(),
+    expires_at: expiresAt.toISOString(),
+    status: 'active',
+  };
+
+  const response = existing[0]?.id
+    ? await fetch(`${SUPABASE_URL}/rest/v1/org_subscriptions?id=eq.${encodeURIComponent(existing[0].id)}`, {
+        method: 'PATCH',
+        headers: { ...svcHeaders, Prefer: 'return=minimal' },
+        body: JSON.stringify(payload),
+      })
+    : await fetch(`${SUPABASE_URL}/rest/v1/org_subscriptions`, {
+        method: 'POST',
+        headers: { ...svcHeaders, Prefer: 'return=minimal' },
+        body: JSON.stringify([payload]),
+      });
+
+  if (!response.ok) {
+    throw new Error(`ORG_SUBSCRIPTION_ACTIVATION_FAILED:${response.status}`);
+  }
+}
+
+export async function finalizeGrantStateAfterActivation(params: {
+  grantStatus: VerifyIapOrderResponse['grant_status'];
+  errorCode: string | null;
+  userId: string;
+  productId: string;
+  body: VerifyIapOrderRequest;
+  tossOrderId: string;
+  hasB2BGrant: boolean;
+  activateSubscriptionFn?: (userId: string, productId: string) => Promise<void>;
+  activateOrgSubscriptionFn?: (body: VerifyIapOrderRequest, tossOrderId: string) => Promise<void>;
+}): Promise<{
+  grantStatus: VerifyIapOrderResponse['grant_status'];
+  errorCode: string | null;
+}> {
+  let grantStatus = params.grantStatus;
+  let errorCode = params.errorCode;
+  const hasB2CGrant = Boolean(PRODUCT_GRANTS[params.productId]);
+
+  if (grantStatus === 'granted' && !hasB2CGrant && !params.hasB2BGrant) {
+    grantStatus = 'grant_failed';
+    errorCode = 'IAP_PRODUCT_GRANT_UNKNOWN';
+  }
+
+  if (grantStatus === 'granted' && hasB2CGrant) {
+    try {
+      await (params.activateSubscriptionFn ?? activateSubscription)(params.userId, params.productId);
+    } catch {
+      grantStatus = 'grant_failed';
+      errorCode = 'SUBSCRIPTION_ACTIVATION_FAILED';
+    }
+  }
+
+  if (grantStatus === 'granted' && params.hasB2BGrant) {
+    try {
+      await (params.activateOrgSubscriptionFn ?? activateOrgSubscription)(params.body, params.tossOrderId);
+    } catch {
+      grantStatus = 'grant_failed';
+      errorCode = 'ORG_SUBSCRIPTION_ACTIVATION_FAILED';
+    }
+  }
+
+  return { grantStatus, errorCode };
 }
 
 async function resolveTossUserKey(userId: string): Promise<string | null> {
@@ -410,20 +850,22 @@ async function resolveTossUserKey(userId: string): Promise<string | null> {
 /** 요청 전체 타임아웃 — processProductGrant 30초 한도보다 1초 마진 */
 const REQUEST_TIMEOUT_MS = 29_000;
 
-Deno.serve(async (request: Request) => {
-  if (request.method !== 'POST') {
-    return toJsonResponse(fail('METHOD_NOT_ALLOWED', `Unsupported method: ${request.method}`, 405));
-  }
+if (edgeRuntime?.serve) {
+  edgeRuntime.serve(async (request: Request) => {
+    if (request.method !== 'POST') {
+      return toJsonResponse(fail('METHOD_NOT_ALLOWED', `Unsupported method: ${request.method}`, 405));
+    }
 
-  const timeoutResponse = new Promise<Response>((resolve) => {
-    setTimeout(
-      () => resolve(toJsonResponse(fail('IAP_TIMEOUT', 'Request exceeded 30s processProductGrant limit', 504))),
-      REQUEST_TIMEOUT_MS,
-    );
+    const timeoutResponse = new Promise<Response>((resolve) => {
+      setTimeout(
+        () => resolve(toJsonResponse(fail('IAP_TIMEOUT', 'Request exceeded 30s processProductGrant limit', 504))),
+        REQUEST_TIMEOUT_MS,
+      );
+    });
+
+    return Promise.race([handleRequest(request), timeoutResponse]);
   });
-
-  return Promise.race([handleRequest(request), timeoutResponse]);
-});
+}
 
 async function handleRequest(request: Request): Promise<Response> {
 
@@ -432,16 +874,13 @@ async function handleRequest(request: Request): Promise<Response> {
     return toJsonResponse(fail('AUTH_UNAUTHORIZED', 'Missing bearer token', 401));
   }
 
-  // FastAPI 프록시 경로: service_role JWT로 호출 시 JWT 검증 없이 body.userId 사용
-  // service_role key는 /auth/v1/user 엔드포인트에서 user.id를 반환하지 않으므로 claims 직접 파싱
-  const isServiceRole = parseTokenRole(token) === 'service_role';
+  // FastAPI 프록시 경로: 실제 service role key와 정확히 일치할 때만 body.userId 사용.
+  // verify_jwt=false 함수라서 unsigned JWT payload의 role=service_role은 절대 신뢰하지 않는다.
+  const isServiceRole = isTrustedServiceRoleToken(token, SUPABASE_SERVICE_ROLE_KEY);
 
   let resolvedUserId: string | undefined;
-  let role: UserRole;
 
-  if (isServiceRole) {
-    role = 'service_role';
-  } else {
+  if (!isServiceRole) {
     const auth = await verifyJwtViaAuth(token);
     if (!auth.ok) {
       return toJsonResponse(auth.error);
@@ -450,7 +889,6 @@ async function handleRequest(request: Request): Promise<Response> {
     if (!effectiveRole || !ALLOWED_ROLES.has(effectiveRole)) {
       return toJsonResponse(fail('AUTH_FORBIDDEN', 'Only authenticated app roles can verify IAP orders', 403));
     }
-    role = effectiveRole;
     resolvedUserId = auth.user.id;
   }
 
@@ -465,22 +903,47 @@ async function handleRequest(request: Request): Promise<Response> {
     );
   }
 
-  // service_role 호출은 FastAPI가 이미 검증한 userId를 body에서 가져온다
-  if (isServiceRole) {
-    if (!body.userId) {
-      return toJsonResponse(fail('VALIDATION_ERROR', 'userId is required for service_role calls', 400));
-    }
-    resolvedUserId = body.userId;
+  const userResolution = resolveIapRequestUserId({
+    isServiceRole,
+    bodyUserId: body.userId,
+    authUserId: resolvedUserId,
+  });
+  if (!userResolution.ok) {
+    return toJsonResponse(userResolution);
+  }
+  resolvedUserId = userResolution.data.userId;
+
+  const b2bScope = resolveB2BScope(body);
+  if (b2bScope.error) {
+    return toJsonResponse(b2bScope.error);
   }
 
-  // authenticated 기본 세션은 개인 결제만 허용하고 조직/트레이너 지급 컨텍스트는 차단한다.
-  if (role === 'authenticated' && (body.orgId || body.trainerUserId)) {
+  // B2B 지급 컨텍스트는 FastAPI proxy가 JWT 사용자와 org/trainer 권한을 검증한 service_role 경로만 허용한다.
+  if (!isServiceRole && b2bScope.grant) {
     return toJsonResponse(
-      fail('AUTH_FORBIDDEN', 'authenticated role cannot grant org/trainer scoped purchases', 403),
+      fail('AUTH_FORBIDDEN', 'B2B IAP context requires server-side membership verification', 403),
     );
   }
 
-  // mTLS 실 검증 — cert/key 환경변수 존재 시 real, 없으면 mock (로컬 안전)
+  const existing = await findExistingTossOrder(body);
+  if (!existing.ok) {
+    return toJsonResponse(existing.error);
+  }
+
+  if (existing.row) {
+    if (!isIapReplayCompatible(existing.row, body, resolvedUserId!)) {
+      return toJsonResponse(
+        fail('IAP_IDEMPOTENCY_CONFLICT', 'IAP idempotency key is already bound to another order', 409),
+      );
+    }
+    const replayEntitlement = await validateGrantedReplayEntitlement(existing.row);
+    if (!replayEntitlement.ok) {
+      return toJsonResponse(replayEntitlement);
+    }
+    return toJsonResponse(ok(toVerifyIapOrderResponse(existing.row)));
+  }
+
+  // mTLS 실 검증 — 업로드/운영 계열은 cert/key가 없어도 real fail-closed, mock은 명시적 DEV_LOCAL/test에서만 허용한다.
   const mTLSClient = createMTLSClient(resolveMtlsMode());
   let tossUserKey: string | null = null;
   try {
@@ -511,50 +974,74 @@ async function handleRequest(request: Request): Promise<Response> {
     return toJsonResponse(fail('IAP_VERIFY_FAILED', 'Toss IAP verification failed', status));
   }
 
-  const grantStatus: VerifyIapOrderResponse['grant_status'] =
+  const initialGrantStatus: VerifyIapOrderResponse['grant_status'] =
     tossResult.tossStatus === 'PAYMENT_COMPLETED' ? 'granted'
     : tossResult.tossStatus === 'REFUNDED' ? 'refunded'
     : tossResult.tossStatus === 'FAILED' || tossResult.tossStatus === 'NOT_FOUND' ? 'grant_failed'
     : 'pending';
+  const initialErrorCode = tossResult.errorCode ?? null;
+  const willActivate = initialGrantStatus === 'granted';
 
-  const persisted = await upsertTossOrder(token, {
+  // SEC-1 (도그푸딩 감사 2026-07-11): 활성화 "이전"에 toss_order_id 유니크 insert 로 선점한다.
+  // 활성화(ai_tokens 적립)는 비멱등이라, 동시요청이 둘 다 활성화하면 토큰이 이중 적립된다.
+  // 선점에 성공한 요청만 활성화하고, 결과로 grant_status 를 확정 UPDATE 한다.
+  const claim = await upsertTossOrder({
     user_id: resolvedUserId!,
     product_id: body.productId,
     idempotency_key: body.idempotencyKey,
     toss_status: tossResult.tossStatus,
-    grant_status: grantStatus,
+    grant_status: willActivate ? 'pending' : initialGrantStatus,
     amount: tossResult.amount,
     toss_order_id: tossResult.tossOrderId,
-    error_code: tossResult.errorCode ?? null,
+    org_id: b2bScope.orgId,
+    trainer_user_id: b2bScope.trainerUserId,
+    error_code: initialErrorCode,
     retry_count: 0,
   });
 
-  if (!persisted.ok) {
-    return toJsonResponse(persisted.error);
-  }
-
-  if (grantStatus === 'granted') {
-    try {
-      await activateSubscription(resolvedUserId!, body.productId);
-    } catch (err) {
-      console.error('[verify-iap-order] subscription activation failed (non-fatal):', err);
+  if (!claim.ok) {
+    // 유니크 충돌 = 다른 요청이 이미 이 주문을 선점(활성화 담당). 기존 행으로 replay 안내.
+    if (claim.conflict) {
+      const existingAfter = await findExistingTossOrder(body);
+      if (
+        existingAfter.ok &&
+        existingAfter.row &&
+        isIapReplayCompatible(existingAfter.row, body, resolvedUserId!)
+      ) {
+        const replayEntitlement = await validateGrantedReplayEntitlement(existingAfter.row);
+        if (!replayEntitlement.ok) {
+          return toJsonResponse(replayEntitlement);
+        }
+        return toJsonResponse(ok(toVerifyIapOrderResponse(existingAfter.row)));
+      }
     }
+    return toJsonResponse(claim.error);
   }
 
-  const response: VerifyIapOrderResponse = {
-    id: persisted.row.id,
-    user_id: persisted.row.user_id,
-    product_id: persisted.row.product_id,
-    idempotency_key: persisted.row.idempotency_key,
-    toss_status: persisted.row.toss_status,
-    grant_status: persisted.row.grant_status,
-    amount: persisted.row.amount,
-    toss_order_id: persisted.row.toss_order_id,
-    error_code: persisted.row.error_code,
-    retry_count: persisted.row.retry_count,
-    created_at: persisted.row.created_at,
-    updated_at: persisted.row.updated_at,
-  };
+  // 활성화 대상이 아니면(결제완료 외) 선점 행을 그대로 반환.
+  if (!willActivate) {
+    return toJsonResponse(ok(toVerifyIapOrderResponse(claim.row)));
+  }
 
-  return toJsonResponse(ok(response));
+  // 선점 성공 + 결제완료 → 이 요청만 활성화(유일 처리자 보장).
+  const finalizedGrant = await finalizeGrantStateAfterActivation({
+    grantStatus: initialGrantStatus,
+    errorCode: initialErrorCode,
+    userId: resolvedUserId!,
+    productId: body.productId,
+    body,
+    tossOrderId: tossResult.tossOrderId,
+    hasB2BGrant: Boolean(b2bScope.grant),
+  });
+
+  const finalized = await updateTossOrderGrantState(
+    claim.row.id,
+    finalizedGrant.grantStatus,
+    finalizedGrant.errorCode,
+  );
+  if (!finalized.ok) {
+    return toJsonResponse(finalized.error);
+  }
+
+  return toJsonResponse(ok(toVerifyIapOrderResponse(finalized.row)));
 }

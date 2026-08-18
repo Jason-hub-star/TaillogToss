@@ -191,6 +191,94 @@
       "src/lib/data/CHANGELOG.ndjson",
       "src/lib/data/catalog.json"
     ]
+  },
+  {
+    "name": "marketing-blog-publish-nightly",
+    "file": "marketing-blog-publish-nightly.prompt.md",
+    "task_id": "marketing-blog-publish-nightly",
+    "schedule_kr": "매일 22:00 (Asia/Seoul)",
+    "lock": null,
+    "freshness_hours": 26,
+    "artifacts": [
+      "docs/marketing/MARKETING-BOARD.md"
+    ]
+  },
+  {
+    "name": "marketing-case-study-weekly",
+    "file": "marketing-case-study-weekly.prompt.md",
+    "task_id": "marketing-case-study-weekly",
+    "schedule_kr": "매주 목요일 14:00 (Asia/Seoul)",
+    "lock": null,
+    "freshness_hours": 194,
+    "artifacts": [
+      "docs/marketing/MARKETING-BOARD.md"
+    ]
+  },
+  {
+    "name": "marketing-instagram-publish",
+    "file": "marketing-instagram-publish.prompt.md",
+    "task_id": "marketing-instagram-publish",
+    "schedule_kr": "매주 수요일 20:00 (Asia/Seoul)",
+    "lock": null,
+    "freshness_hours": 194,
+    "artifacts": [
+      "docs/marketing/MARKETING-BOARD.md"
+    ]
+  },
+  {
+    "name": "marketing-threads-publish",
+    "file": "marketing-threads-publish.prompt.md",
+    "task_id": "marketing-threads-publish",
+    "schedule_kr": "매주 화/금요일 19:00 (Asia/Seoul)",
+    "lock": null,
+    "freshness_hours": 98,
+    "artifacts": [
+      "docs/marketing/MARKETING-BOARD.md"
+    ]
+  },
+  {
+    "name": "marketing-threads-token-refresh",
+    "file": "marketing-threads-token-refresh.prompt.md",
+    "task_id": "marketing-threads-token-refresh",
+    "schedule_kr": "매주 월요일 09:00 (Asia/Seoul)",
+    "lock": null,
+    "freshness_hours": 194,
+    "artifacts": [
+      "docs/marketing/MARKETING-BOARD.md"
+    ]
+  },
+  {
+    "name": "marketing-weekly-report",
+    "file": "marketing-weekly-report.prompt.md",
+    "task_id": "marketing-weekly-report",
+    "schedule_kr": "매주 일요일 21:00 (Asia/Seoul)",
+    "lock": null,
+    "freshness_hours": 194,
+    "artifacts": [
+      "docs/marketing/MARKETING-BOARD.md"
+    ]
+  },
+  {
+    "name": "point-events-drainer",
+    "file": "point-events-drainer.prompt.md",
+    "task_id": "point-events-drainer",
+    "schedule_kr": "매 10분",
+    "lock": null,
+    "freshness_hours": 2,
+    "artifacts": [
+      "docs/marketing/MARKETING-BOARD.md"
+    ]
+  },
+  {
+    "name": "referral-settlement-weekly",
+    "file": "referral-settlement-weekly.prompt.md",
+    "task_id": "referral-settlement-weekly",
+    "schedule_kr": "매주 월요일 02:00 (Asia/Seoul)",
+    "lock": null,
+    "freshness_hours": 194,
+    "artifacts": [
+      "docs/marketing/MARKETING-BOARD.md"
+    ]
   }
 ]
 ```

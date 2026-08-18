@@ -14,12 +14,24 @@ interface DisconnectRequest {
   referrer: DisconnectReferrer;
 }
 
+export interface TossDisconnectDeps {
+  getEnv: (key: string) => string | undefined;
+  fetchFn: typeof fetch;
+}
+
 const VALID_REFERRERS: DisconnectReferrer[] = ['UNLINK', 'WITHDRAWAL_TERMS', 'WITHDRAWAL_TOSS'];
 const USER_KEY_COLUMNS = ['toss_user_key', 'kakao_sync_id'] as const;
 
-function getSupabaseEnv(): { supabaseUrl: string; serviceKey: string } {
-  const supabaseUrl = Deno.env.get('SUPABASE_URL');
-  const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+function defaultDeps(): TossDisconnectDeps {
+  return {
+    getEnv: (key) => (typeof Deno !== 'undefined' ? Deno.env.get(key) : undefined),
+    fetchFn: fetch,
+  };
+}
+
+function getSupabaseEnv(deps: TossDisconnectDeps): { supabaseUrl: string; serviceKey: string } {
+  const supabaseUrl = deps.getEnv('SUPABASE_URL');
+  const serviceKey = deps.getEnv('SUPABASE_SERVICE_ROLE_KEY');
   if (!supabaseUrl || !serviceKey) {
     throw new Error('SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY must be set');
   }
@@ -48,11 +60,11 @@ function getCorsHeaders(req: Request): Record<string, string> {
   };
 }
 
-function verifyBasicAuth(authHeader: string | null): boolean {
+function verifyBasicAuth(authHeader: string | null, deps: TossDisconnectDeps): boolean {
   if (!authHeader?.startsWith('Basic ')) return false;
 
-  const expectedId = Deno.env.get('TOSS_CALLBACK_AUTH_ID');
-  const expectedPw = Deno.env.get('TOSS_CALLBACK_AUTH_PW');
+  const expectedId = deps.getEnv('TOSS_CALLBACK_AUTH_ID');
+  const expectedPw = deps.getEnv('TOSS_CALLBACK_AUTH_PW');
   if (!expectedId || !expectedPw) return false;
 
   try {
@@ -79,12 +91,13 @@ async function patchUserByAnyKey(
   userKey: number,
   buildPayload: (column: (typeof USER_KEY_COLUMNS)[number]) => Record<string, unknown>,
   contextLabel: string,
+  deps: TossDisconnectDeps,
 ): Promise<void> {
-  const { supabaseUrl, serviceKey } = getSupabaseEnv();
+  const { supabaseUrl, serviceKey } = getSupabaseEnv(deps);
   let lastError = '';
 
   for (const column of USER_KEY_COLUMNS) {
-    const res = await fetch(`${supabaseUrl}/rest/v1/users?${column}=eq.${encodeURIComponent(String(userKey))}`, {
+    const res = await deps.fetchFn(`${supabaseUrl}/rest/v1/users?${column}=eq.${encodeURIComponent(String(userKey))}`, {
       method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',
@@ -112,11 +125,11 @@ async function patchUserByAnyKey(
   throw new Error(`${contextLabel} PATCH failed: no compatible user-key column (${lastError || 'unknown'})`);
 }
 
-async function findUserIdByAnyKey(userKey: number): Promise<string | null> {
-  const { supabaseUrl, serviceKey } = getSupabaseEnv();
+async function findUserIdByAnyKey(userKey: number, deps: TossDisconnectDeps): Promise<string | null> {
+  const { supabaseUrl, serviceKey } = getSupabaseEnv(deps);
 
   for (const column of USER_KEY_COLUMNS) {
-    const res = await fetch(
+    const res = await deps.fetchFn(
       `${supabaseUrl}/rest/v1/users?${column}=eq.${encodeURIComponent(String(userKey))}&select=id&limit=1`,
       {
         headers: {
@@ -147,33 +160,35 @@ function getDisconnectIdempotencyKey(userKeyHash: string, referrer: DisconnectRe
   return `disconnect_${userKeyHash}_${referrer}`.slice(0, 255);
 }
 
-async function handleUnlink(userKey: number): Promise<void> {
+async function handleUnlink(userKey: number, deps: TossDisconnectDeps): Promise<void> {
   // 유저키 컬럼이 마이그레이션 상태에 따라 다를 수 있어 둘 다 지원
   await patchUserByAnyKey(
     userKey,
     (column) => ({ [column]: null }),
     'UNLINK',
+    deps,
   );
 }
 
-async function handleWithdrawalTerms(userKey: number): Promise<void> {
+async function handleWithdrawalTerms(userKey: number, deps: TossDisconnectDeps): Promise<void> {
   // PII 삭제 + 익명화 (user_xxxxx)
   const anonymId = `user_${String(userKey).slice(-5).padStart(5, '0')}`;
   await patchUserByAnyKey(
     userKey,
     (column) => ({ [column]: anonymId }),
     'WITHDRAWAL_TERMS',
+    deps,
   );
 }
 
-async function handleWithdrawalToss(userKey: number): Promise<void> {
-  const { supabaseUrl, serviceKey } = getSupabaseEnv();
-  const userId = await findUserIdByAnyKey(userKey);
+async function handleWithdrawalToss(userKey: number, deps: TossDisconnectDeps): Promise<void> {
+  const { supabaseUrl, serviceKey } = getSupabaseEnv(deps);
+  const userId = await findUserIdByAnyKey(userKey, deps);
 
   if (userId) {
     // Supabase Auth 사용자 삭제 → CASCADE로 관련 데이터 삭제
     // 결제 이력은 ON DELETE SET NULL 또는 별도 보존 테이블로 5년 보존
-    const delRes = await fetch(`${supabaseUrl}/auth/v1/admin/users/${userId}`, {
+    const delRes = await deps.fetchFn(`${supabaseUrl}/auth/v1/admin/users/${userId}`, {
       method: 'DELETE',
       headers: {
         apikey: serviceKey,
@@ -190,15 +205,16 @@ async function handleWithdrawalToss(userKey: number): Promise<void> {
 async function logDisconnect(
   userKeyHash: string,
   referrer: DisconnectReferrer,
-  success: boolean
+  success: boolean,
+  deps: TossDisconnectDeps,
 ): Promise<void> {
-  const supabaseUrl = Deno.env.get('SUPABASE_URL');
-  const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+  const supabaseUrl = deps.getEnv('SUPABASE_URL');
+  const serviceKey = deps.getEnv('SUPABASE_SERVICE_ROLE_KEY');
   if (!supabaseUrl || !serviceKey) return;
 
   const idempotencyKey = getDisconnectIdempotencyKey(userKeyHash, referrer);
   try {
-    await fetch(`${supabaseUrl}/rest/v1/noti_history`, {
+    await deps.fetchFn(`${supabaseUrl}/rest/v1/noti_history`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -224,14 +240,15 @@ async function logDisconnect(
 async function checkAlreadyProcessed(
   userKeyHash: string,
   referrer: DisconnectReferrer,
+  deps: TossDisconnectDeps,
 ): Promise<boolean> {
-  const supabaseUrl = Deno.env.get('SUPABASE_URL');
-  const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+  const supabaseUrl = deps.getEnv('SUPABASE_URL');
+  const serviceKey = deps.getEnv('SUPABASE_SERVICE_ROLE_KEY');
   if (!supabaseUrl || !serviceKey) return false;
 
   const idempotencyKey = getDisconnectIdempotencyKey(userKeyHash, referrer);
   try {
-    const res = await fetch(
+    const res = await deps.fetchFn(
       `${supabaseUrl}/rest/v1/noti_history?select=id&limit=1&idempotency_key=eq.${encodeURIComponent(idempotencyKey)}&success=eq.true`,
       {
         headers: {
@@ -248,7 +265,10 @@ async function checkAlreadyProcessed(
   }
 }
 
-Deno.serve(async (req: Request) => {
+export async function handleTossDisconnect(
+  req: Request,
+  deps: TossDisconnectDeps,
+): Promise<Response> {
   const corsHeaders = getCorsHeaders(req);
 
   // CORS preflight (콘솔 테스트 + Sandbox 버튼용)
@@ -260,7 +280,7 @@ Deno.serve(async (req: Request) => {
 
   // Basic Auth 검증
   const authHeader = req.headers.get('Authorization');
-  if (!verifyBasicAuth(authHeader)) {
+  if (!verifyBasicAuth(authHeader, deps)) {
     return new Response(
       JSON.stringify(fail('UNAUTHORIZED', 'Invalid credentials', 401)),
       { status: 401, headers }
@@ -303,7 +323,7 @@ Deno.serve(async (req: Request) => {
     currentReferrer = referrer;
 
     // 멱등성: 동일 요청 이미 처리됐으면 즉시 200 반환 (토스 서버 재시도 대응)
-    const alreadyProcessed = await checkAlreadyProcessed(userKeyHash, referrer);
+    const alreadyProcessed = await checkAlreadyProcessed(userKeyHash, referrer, deps);
     if (alreadyProcessed) {
       return new Response(
         JSON.stringify(ok({ processed: true, referrer, deduplicated: true })),
@@ -314,29 +334,42 @@ Deno.serve(async (req: Request) => {
     // referrer별 처리
     switch (referrer) {
       case 'UNLINK':
-        await handleUnlink(userKey);
+        await handleUnlink(userKey, deps);
         break;
       case 'WITHDRAWAL_TERMS':
-        await handleWithdrawalTerms(userKey);
+        await handleWithdrawalTerms(userKey, deps);
         break;
       case 'WITHDRAWAL_TOSS':
-        await handleWithdrawalToss(userKey);
+        await handleWithdrawalToss(userKey, deps);
         break;
     }
 
     // 처리 로그 기록
-    await logDisconnect(userKeyHash, referrer, true);
+    await logDisconnect(userKeyHash, referrer, true, deps);
 
     return new Response(
       JSON.stringify(ok({ processed: true, referrer })),
       { status: 200, headers }
     );
   } catch (err) {
-    await logDisconnect(currentUserKeyHash, currentReferrer, false);
+    await logDisconnect(currentUserKeyHash, currentReferrer, false, deps);
+    console.error('[toss-disconnect] INTERNAL', {
+      referrer: currentReferrer,
+      userKeyHash: currentUserKeyHash,
+      error: err instanceof Error ? err.name : 'unknown',
+    });
 
     return new Response(
-      JSON.stringify(fail('INTERNAL', String(err), 500)),
+      JSON.stringify(fail('INTERNAL', 'Disconnect processing failed', 500)),
       { status: 500, headers }
     );
   }
-});
+}
+
+const edgeRuntime = (globalThis as {
+  Deno?: { serve: (handler: (request: Request) => Promise<Response> | Response) => void };
+}).Deno;
+
+if (edgeRuntime?.serve) {
+  edgeRuntime.serve(async (req: Request) => handleTossDisconnect(req, defaultDeps()));
+}

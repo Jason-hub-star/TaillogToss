@@ -12,6 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_db
 from app.core.security import get_current_user_id
 from app.features.training import deps, schemas, service
+from app.shared.utils.ownership import verify_dog_ownership
 
 router = APIRouter()
 
@@ -23,6 +24,7 @@ async def get_training_statuses(
     db: AsyncSession = Depends(get_db),
 ):
     """강아지별 훈련 상태 목록"""
+    await verify_dog_ownership(db, dog_id, user_id=user_id)
     return await service.get_training_statuses(db, user_id, dog_id)
 
 
@@ -33,6 +35,7 @@ async def update_training_status(
     db: AsyncSession = Depends(get_db),
 ):
     """훈련 상태 upsert — Pro 커리큘럼 접근 검증 포함"""
+    await verify_dog_ownership(db, UUID(data.dog_id), user_id=user_id)
     await deps.require_pro_for_curriculum(data.curriculum_id, user_id, db)
     return await service.upsert_training_status(db, user_id, data)
 
@@ -60,6 +63,7 @@ async def save_step_feedback(
     db: AsyncSession = Depends(get_db),
 ):
     """스텝 반응(reaction) 저장 — user_training_status.reaction UPDATE"""
+    await verify_dog_ownership(db, UUID(data.dog_id), user_id=user_id)
     await service.upsert_step_feedback(db, user_id, data)
     return None
 
@@ -72,4 +76,5 @@ async def get_step_feedback(
     db: AsyncSession = Depends(get_db),
 ):
     """스텝 피드백 목록 — reaction IS NOT NULL 행"""
+    await verify_dog_ownership(db, dog_id, user_id=user_id)
     return await service.get_step_feedback(db, user_id, dog_id, curriculum_id)

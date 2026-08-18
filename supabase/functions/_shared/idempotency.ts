@@ -8,6 +8,7 @@ export type RequestStatus = 'processing' | 'completed' | 'failed';
 export interface IdempotencyRecord<T> {
   idempotencyKey: string;
   functionName: string;
+  requestFingerprint?: string;
   status: RequestStatus;
   response?: T;
   createdAt: string;
@@ -16,6 +17,7 @@ export interface IdempotencyRecord<T> {
 
 export type BeginIdempotencyResult<T> =
   | { kind: 'new' }
+  | { kind: 'conflict'; record: IdempotencyRecord<T> }
   | { kind: 'existing'; record: IdempotencyRecord<T> };
 
 export class InMemoryIdempotencyStore {
@@ -25,11 +27,22 @@ export class InMemoryIdempotencyStore {
     return `${functionName}:${idempotencyKey}`;
   }
 
-  begin<T>(functionName: string, idempotencyKey: string): BeginIdempotencyResult<T> {
+  begin<T>(
+    functionName: string,
+    idempotencyKey: string,
+    requestFingerprint?: string
+  ): BeginIdempotencyResult<T> {
     const key = this.buildCompositeKey(functionName, idempotencyKey);
     const existing = this.records.get(key);
 
     if (existing) {
+      if (
+        existing.requestFingerprint &&
+        requestFingerprint &&
+        existing.requestFingerprint !== requestFingerprint
+      ) {
+        return { kind: 'conflict', record: existing as IdempotencyRecord<T> };
+      }
       return { kind: 'existing', record: existing as IdempotencyRecord<T> };
     }
 
@@ -37,6 +50,7 @@ export class InMemoryIdempotencyStore {
     this.records.set(key, {
       idempotencyKey,
       functionName,
+      requestFingerprint,
       status: 'processing',
       createdAt: now,
       updatedAt: now,
@@ -53,6 +67,7 @@ export class InMemoryIdempotencyStore {
     const nextRecord: IdempotencyRecord<T> = {
       idempotencyKey,
       functionName,
+      requestFingerprint: existing?.requestFingerprint,
       status: 'completed',
       response,
       createdAt: existing?.createdAt ?? now,

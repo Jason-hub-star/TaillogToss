@@ -364,9 +364,17 @@ async def toggle_action_item(
     coaching_id: UUID,
     action_item_id: str,
     is_completed: bool,
+    user_id: str,
 ) -> schemas.ActionTrackerResponse:
-    """액션 아이템 완료 토글 (upsert)"""
+    """액션 아이템 완료 토글 (upsert) — coaching dog 소유권 검증 포함"""
     from app.shared.models import ActionTracker
+
+    coaching_q = select(AICoaching).where(AICoaching.id == coaching_id)
+    coaching = (await db.execute(coaching_q)).scalars().first()
+    if not coaching:
+        raise NotFoundException("Coaching not found")
+
+    await verify_dog_ownership(db, coaching.dog_id, user_id=user_id)
 
     q = select(ActionTracker).where(
         ActionTracker.coaching_id == coaching_id,

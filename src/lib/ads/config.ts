@@ -53,6 +53,7 @@ export interface AdLoadCallbacks {
 }
 
 export interface AdShowCallbacks {
+  onImpression?: () => void;
   onRewarded: () => void;
   onClosed: () => void;
   onError: (error: unknown) => void;
@@ -74,11 +75,14 @@ export function createMockAdsSdk(): TossAdsSdk {
         catch (err) { onError(err instanceof Error ? err : new Error(String(err))); }
       }, 300);
     },
-    showFullScreenAd({ onRewarded, onError }) {
+    showFullScreenAd({ onImpression, onRewarded, onError }) {
       if (!loaded) { onError(new Error('Ad not loaded')); return; }
       loaded = false;
       setTimeout(() => {
-        try { onRewarded(); }
+        try {
+          onImpression?.();
+          onRewarded();
+        }
         catch (err) { onError(err instanceof Error ? err : new Error(String(err))); }
       }, 700);
     },
@@ -138,7 +142,7 @@ export function createFrameworkAdsSdk(): TossAdsSdk {
         },
       });
     },
-    showFullScreenAd({ onRewarded, onClosed, onError }) {
+    showFullScreenAd({ onImpression, onRewarded, onClosed, onError }) {
       if (!loaded || !loadedAdGroupId) {
         onError(new Error('Ad not loaded'));
         return;
@@ -156,6 +160,7 @@ export function createFrameworkAdsSdk(): TossAdsSdk {
             loadedAdGroupId = null;
             return;
           }
+          if (event.type === 'impression') onImpression?.();
           if (event.type === 'userEarnedReward') onRewarded();
           if (event.type === 'dismissed' || event.type === 'failedToShow') onClosed();
         },

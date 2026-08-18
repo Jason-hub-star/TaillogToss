@@ -31,13 +31,23 @@ describe('resolveEffectiveSessionRole', () => {
     ).toBe('trainer');
   });
 
-  it('falls back to a valid session role when public role is not B2B', () => {
+  it('does not trust B2B session metadata when public role is not B2B', () => {
     expect(
       resolveEffectiveSessionRole({
         sessionRole: 'org_staff',
         preferredFlow: 'B2B',
         publicRole: 'user',
       }),
-    ).toBe('org_staff');
+    ).toBe('user');
+  });
+
+  it('does not trust B2B session metadata when public role lookup is unavailable', () => {
+    expect(
+      resolveEffectiveSessionRole({
+        sessionRole: 'trainer',
+        preferredFlow: null,
+        publicRole: null,
+      }),
+    ).toBe('user');
   });
 });

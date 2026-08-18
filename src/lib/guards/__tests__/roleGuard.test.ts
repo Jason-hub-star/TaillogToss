@@ -98,4 +98,14 @@ describe('evaluatePageGuard + requireRole', () => {
     });
     expect(result).toEqual({ status: 'redirect', redirectTo: '/dashboard' });
   });
+
+  it('B2B 페이지는 role lookup 완료 전 undefined 역할을 허용하지 않는다', () => {
+    const result = evaluatePageGuard({
+      ...baseInput,
+      currentPath: '/ops/settings',
+      requireFeature: 'b2bOnly',
+      userRole: undefined,
+    });
+    expect(result).toEqual({ status: 'redirect', redirectTo: '/dashboard' });
+  });
 });

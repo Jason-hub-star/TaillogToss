@@ -130,11 +130,13 @@ Body: { "orderId": "uuid-v7" }
 | `NETWORK_ERROR` | 네트워크 오류 |
 | `TOSS_SERVER_VERIFICATION_FAILED` | 서버 검증 실패 |
 
-### 1-5. 정기 결제 / 구독 API
+### 1-5. 정기 결제 / 구독 API — ⏳ **구현 예정 (출시 후)**
 
-> 2026-05-14 앱인토스 업데이트 반영: IAP 정기 결제가 공개됨. 테일로그 v1 배포 범위에서는 정기 결제를 **보류**하고, 기존 단건 IAP(비소모품/소모품) 검증 경로를 유지한다.
+> **2026-05-22 재검증**: 토스 공식 문서(`developers-apps-in-toss.toss.im/.../subscription.html`) 명시 — **"현재 샌드박스 앱에서는 구독 기능 테스트를 지원하지 않아요. 추후 지원 예정이에요."** 운영 환경에서도 일반 미니앱 공개 출시 전 상태로 추정됨. **AIT에서 즉시 테스트 불가능.**
+>
+> 테일로그 v1 배포 범위에서는 정기 결제를 **보류**하고, 기존 단건 IAP(`pro_monthly` non_consumable)를 유지한다. 토스의 정기결제 일반 공개 발표 후 Phase 6에서 일괄 전환 예정.
 
-현재 SDK 2.4.1에도 구독 상품 타입과 구독 주문 API가 포함되어 있다.
+현재 SDK 2.4.1에도 구독 상품 타입과 구독 주문 API가 포함되어 있으나 운영 미지원.
 
 ```typescript
 type SubscriptionProductListItem = {

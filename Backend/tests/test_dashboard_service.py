@@ -3,6 +3,7 @@ from uuid import uuid4
 
 import pytest
 
+from app.features.dashboard import router as dashboard_router
 from app.features.dashboard.service import get_dashboard_data
 from app.shared.models import BehaviorLog, Dog, DogEnv
 
@@ -81,3 +82,29 @@ async def test_dashboard_uses_compact_profile_and_log_queries():
     assert result.recent_logs[0].quick_category == "barking"
     assert result.issues == ["barking"]
     assert result.env_triggers == ["doorbell"]
+
+
+@pytest.mark.asyncio
+async def test_dashboard_explicit_dog_id_requires_ownership_check(monkeypatch):
+    """AUTH-001: explicit dashboard dog_id must not bypass owner/assignment checks."""
+    dog_id = uuid4()
+    calls = []
+
+    async def fake_verify_dog_ownership(db, checked_dog_id, user_id=None, **_kwargs):
+        calls.append((db, checked_dog_id, user_id))
+
+    monkeypatch.setattr(
+        dashboard_router,
+        "verify_dog_ownership",
+        fake_verify_dog_ownership,
+    )
+
+    db = object()
+    resolved = await dashboard_router.resolve_dog_id(
+        dog_id=dog_id,
+        user_id="11111111-1111-1111-1111-111111111111",
+        db=db,
+    )
+
+    assert resolved == str(dog_id)
+    assert calls == [(db, dog_id, "11111111-1111-1111-1111-111111111111")]

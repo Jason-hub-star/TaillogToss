@@ -1,7 +1,7 @@
 """
 대시보드 라우터 — GET / (dog_id 자동 해석)
 DogCoach dashboard/router.py 마이그레이션 (Toss: 인증 필수)
-Parity: APP-001
+Parity: APP-001, AUTH-001
 """
 from uuid import UUID
 
@@ -14,6 +14,7 @@ from app.core.database import get_db
 from app.core.security import get_current_user_id
 from app.features.dashboard import schemas, service
 from app.shared.models import Dog
+from app.shared.utils.ownership import verify_dog_ownership
 
 router = APIRouter()
 
@@ -25,6 +26,7 @@ async def resolve_dog_id(
 ) -> str:
     """dog_id 파라미터가 없으면 최신 강아지 자동 선택"""
     if dog_id:
+        await verify_dog_ownership(db, dog_id, user_id=user_id)
         return str(dog_id)
     stmt = (
         select(Dog.id)

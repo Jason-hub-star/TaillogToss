@@ -35,7 +35,11 @@ function ShareTokenReportPage() {
   const [isVerified, setIsVerified] = useState(false);
   const [verifyError, setVerifyError] = useState('');
   const [isVerifying, setIsVerifying] = useState(false);
-  const { data: report, isLoading, error } = useReportByShareToken(isVerified ? shareToken : undefined);
+  const verifiedLast4 = isVerified ? phoneLastFour.replace(/[^0-9]/g, '').slice(0, 4) : undefined;
+  const { data: report, isLoading, error } = useReportByShareToken(
+    isVerified ? shareToken : undefined,
+    verifiedLast4,
+  );
   const createInteraction = useCreateInteraction();
 
   const handleVerify = useCallback(async () => {
@@ -130,6 +134,8 @@ function ShareTokenReportPage() {
           createInteraction.mutate({
             report_id: report.id,
             parent_identifier: `phone_${phoneLastFour}`,
+            share_token: shareToken,
+            last4: phoneLastFour.replace(/[^0-9]/g, '').slice(0, 4),
             interaction_type: 'like',
             content: emoji,
           });
@@ -139,6 +145,8 @@ function ShareTokenReportPage() {
           createInteraction.mutate({
             report_id: report.id,
             parent_identifier: `phone_${phoneLastFour}`,
+            share_token: shareToken,
+            last4: phoneLastFour.replace(/[^0-9]/g, '').slice(0, 4),
             interaction_type: 'question',
             content: question,
           });

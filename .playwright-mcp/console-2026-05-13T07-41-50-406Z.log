@@ -1,0 +1,11 @@
+[     505ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ https://business-accounts.toss.im/user/me:0
+[     505ms] [ERROR] Failed to install plugin gs Error: Unauthorized
+    at hc (https://business.toss.im/one-navigation/v1/bundle.js:12299:17084) @ https://apps-in-toss.toss.im/static/bootstrap.C-68ybfH.js:41
+[     517ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ https://business-accounts.toss.im/user/me:0
+[     644ms] [ERROR] Failed to load resource: the server responded with a status of 401 () @ https://apps-in-toss.toss.im/console/api-public/v3/appsintossconsole/members/me/user-info:0
+[     649ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ https://business-accounts.toss.im/user/me:0
+[   23807ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ https://business-accounts.toss.im/user/me:0
+[   23822ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ https://business-accounts.toss.im/user/me:0
+[   24437ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ https://business-accounts.toss.im/user/me:0
+[   24463ms] [VERBOSE] [DOM] Input elements should have autocomplete attributes (suggested: "username"): (More info: https://goo.gl/9p2vKq) %o @ https://business.toss.im/account/sign-in?client_id=4uktpjgqd0cp9txybqzuxc2y6w0cuupb&redirect_uri=https%3A%2F%2Fapps-in-toss.toss.im%2Fsign-up&state=%2Fworkspace:0
+[   25002ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ https://business-accounts.toss.im/user/me:0

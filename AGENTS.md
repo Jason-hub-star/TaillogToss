@@ -202,6 +202,7 @@ This file only keeps execution rules, priorities, and pointers.
 | Command | Purpose | When to use |
 |---|---|---|
 | `/learn` | 교정 사항 → feedback memory 저장 | 교정 후 규칙으로 학습시킬 때 |
+| `/skill-audit` | 반복 워크플로우 스킬 후보 감사 | 최근 세션에서 수동 반복 작업과 스킬/서브에이전트 후보를 찾을 때 |
 | `/doc-update` | 코드 변경 후 문서 자동 갱신 | 구현 완료 후 문서 동기화 |
 | `/self-review` | working tree 전체 자기 리뷰 | 커밋 전 품질 점검 |
 | `/token-lint` | 스타일 토큰 하드코딩 탐지 | 스타일 변경 후 토큰 준수 확인 |

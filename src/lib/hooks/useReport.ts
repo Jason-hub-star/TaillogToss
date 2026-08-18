@@ -35,11 +35,11 @@ export function useReportDetail(reportId: string | undefined) {
   });
 }
 
-export function useReportByShareToken(token: string | undefined) {
+export function useReportByShareToken(token: string | undefined, last4: string | undefined) {
   return useQuery({
-    queryKey: queryKeys.reports.byShareToken(token ?? ''),
-    queryFn: () => reportApi.getReportByShareToken(token!),
-    enabled: !!token,
+    queryKey: queryKeys.reports.byShareToken(token ?? '', last4 ?? ''),
+    queryFn: () => reportApi.getReportByShareToken(token!, last4!),
+    enabled: !!token && !!last4,
     ...queryPolicy.default,
   });
 }
@@ -90,6 +90,8 @@ export function useCreateInteraction() {
       report_id: string;
       parent_user_id?: string;
       parent_identifier?: string;
+      share_token?: string;
+      last4?: string;
       interaction_type: ParentInteraction['interaction_type'];
       content?: string;
     }) => reportApi.createInteraction(input),

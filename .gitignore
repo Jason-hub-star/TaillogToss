@@ -43,6 +43,8 @@ venv/
 *.key
 *.p12
 *.pfx
+security-rls-fixture*.json
+.security-rls-fixture*.json
 public/mTLS_*/
 src/public/
 securityMail*
@@ -54,3 +56,12 @@ securityMail*
 # MCP / AI IDE config (contains access tokens)
 .mcp.json
 .gemini/
+
+# code-review-graph 인덱스 (로컬 캐시, 재생성 가능)
+.code-review-graph/
+
+# QA 스크린샷 (13MB 증거물, 로컬 보관)
+qa-screenshots/
+
+# supabase CLI 버전 캐시
+supabase/.temp/

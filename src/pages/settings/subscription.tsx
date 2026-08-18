@@ -40,6 +40,14 @@ export const Route = createRoute('/settings/subscription', {
   screenOptions: { headerShown: false },
 });
 
+const DevIapBypassButtonComponent = __DEV__
+  ? (
+      require('components/features/settings/DevIapBypassButton') as typeof import(
+        'components/features/settings/DevIapBypassButton'
+      )
+    ).DevIapBypassButton
+  : null;
+
 const PRO_FEATURES: Array<{ iconSource: string; label: string }> = [
   { iconSource: ICONS['ic-coaching']!, label: 'AI 코칭 하루 10회' },
   { iconSource: ICONS['ic-dog']!, label: `다견 기능 최대 ${DOG_LIMITS.PRO}마리` },
@@ -234,17 +242,14 @@ function SubscriptionPage() {
                 {purchasingId === proProduct.product_id ? '처리하고 있어요' : 'PRO 시작하기'}
               </Text>
             </TouchableOpacity>
-            {isDevToolsEnabled() && (
-              <TouchableOpacity
-                style={[styles.devBypassButton, purchasingId === proProduct.product_id && styles.buttonDisabled]}
+            {DevIapBypassButtonComponent && isDevToolsEnabled() && (
+              <DevIapBypassButtonComponent
+                buttonStyle={styles.devBypassButton}
+                disabledStyle={styles.buttonDisabled}
+                textStyle={styles.devBypassText}
                 onPress={() => void handleDevDirectGrant(proProduct.product_id)}
                 disabled={!!purchasingId}
-                activeOpacity={0.8}
-              >
-                <Text style={styles.devBypassText}>
-                  [DEV] IAP 바이패스 — verify-iap-order 직접 호출
-                </Text>
-              </TouchableOpacity>
+              />
             )}
           </View>
         )}
@@ -562,7 +567,7 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
   rewardButton: {
-    backgroundColor: colors.textPrimary,
+    backgroundColor: colors.primaryBlue,
     borderRadius: 12,
     paddingVertical: 14,
     alignItems: 'center',

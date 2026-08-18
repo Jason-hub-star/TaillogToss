@@ -32,28 +32,28 @@ version: 1
 
 ## 도메인 스킬 라우팅 (`Skill("<이름>")`)
 
-**페이지 작업 규약: `page-*` 1개 + `feature-*` 최대 2개.** 그 이상 로드하면 매칭이 무너진다.
+**전부 1단이라 실제로 호출된다.** 2026-08-18 평탄화 전에는 3~4단 중첩이라 Skill 툴이
+등록조차 못 했다 — `CLAUDE.md` 의 라우팅 지시 45개가 죽은 글자였다.
+
+**한 화면에 `feature-*` 최대 2개.** 그 이상 로드하면 매칭이 무너진다.
 
 | 무엇을 하나 | 부를 것 |
 |---|---|
-| `.ait` 빌드·배포가 깨짐 | `toss-ait-build-ops` — 이 리포에서 **가장 많이 불린 스킬**(569회/23세션) |
-| 샌드박스·Metro 번들이 안 뜸 | `toss-sandbox-metro` |
-| dev 서버·adb 실기기 | `toss-dev-server` |
-| 런타임 모드(mock/real) 전환 | `toss-runtime-mode-ops` |
-| 결제·구독·IAP 404 | `toss-iap-proxy-ops` · `toss-monetization-ops` · `toss-iap-edge-recovery` |
-| 추천·바이럴·리퍼럴 | `toss-growth-ops` |
-| 로그인·토큰·세션 브릿지 | `toss-login-token-ops` · `toss-mock-auth-ops` |
-| Edge 함수 보안 하드닝 | `toss-edge-hardening` |
-| Supabase 스키마·마이그레이션 | `toss_db_migration` · `toss-supabase-mcp` |
-| FastAPI 모델↔DB 타입 불일치 | `toss-backend-model-ops` |
+| `.ait` 빌드·배포가 깨짐 | `toss-ait-build-ops` |
+| 실기기에서 새 UI 가 안 보임 | `toss-sandbox-metro` — **캐시부터 의심** |
+| dev 서버·adb | `toss-dev-server` · `toss-runtime-mode-ops` |
 | 배포 전 게이트 | `toss-phase13-gate` |
-| 화면 설계·플로우 | `toss_wireframes` · `toss_journey` · `toss_apps` |
+| **화면을 새로 만듦** | `toss_wireframes`(레이아웃 5패턴) · `toss_journey` · `toss_apps` |
+| 스키마·마이그레이션 | `toss_db_migration` · `toss-supabase-mcp` |
+| FastAPI 모델↔DB 불일치 | `toss-backend-model-ops` |
+| 로그인·세션 | `toss-login-token-ops` · `toss-mock-auth-ops` |
+| Edge 보안 | `toss-edge-hardening` |
 
-### feature-* (횡단 관심사, 최대 2개)
+### 횡단 (최대 2개)
 `feature-ui-empty-and-skeleton` · `feature-data-binding-and-loading` · `feature-navigation-and-gesture` · `feature-form-validation-and-submit` · `feature-error-and-retry-state` · `feature-analytics-and-tracking`
 
-### page-* (라우트별, 1개)
-`docs/status/PAGE-UPGRADE-BOARD.md` 가 어떤 라우트를 칠지 정하고, `docs/status/SKILL-DOC-MATRIX.md` 가 그 라우트 ↔ 스킬 매핑의 SSOT다.
+### 보관됨
+`page-*` 21종(73% 보일러플레이트) · 과금 4종(전면 무료 결정). `.claude/skills/_archive/` 에 있고 `git mv` 로 되살린다.
 
 ## Verify
 

@@ -109,40 +109,44 @@ This file only keeps execution rules, priorities, and pointers.
 
 ## Skill Routing Index (MUST)
 
-Skill root: `.claude/skills/toss-guide/`
-Page/feature skill root: `.claude/skills/page-skills/`
+Skill root: `.claude/skills/` — **모두 1단이다.** 2026-08-18 평탄화 전에는 `toss-guide/core/...`
+처럼 3~4단이라 **Claude Code 의 Skill 툴이 등록조차 못 했다**(전 기간 성공 호출 0). Codex 는
+파일로 읽어 동작했으나 더는 쓰지 않으므로, 중첩 스킬은 소비자가 0이었다.
+**새 스킬은 반드시 `.claude/skills/<name>/SKILL.md` 1단에 만든다.**
 
-### Base domain skills
-- `Skill("toss_wireframes")`
-- `Skill("toss_journey")`
-- `Skill("toss_apps")`
-- `Skill("toss-growth-ops")`
-- `Skill("toss-monetization-ops")`
-- `Skill("toss-login-token-ops")`
-- `Skill("toss_db_migration")`
-- `Skill("toss-edge-hardening")`
-- `Skill("toss-phase13-gate")`
-- `Skill("toss-runtime-mode-ops")`
-- `Skill("toss-supabase-mcp")`
-- `Skill("toss-sandbox-metro")`
-- `Skill("toss-dev-server")`
-- `Skill("toss-iap-proxy-ops")` — IAP 404→FastAPI proxy, service role JWT 감지, mTLS mock, subscriptions 활성화 E2E
-- `Skill("toss-mock-auth-ops")` — Mock stable userKey, survey 루프 진단, adb 트러블슈팅
-- `Skill("toss-ait-build-ops")` — .ait 빌드/배포 성공 패턴, supabase url 에러 해결, env var 인라인
-- `Skill("toss-backend-model-ops")` — SQLAlchemy 모델-DB 타입 불일치 방지, async cascade, Pydantic enum 검증 4대 규칙
+### 공통 메타 6
+`/상태` · `/다음` · `/진단` · `/마감` · `/명령어` · `/감사`
 
-### Page hardening skills
-- Source of truth: `docs/status/PAGE-UPGRADE-BOARD.md`
-- Mapping: `docs/status/SKILL-DOC-MATRIX.md`
-- Naming: `page-<route-slug>-upgrade`
+### 실행·빌드
+| 스킬 | 언제 |
+|---|---|
+| `toss-ait-build-ops` | `.ait` 빌드·업로드. env var 인라인 실패, babel/esbuild 충돌 |
+| `toss-sandbox-metro` | 실기기 Metro 연결, 진입 스킴. **실기기 미렌더는 코드보다 캐시를 먼저 의심** |
+| `toss-dev-server` | 로컬 Metro + FastAPI 기동·재시작 |
+| `toss-runtime-mode-ops` | DEV_LOCAL / SANDBOX_REAL / PROD_READY 토글 |
+| `toss-phase13-gate` | 배포 전 E2E 게이트 |
 
-### Cross-page feature skills
-- `feature-ui-empty-and-skeleton`
-- `feature-navigation-and-gesture`
-- `feature-data-binding-and-loading`
-- `feature-form-validation-and-submit`
-- `feature-error-and-retry-state`
-- `feature-analytics-and-tracking`
+### 화면
+| 스킬 | 언제 |
+|---|---|
+| `toss_wireframes` | 화면 만들기 전. 19개 화면 ASCII + 5가지 레이아웃 패턴 |
+| `toss_journey` | 여정 흐름·상태 전환 |
+| `toss_apps` | TDS 컴포넌트, 프레임워크 기초 |
+
+### 데이터·인증·보안
+| 스킬 | 언제 |
+|---|---|
+| `toss_db_migration` · `toss-supabase-mcp` | 스키마·마이그레이션·Edge 배포 |
+| `toss-backend-model-ops` | SQLAlchemy 모델↔DB 불일치, async cascade, enum |
+| `toss-login-token-ops` · `toss-mock-auth-ops` | 토큰 흐름 · mock userKey·survey 루프 |
+| `toss-edge-hardening` | Edge 권한 검증·헤더 신뢰 제거 |
+
+### 횡단 (한 화면에 **최대 2개**)
+`feature-ui-empty-and-skeleton` · `feature-data-binding-and-loading` · `feature-navigation-and-gesture` · `feature-form-validation-and-submit` · `feature-error-and-retry-state` · `feature-analytics-and-tracking`
+
+### 보관 (`.claude/skills/_archive/`)
+- **`page-*` 21종** — 73% 가 동일 보일러플레이트였다(파일당 42줄 중 고유 10~15줄, 그마저 경로·parity ID). 라우트별 정보는 `docs/status/PAGE-UPGRADE-BOARD.md` 가 더 정확하다
+- **과금 4종**(`toss-monetization-ops` · `toss-iap-proxy-ops` · `toss-iap-edge-recovery` · `toss-growth-ops`) — 전면 무료 결정으로 당분간 무의미. 되살릴 땐 `git mv` 로 1단 복귀
 
 ## Current Priority (Last Updated: 2026-03-01)
 1. UIUX-001: dashboard analysis/training empty-state and skeleton stabilization

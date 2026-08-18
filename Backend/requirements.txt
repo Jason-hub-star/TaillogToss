@@ -2,8 +2,11 @@
 # DogCoach 마이그레이션 기반, Toss 미니앱 전용
 
 # Framework
-fastapi>=0.100.0
-uvicorn[standard]>=0.23.0
+# 상한 필수 — Dockerfile 이 lock 없이 `pip install -r requirements.txt` 를 돌리므로
+# 상한이 없으면 배포할 때마다 다른 버전이 깔린다. 2026-08-18 실측: 0.141.1 이 깔려
+# include_router 가 _IncludedRouter 래퍼로 바뀌었고 라우터 검증 테스트 3건이 깨졌다.
+fastapi>=0.100.0,<1.0.0
+uvicorn[standard]>=0.23.0,<1.0.0
 
 # Database
 sqlalchemy[asyncio]>=2.0.0

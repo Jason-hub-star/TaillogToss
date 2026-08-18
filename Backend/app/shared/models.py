@@ -528,6 +528,15 @@ class UserTrainingStatus(Base):
     reaction = Column(String(20))  # enjoyed | neutral | sensitive
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
+    # DB 의 UNIQUE 와 반드시 일치시킨다. 초기 스키마에는 dog_id 가 빠져 있어
+    # 다견 사용자가 충돌했고, 모델에는 선언 자체가 없어 드리프트를 못 잡았다.
+    __table_args__ = (
+        UniqueConstraint(
+            "user_id", "dog_id", "curriculum_id", "stage_id", "step_number",
+            name="uq_user_training_status_dog_step",
+        ),
+    )
+
     user = relationship("User")
 
 

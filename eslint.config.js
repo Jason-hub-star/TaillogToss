@@ -16,6 +16,9 @@ export default [
       'src/router.gen.ts',
       // granite 빌드 생성물 — gitignore 대상이고 재생성되므로 린트하지 않는다
       '**/.granite/**',
+      // python 가상환경 — gitignore 대상. 안에 벤더 .js 가 섞여 있어 린트 대상이 아니다
+      '**/.venv/**',
+      '**/venv/**',
     ],
   },
   { files: ['pages/**/*.{ts,jsx,tsx}', 'src/**/*.{ts,jsx,tsx}'] },
